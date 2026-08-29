@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+
+# Generated BG3 artifacts
+*.pak
+*.gr2
+*.GR2
+*.lsf
+*.LSF
+build/
+dist/
+output/
+outputs/
+staging/
+reextracted/
+diagnostics/
+
+# Local evidence and live-state copies
+*.log
+*.tmp
+modsettings*.lsx
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
