@@ -1,0 +1,11 @@
+# Workstation-only source locations and integration assertions.
+local/
+source_config.json
+
+# Generated classification/provenance artifacts, regardless of chosen output directory.
+**/TRUE_UNDERWEAR_LEDGER.json
+**/TRUE_UNDERWEAR_LEDGER.md
+**/TRUE_UNDERWEAR_REJECTIONS.json
+**/TRUE_UNDERWEAR_ROUTE_AUDIT.json
+**/SOURCE_ARCHIVE_MANIFESTS.json
+**/SOURCE_EXTRACTION_LOG.json

@@ -1,0 +1,18 @@
+{
+  "shared_stats": ["inputs/shared/Armor.txt"],
+  "rejections_path": "generated/TRUE_UNDERWEAR_REJECTIONS.json",
+  "sources": [
+    {
+      "source": "EXAMPLE_SOURCE",
+      "module_folder": "ExampleModule",
+      "module_name": "Example Module",
+      "module_uuid": "11111111-1111-1111-1111-111111111111",
+      "version64": "1",
+      "stats": ["inputs/example/Armor.txt"],
+      "roots": ["inputs/example/RootTemplates.lsx"],
+      "meta_path": "inputs/example/meta.lsx",
+      "original_pak": null,
+      "dependency_stats": []
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<save><region id="Templates"><node id="Templates"><children>
+  <node id="GameObjects">
+    <attribute id="MapKey" type="FixedString" value="11111111-2222-3333-4444-555555555555" />
+    <attribute id="Name" type="LSString" value="Fixture Vanity Garment" />
+    <attribute id="Stats" type="FixedString" value="FixtureSlotVanity" />
+    <attribute id="Type" type="FixedString" value="item" />
+  </node>
+  <node id="GameObjects">
+    <attribute id="MapKey" type="FixedString" value="66666666-7777-8888-9999-aaaaaaaaaaaa" />
+    <attribute id="Name" type="LSString" value="Fixture Unresolved Garment" />
+    <attribute id="Stats" type="FixedString" value="FixtureUnresolvedGarment" />
+    <attribute id="Type" type="FixedString" value="item" />
+  </node>
+  <node id="GameObjects">
+    <attribute id="MapKey" type="FixedString" value="bbbbbbbb-cccc-dddd-eeee-ffffffffffff" />
+    <attribute id="Name" type="LSString" value="Fixture Character Garment" />
+    <attribute id="Stats" type="FixedString" value="FixtureCharacterUnderwear" />
+    <attribute id="Type" type="FixedString" value="character" />
+  </node>
+</children></node></region></save>

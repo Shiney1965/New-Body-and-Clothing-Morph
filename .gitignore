@@ -23,9 +23,22 @@ diagnostics/
 *.tmp
 modsettings*.lsx
 
+# Public-payload hygiene: generated/local evidence and source extracts
+/workstreams/**/evidence/
+/workstreams/**/test_cards_archive/
+/workstreams/**/IMPLEMENTATION_REPORT.md
+
+# Workstation-specific source registries and audit helpers
+/workstreams/coverage_ledger/source_registry.json
+/workstreams/coverage_ledger/prior_sources.json
+/workstreams/true_underwear/source_provenance.py
+/workstreams/vanitybody/inventory.py
+/workstreams/vanitybody/uuid_audit.py
+/workstreams/vanitybody/VANITYBODY_LEDGER.json
+/workstreams/vanitybody/VANITYBODY_LEDGER.md
+
 # OS/editor
 .DS_Store
 Thumbs.db
 .idea/
 .vscode/
-

@@ -1,0 +1,11 @@
+new entry "FixtureSlotUnderwearBase"
+type "Armor"
+data "Slot" "Underwear"
+
+new entry "FixtureSlotUnderwear"
+type "Armor"
+using "FixtureSlotUnderwearBase"
+
+new entry "FixtureSlotVanity"
+type "Armor"
+data "Slot" "VanityBody"

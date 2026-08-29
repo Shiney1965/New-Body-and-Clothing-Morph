@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ClothMorph SCO/Sindae garment record",
+  "type": "object",
+  "$defs": {
+    "route": {
+      "type": "object",
+      "required": ["mode", "visual_resource_uuid", "path", "provenance", "mesh_sha256", "gameplay_result"],
+      "properties": {
+        "mode": {"type": "string"},
+        "visual_resource_uuid": {"type": ["string", "null"]},
+        "path": {"type": ["string", "null"]},
+        "provenance": {"type": "string"},
+        "mesh_sha256": {"type": ["string", "null"]},
+        "gameplay_result": {"type": "string"}
+      }
+    },
+    "disposition": {
+      "type": "string",
+      "enum": [
+        "ACCEPTED / PROTECT",
+        "READY FOR TEST",
+        "CONFIRMED DEFECT / CORRECT",
+        "MISSING ROUTE / BUILD",
+        "DEFERRED WITH CAUSE",
+        "OUT OF SCOPE"
+      ]
+    }
+  },
+  "required": [
+    "identity",
+    "source_module",
+    "root_template_uuid",
+    "stats_entry",
+    "effective_slot",
+    "source_visual_resource_uuid",
+    "source_visual_resource_path",
+    "body_family",
+    "garment_family",
+    "inheritance_chain",
+    "routes",
+    "topology_family",
+    "component_contract",
+    "protected_controls",
+    "package_ownership",
+    "candidate_profile",
+    "readiness_evidence",
+    "next_action",
+    "disposition"
+  ],
+  "properties": {
+    "identity": {"type": "string"},
+    "source_module": {"type": "object"},
+    "root_template_uuid": {"type": ["string", "null"]},
+    "stats_entry": {"type": ["string", "null"]},
+    "effective_slot": {"type": "string"},
+    "inheritance_chain": {"type": "array", "items": {"type": "string"}},
+    "source_visual_resource_uuid": {"type": ["string", "null"]},
+    "source_visual_resource_path": {"type": ["string", "null"]},
+    "body_family": {"type": "string"},
+    "garment_family": {"type": "string"},
+    "topology_family": {"type": "string"},
+    "component_contract": {"type": "string"},
+    "routes": {
+      "type": "object",
+      "required": ["source_native", "Vanilla", "SBBF", "BCB"],
+      "additionalProperties": {"$ref": "#/$defs/route"}
+    },
+    "protected_controls": {"type": "array", "items": {"type": "string"}},
+    "package_ownership": {"type": ["object", "null"]},
+    "candidate_profile": {"type": ["object", "null"]},
+    "readiness_evidence": {"type": "array", "items": {"type": "string"}},
+    "next_action": {"type": "string"},
+    "disposition": {"$ref": "#/$defs/disposition"}
+  }
+}

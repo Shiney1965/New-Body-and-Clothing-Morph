@@ -1,0 +1,18 @@
+new entry "FixtureGarmentUnderwear"
+type "Armor"
+using "FixtureSlotUnderwear"
+data "RootTemplate" "11111111-2222-3333-4444-555555555555"
+
+new entry "FixtureUnresolvedGarment"
+type "Armor"
+using "FixtureMissingParent"
+data "RootTemplate" "66666666-7777-8888-9999-aaaaaaaaaaaa"
+
+new entry "FixtureTemplateOnly"
+type "Armor"
+using "FixtureSlotUnderwear"
+
+new entry "FixtureCharacterUnderwear"
+type "Armor"
+using "FixtureSlotUnderwear"
+data "RootTemplate" "bbbbbbbb-cccc-dddd-eeee-ffffffffffff"

@@ -1,0 +1,15 @@
+# Private inputs, generated local diagnostics, and any copied third-party data.
+/local/config.json
+/local/generated/
+/local/evidence/
+/local/staging/
+/local/ledgers/
+/evidence/
+/staging/
+/*LEDGER.json
+/*LEDGER.md
+/IMPLEMENTATION_REPORT.md
+*.glb
+*.gr2
+*.GR2
+*.pak

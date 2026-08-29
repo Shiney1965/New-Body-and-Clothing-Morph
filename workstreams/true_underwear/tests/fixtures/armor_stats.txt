@@ -1,0 +1,27 @@
+new entry "FixtureSlotUnderwearBase"
+type "Armor"
+data "Slot" "Underwear"
+
+new entry "FixtureSlotUnderwear"
+type "Armor"
+using "FixtureSlotUnderwearBase"
+
+new entry "FixtureNamedUnderwear"
+type "Armor"
+using "FixtureSlotUnderwear"
+
+new entry "FixtureSlotVanity"
+type "Armor"
+data "Slot" "VanityBody"
+
+new entry "FixtureCycleA"
+type "Armor"
+using "FixtureCycleB"
+
+new entry "FixtureCycleB"
+type "Armor"
+using "FixtureCycleA"
+
+new entry "FixtureMissingEntry"
+type "Armor"
+using "FixtureNoSuchParent"

@@ -1,0 +1,6 @@
+{
+  "source_registry_path": "source_registry.json",
+  "prior_sources_path": "prior_sources.json",
+  "evidence_dir": "evidence",
+  "card_dir": "test_cards"
+}

@@ -1,0 +1,12 @@
+# Machine-local source references, generated reports, and gameplay-card output.
+/local/
+/local_configuration.json
+/evidence/
+/test_cards/
+/test_cards_archive/
+/source_registry.json
+/prior_sources.json
+/IMPLEMENTATION_REPORT.md
+/__pycache__/
+/tests/__pycache__/
+/.pytest_cache/

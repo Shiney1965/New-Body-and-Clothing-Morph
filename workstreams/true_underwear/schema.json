@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["schema", "classification_rule", "scope", "summary", "records"],
+  "properties": {
+    "schema": {"const": "clothmorph-true-underwear-ledger-v2"},
+    "classification_rule": {"const": "effective Slot resolved through using inheritance equals Underwear"},
+    "records": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["source", "module_folder", "module_name", "module_uuid", "version64", "root_template_uuid", "stats_entry", "effective_slot", "inheritance", "creation_path", "source_visual_resource_uuid", "source_visual_path", "native_body_form", "vanilla_route", "sbbf_route", "bcb_route", "disposition", "gameplay_status"],
+        "properties": {
+          "effective_slot": {"const": "Underwear"},
+          "module_uuid": {"type": "string", "minLength": 1},
+          "version64": {"type": "string", "minLength": 1},
+          "root_template_uuid": {"type": "string", "minLength": 1},
+          "source_visual_resource_uuid": {"type": "string", "minLength": 1},
+          "source_visual_path": {"type": "string", "minLength": 1},
+          "native_body_form": {"type": "string", "minLength": 1},
+          "vanilla_route": {"type": "string", "minLength": 1},
+          "sbbf_route": {"type": "string", "minLength": 1},
+          "bcb_route": {"type": "string", "minLength": 1},
+          "creation_path": {"enum": ["named_stats", "root_template"]},
+          "disposition": {"enum": ["ACCEPTED / PROTECT", "READY FOR TEST", "CONFIRMED DEFECT / CORRECT", "MISSING ROUTE / BUILD", "DEFERRED WITH CAUSE", "OUT OF SCOPE"]},
+          "gameplay_status": {"const": "NOT RUN"}
+        }
+      }
+    }
+  }
+}
