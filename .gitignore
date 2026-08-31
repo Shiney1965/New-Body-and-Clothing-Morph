@@ -42,3 +42,7 @@ modsettings*.lsx
 Thumbs.db
 .idea/
 .vscode/
+
+# Codex isolated implementation workspaces
+.worktrees/
+.superpowers/
