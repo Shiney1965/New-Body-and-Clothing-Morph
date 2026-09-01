@@ -80,6 +80,7 @@ def complete_section_9_contract():
         "evidence_paths": ["fixture.json"], "evidence_hashes": ["E" * 64],
         "disposition": "DEFERRED_WITH_CAUSE", "blocker_codes": ["SYNTHETIC_BLOCKER"], "release_blocking": True,
         "next_admissible_action": "Obtain bounded evidence.", "acceptance_event_id": "UNKNOWN_ACCEPTANCE_EVENT", "shipped_package_id": "UNKNOWN_SHIPPED_PACKAGE",
+        "terminal_exclusion": None,
     }
 
 

@@ -112,4 +112,5 @@ def test_observation_and_ledger_record_emit_deterministic_section_9_2_fields():
         "next_admissible_action",
         "acceptance_event_id",
         "shipped_package_id",
+        "terminal_exclusion",
     ]

@@ -137,6 +137,7 @@ class LedgerRecord:
     next_admissible_action: str
     acceptance_event_id: str
     shipped_package_id: str
+    terminal_exclusion: Mapping[str, Any] | None = None
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -161,4 +162,5 @@ class LedgerRecord:
             "next_admissible_action": self.next_admissible_action,
             "acceptance_event_id": self.acceptance_event_id,
             "shipped_package_id": self.shipped_package_id,
+            "terminal_exclusion": _stable_value(self.terminal_exclusion),
         }

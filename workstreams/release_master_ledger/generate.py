@@ -17,6 +17,7 @@ from .configuration import (
     load_local_configuration,
     verify_evidence_inputs,
 )
+from .exclusions import select_current_exclusion
 from .models import LedgerRecord, Observation
 from .inventory import (
     IndependentInventories,
@@ -47,6 +48,15 @@ class GenerationResult:
     manifest_sha256: str
 
 
+@dataclass(frozen=True)
+class DiscoveredExclusionEvent:
+    """One hash-locked event file parsed only after its bytes are digested."""
+
+    relative_path: str
+    sha256: str
+    event: Mapping[str, object]
+
+
 def _json_bytes(payload: object) -> bytes:
     return (
         json.dumps(payload, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
@@ -55,6 +65,113 @@ def _json_bytes(payload: object) -> bytes:
 
 def _sha256(content: bytes) -> str:
     return hashlib.sha256(content).hexdigest().upper()
+
+
+def _hash_event_file(path: Path) -> str:
+    """Digest one exact event file before its content is interpreted."""
+    return _sha256(path.read_bytes())
+
+
+def discover_exclusion_events(directory: Path | None) -> tuple[DiscoveredExclusionEvent, ...]:
+    """Read a local event history in normalized-path order without mutation."""
+    if directory is None or not directory.is_dir():
+        return ()
+    root = directory.resolve(strict=True)
+    candidates: list[tuple[str, Path]] = []
+    for candidate in directory.rglob("*"):
+        if not candidate.is_file():
+            continue
+        resolved = candidate.resolve(strict=True)
+        if root not in resolved.parents:
+            raise ValueError(f"EXCLUSION_EVENT_OUTSIDE_CONFIGURED_DIRECTORY:{candidate}")
+        relative = resolved.relative_to(root).as_posix()
+        candidates.append((relative, resolved))
+    discovered: list[DiscoveredExclusionEvent] = []
+    for relative, path in sorted(candidates):
+        digest = _hash_event_file(path)
+        try:
+            event = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
+            raise ValueError(f"EXCLUSION_EVENT_INVALID_JSON:{relative}:{digest}") from error
+        if not isinstance(event, Mapping):
+            raise ValueError(f"EXCLUSION_EVENT_INVALID_ROOT:{relative}:{digest}")
+        discovered.append(DiscoveredExclusionEvent(relative, digest, event))
+    return tuple(discovered)
+
+
+def _local_verified_evidence_registry(
+    config: LocalConfiguration, verified_inputs: Iterable[VerifiedInput],
+) -> dict[str, str]:
+    """Expose only configured, already-hashed local evidence by exact relative path."""
+    if config.exclusion_events_dir is None:
+        return {}
+    local_root = config.exclusion_events_dir.parent.resolve(strict=False)
+    registry: dict[str, str] = {}
+    for input_ in verified_inputs:
+        try:
+            relative = input_.path.resolve(strict=False).relative_to(local_root).as_posix()
+        except ValueError:
+            continue
+        registry[relative] = input_.actual_sha256
+    return dict(sorted(registry.items()))
+
+
+def _terminal_exclusion_summary(event: Mapping[str, object]) -> dict[str, object]:
+    """Emit the bounded generated form of an already-selected valid event."""
+    return {
+        "event_id": event["event_id"],
+        "record_id": event["record_id"],
+        "identity_sha256": event["identity_sha256"],
+        "source_profile_id": event["source_profile_id"],
+        "mode": event["mode"],
+        "reason": event["reason"],
+        "scope_statement": event["scope_statement"],
+        "evidence": event["evidence"],
+        "protected_impact": {"result": event["protected_impact"]["result"]},
+        "next_project_if_reopened": event["next_project_if_reopened"],
+        "approved_by": event["approved_by"],
+        "approved_reason": event["approved_reason"],
+        "created_utc": event["created_utc"],
+    }
+
+
+def _attach_terminal_exclusions(
+    records: tuple[LedgerRecord, ...],
+    events: Iterable[Mapping[str, object]],
+    verified_evidence: Mapping[str, str],
+) -> tuple[LedgerRecord, ...]:
+    """Attach only one valid selected event; invalid histories leave records untouched."""
+    history = tuple(events)
+    attached: list[LedgerRecord] = []
+    for record in records:
+        record_data = record.to_dict()
+        modes = sorted({
+            event.get("mode") for event in history
+            if event.get("record_id") == record.record_id
+            and isinstance(event.get("mode"), str)
+        })
+        selections = [
+            select_current_exclusion(
+                history, record.record_id, mode,
+                ledger_record=record_data, evidence_hashes=verified_evidence,
+            )
+            for mode in modes
+        ]
+        selected = [selection.event for selection in selections if selection.event is not None]
+        if len(selected) != 1 or any(selection.errors for selection in selections):
+            attached.append(record)
+            continue
+        event = selected[0]
+        assert event is not None
+        attached.append(replace(
+            record,
+            disposition="OUT_OF_SCOPE_WITH_PROOF",
+            blocker_codes=(),
+            release_blocking=False,
+            next_admissible_action=str(event["next_project_if_reopened"]),
+            terminal_exclusion=_terminal_exclusion_summary(event),
+        ))
+    return tuple(attached)
 
 
 def _write(path: Path, content: bytes) -> str:
@@ -253,12 +370,20 @@ def generate(config: LocalConfiguration) -> GenerationResult:
                 namespaced = _attach_protected_manifest(namespaced, inventories)
             observations.append(namespaced)
     reconciliation = reconcile_observations(observations)
+    discovered_events = discover_exclusion_events(config.exclusion_events_dir)
+    records = _attach_terminal_exclusions(
+        reconciliation.records,
+        (item.event for item in discovered_events),
+        _local_verified_evidence_registry(config, verified_inputs),
+    )
     supporting_input_ids = sorted(
         input_.input_id
         for input_ in verified_inputs
         if input_.kind.upper() == "SUPPORTING_EVIDENCE"
     )
-    audit = build_completeness_audit(reconciliation, inventories.to_audit_sets())
+    audit = build_completeness_audit(
+        replace(reconciliation, records=records), inventories.to_audit_sets()
+    )
     audit["registered_inventories"] = {
         "packaged_records": sorted(inventories.packaged_records),
         "prior_evidence": [f"input:{input_id}" for input_id in supporting_input_ids],
@@ -270,7 +395,7 @@ def generate(config: LocalConfiguration) -> GenerationResult:
         "packaged_without_ledger", "ledger_without_source", "in_scope_nonterminal",
     ):
         audit[name] = sorted(audit[name])
-    ledger = _ledger_payload(reconciliation.records, observations, verified_inputs)
+    ledger = _ledger_payload(records, observations, verified_inputs)
     ledger_errors = validate_generated_ledger(ledger)
     if ledger_errors:
         raise ValueError("GENERATED_LEDGER_INVALID:" + ",".join(ledger_errors))

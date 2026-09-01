@@ -46,6 +46,7 @@ def test_canonical_local_config_loads_hash_locked_input(tmp_path: Path, monkeypa
             "expected_sha256": expected_sha256,
         }],
         "output_path": "generated/ledger.json",
+        "exclusion_events_dir": "exclusion_events",
     }), encoding="utf-8")
     monkeypatch.setattr(configuration, "WORKSTREAM_ROOT", workstream_root)
 
@@ -53,6 +54,7 @@ def test_canonical_local_config_loads_hash_locked_input(tmp_path: Path, monkeypa
 
     assert config.inputs[0].path == evidence
     assert config.output_path == local_root / "generated" / "ledger.json"
+    assert config.exclusion_events_dir == local_root / "exclusion_events"
 
 
 def test_hash_mismatch_fails_before_adapter_reads_json(tmp_path: Path):

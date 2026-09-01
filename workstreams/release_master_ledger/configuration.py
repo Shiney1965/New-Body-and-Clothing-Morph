@@ -40,6 +40,7 @@ class LocalConfiguration:
 
     inputs: tuple[EvidenceInput, ...]
     output_path: Path
+    exclusion_events_dir: Path | None = None
 
 
 @dataclass(frozen=True)
@@ -77,6 +78,15 @@ def validate_output_path(path: Path, workstream_root: Path) -> Path:
     if resolved_output == resolved_generated_root or resolved_generated_root not in resolved_output.parents:
         raise ConfigurationError("OUTPUT_OUTSIDE_LOCAL_GENERATED")
     return resolved_output
+
+
+def validate_exclusion_events_dir(path: Path, workstream_root: Path) -> Path:
+    """Resolve an event history directory only when it stays below local/."""
+    local_root = _local_root(workstream_root).resolve(strict=False)
+    resolved = path.resolve(strict=False)
+    if resolved == local_root or local_root not in resolved.parents:
+        raise ConfigurationError("EXCLUSION_EVENTS_OUTSIDE_LOCAL")
+    return resolved
 
 
 def _required_text(mapping: dict[str, object], key: str) -> str:
@@ -121,7 +131,19 @@ def load_local_configuration() -> LocalConfiguration:
         _resolve_config_path(config_path, _required_text(payload, "output_path")),
         WORKSTREAM_ROOT,
     )
-    return LocalConfiguration(inputs=inputs, output_path=output_path)
+    exclusion_events_dir = None
+    if "exclusion_events_dir" in payload:
+        exclusion_events_dir = validate_exclusion_events_dir(
+            _resolve_config_path(
+                config_path, _required_text(payload, "exclusion_events_dir")
+            ),
+            WORKSTREAM_ROOT,
+        )
+    return LocalConfiguration(
+        inputs=inputs,
+        output_path=output_path,
+        exclusion_events_dir=exclusion_events_dir,
+    )
 
 
 def _hash_input(path: Path) -> tuple[int, str]:

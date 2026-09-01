@@ -67,7 +67,7 @@
         "creation_path", "classification", "body_tuple", "source_route", "mode_routes",
         "protected_relations", "transformation", "gates", "evidence_paths", "evidence_hashes",
         "disposition", "blocker_codes", "release_blocking", "next_admissible_action",
-        "acceptance_event_id", "shipped_package_id"
+        "acceptance_event_id", "shipped_package_id", "terminal_exclusion"
       ],
       "properties": {
         "record_id": {"$ref": "#/$defs/text"},
@@ -165,7 +165,20 @@
         "release_blocking": {"type": "boolean"},
         "next_admissible_action": {"$ref": "#/$defs/text"},
         "acceptance_event_id": {"$ref": "#/$defs/text"},
-        "shipped_package_id": {"$ref": "#/$defs/text"}
+        "shipped_package_id": {"$ref": "#/$defs/text"},
+        "terminal_exclusion": {
+          "oneOf": [
+            {"type": "null"},
+            {
+              "type": "object",
+              "required": [
+                "event_id", "record_id", "identity_sha256", "source_profile_id", "mode",
+                "reason", "scope_statement", "evidence", "protected_impact",
+                "next_project_if_reopened", "approved_by", "approved_reason", "created_utc"
+              ]
+            }
+          ]
+        }
       }
     }
   }

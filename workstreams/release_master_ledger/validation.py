@@ -37,6 +37,11 @@ MODE_FIELDS = (
 )
 SHA256_RE = re.compile(r"^[0-9A-F]{64}$")
 BLOCKER_CODE_RE = re.compile(r"^[A-Z][A-Z0-9_]*(?::[A-Z0-9_.-]+)*$")
+EXCLUSION_EVENT_ID_RE = re.compile(r"^EXCLUSION_[0-9A-F]{64}$")
+NON_EXCLUSION_TERMINAL_DISPOSITIONS = frozenset({
+    "ACCEPTED_PROTECTED", "SOURCE_NATIVE_PROTECTED",
+    "SHIPPED_NATIVE_PASSTHROUGH", "SHIPPED_REFIT",
+})
 
 _TEXT_VALUES = (
     ("record_id",),
@@ -316,6 +321,67 @@ def _validate_blocker_codes(record: Mapping[str, Any], errors: list[str]) -> Non
         errors.append("BLOCKER_CODES_REQUIRED")
 
 
+def _validate_terminal_exclusion(record: Mapping[str, Any], errors: list[str]) -> None:
+    """Validate the bounded generated summary of a Task-1-validated event."""
+    if "terminal_exclusion" not in record:
+        errors.append("MISSING:terminal_exclusion")
+        return
+    value = record.get("terminal_exclusion")
+    requires_event = (
+        record.get("disposition") == "OUT_OF_SCOPE_WITH_PROOF"
+        or (
+            record.get("release_blocking") is False
+            and record.get("disposition") not in NON_EXCLUSION_TERMINAL_DISPOSITIONS
+        )
+    )
+    if value is None:
+        if requires_event:
+            errors.append("MISSING_VALID_TERMINAL_EXCLUSION")
+        return
+    if not isinstance(value, Mapping):
+        errors.append("INVALID:terminal_exclusion")
+        return
+    valid = True
+    required_text = (
+        "event_id", "record_id", "identity_sha256", "source_profile_id", "mode",
+        "reason", "scope_statement", "next_project_if_reopened", "approved_by",
+        "approved_reason", "created_utc",
+    )
+    for key in required_text:
+        item = value.get(key)
+        if not isinstance(item, str) or not item:
+            errors.append(f"INVALID_TERMINAL_EXCLUSION:{key}")
+            valid = False
+    if isinstance(value.get("event_id"), str) and EXCLUSION_EVENT_ID_RE.fullmatch(value["event_id"]) is None:
+        errors.append("INVALID_TERMINAL_EXCLUSION:event_id")
+        valid = False
+    for key in ("record_id", "identity_sha256"):
+        if value.get(key) != record.get(key):
+            errors.append(f"TERMINAL_EXCLUSION_{key.upper()}_MISMATCH")
+            valid = False
+    evidence = value.get("evidence")
+    if not isinstance(evidence, (list, tuple)) or not evidence:
+        errors.append("INVALID_TERMINAL_EXCLUSION:evidence")
+        valid = False
+    else:
+        for entry in evidence:
+            if not isinstance(entry, Mapping) or not all(
+                isinstance(entry.get(key), str) and entry[key]
+                for key in ("path", "sha256", "claim")
+            ) or SHA256_RE.fullmatch(entry.get("sha256", "")) is None:
+                errors.append("INVALID_TERMINAL_EXCLUSION:evidence")
+                valid = False
+                break
+    impact = value.get("protected_impact")
+    if not isinstance(impact, Mapping) or impact.get("result") != "NO_PROTECTED_MUTATION":
+        errors.append("INVALID_TERMINAL_EXCLUSION:protected_impact")
+        valid = False
+    if valid and (record.get("disposition") != "OUT_OF_SCOPE_WITH_PROOF" or record.get("release_blocking") is not False):
+        errors.append("TERMINAL_EXCLUSION_STATE_MISMATCH")
+    elif not valid and requires_event:
+        errors.append("MISSING_VALID_TERMINAL_EXCLUSION")
+
+
 def validate_record(record: dict[str, object]) -> list[str]:
     """Return stable errors for an emitted record; an empty list is valid."""
     if not isinstance(record, dict):
@@ -353,6 +419,7 @@ def validate_record(record: dict[str, object]) -> list[str]:
         errors.append(f"INVALID_DISPOSITION:{record['disposition']}")
 
     _validate_blocker_codes(record, errors)
+    _validate_terminal_exclusion(record, errors)
 
     fields = _identity_fields_from_record(record)
     if fields is not None:

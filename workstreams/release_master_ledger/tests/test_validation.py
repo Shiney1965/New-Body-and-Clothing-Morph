@@ -147,11 +147,28 @@ def complete_record_fixture():
         "next_admissible_action": "Obtain bounded synthetic evidence.",
         "acceptance_event_id": "UNKNOWN_ACCEPTANCE_EVENT",
         "shipped_package_id": "UNKNOWN_SHIPPED_PACKAGE",
+        "terminal_exclusion": None,
     }
 
 
 def test_complete_synthetic_record_is_valid():
     assert validate_record(complete_record_fixture()) == []
+
+
+def test_terminal_exclusion_field_is_required_even_when_it_is_null():
+    record = complete_record_fixture()
+    del record["terminal_exclusion"]
+
+    assert "MISSING:terminal_exclusion" in validate_record(record)
+
+
+def test_out_of_scope_record_requires_a_valid_terminal_exclusion_attachment():
+    record = complete_record_fixture()
+    record["disposition"] = "OUT_OF_SCOPE_WITH_PROOF"
+    record["release_blocking"] = False
+    record["blocker_codes"] = []
+
+    assert "MISSING_VALID_TERMINAL_EXCLUSION" in validate_record(record)
 
 
 def test_identity_sha256_must_match_recomputed_identity_fields():
@@ -310,7 +327,7 @@ def test_schema_binds_every_section_9_2_family_and_exact_dispositions():
         "creation_path", "classification", "body_tuple", "source_route", "mode_routes",
         "protected_relations", "transformation", "gates", "evidence_paths", "evidence_hashes",
         "disposition", "blocker_codes", "release_blocking", "next_admissible_action",
-        "acceptance_event_id", "shipped_package_id",
+        "acceptance_event_id", "shipped_package_id", "terminal_exclusion",
     }
     assert properties["mode_routes"]["additionalProperties"]["required"] == MODE_FIELDS
     assert schema["$defs"]["disposition"]["enum"] == DISPOSITIONS
