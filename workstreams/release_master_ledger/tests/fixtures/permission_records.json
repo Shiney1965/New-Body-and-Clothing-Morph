@@ -1,0 +1,6 @@
+{
+  "permission_state": "GRANTED_WITH_SCOPE",
+  "scope_resolved": ["HUM_F_Test.GR2"],
+  "evidence_pointer": "fixture-permission.md",
+  "audit_traceability": true
+}

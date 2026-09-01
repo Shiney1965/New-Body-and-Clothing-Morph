@@ -1,0 +1,14 @@
+[
+  {
+    "observation_id": "fixture-coverage-1",
+    "disposition": "OFFLINE CANDIDATE PASS",
+    "effective_slot": "Chest",
+    "route": {"gameplay_result": "NOT RUN"}
+  },
+  {
+    "observation_id": "fixture-coverage-package-1",
+    "disposition": "PACKAGE READY / GAMEPLAY UNASSESSED",
+    "effective_slot": "Chest",
+    "route": {"gameplay_result": "NOT RUN"}
+  }
+]

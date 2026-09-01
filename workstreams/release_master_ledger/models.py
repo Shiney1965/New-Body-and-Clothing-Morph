@@ -54,6 +54,52 @@ class Observation:
     payload: Mapping[str, Any] = field(default_factory=dict)
     blocker_codes: tuple[str, ...] = ()
 
+    def _adapter_value(self, key: str, default: Any) -> Any:
+        """Expose adapter metadata without changing the base observation wire shape."""
+        if isinstance(self.payload, Mapping):
+            return self.payload.get(key, default)
+        return default
+
+    @property
+    def input_id(self) -> str:
+        return self._adapter_value("input_id", "UNKNOWN_INPUT_ID")
+
+    @property
+    def input_sha256(self) -> str:
+        return self._adapter_value("input_sha256", "UNKNOWN_INPUT_SHA256")
+
+    @property
+    def authority(self) -> str:
+        return self._adapter_value("authority", "OBSERVATION")
+
+    @property
+    def evidence_status(self) -> str:
+        return self._adapter_value("evidence_status", "EVIDENCE_UNASSESSED")
+
+    @property
+    def disposition(self) -> str:
+        return self._adapter_value("disposition", "DEFERRED_WITH_CAUSE")
+
+    @property
+    def release_blocking(self) -> bool:
+        return self._adapter_value("release_blocking", True)
+
+    @property
+    def protected_relations(self) -> Mapping[str, Any]:
+        return self._adapter_value("protected_relations", {})
+
+    @property
+    def classification(self) -> Mapping[str, Any]:
+        return self._adapter_value("classification", {"effective_slot": "AMBIGUOUS_SLOT"})
+
+    @property
+    def evidence_pointers(self) -> tuple[str, ...]:
+        return tuple(self._adapter_value("evidence_pointers", self.evidence_files))
+
+    @property
+    def raw_evidence(self) -> Mapping[str, Any]:
+        return self._adapter_value("raw_evidence", {})
+
     def to_dict(self) -> dict[str, object]:
         return {
             "observation_id": self.observation_id,

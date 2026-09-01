@@ -1,0 +1,12 @@
+[
+  {
+    "identity": "fixture-vanity-1",
+    "disposition": "READY FOR TEST",
+    "effective_slot": "Chest"
+  },
+  {
+    "identity": "fixture-bcbscantily-1",
+    "effective_slot": "Chest",
+    "component_contract": "UNASSESSED"
+  }
+]

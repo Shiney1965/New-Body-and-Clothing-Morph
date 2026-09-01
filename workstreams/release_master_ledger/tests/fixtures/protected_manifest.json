@@ -1,0 +1,11 @@
+{
+  "records": [
+    {
+      "observation_id": "fixture-protected-manifest-1",
+      "status": "PROTECTED_SOURCE_NATIVE",
+      "registry_ids": ["fixture-manifest-1"],
+      "route_fingerprint": "EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE",
+      "audit_traceability": true
+    }
+  ]
+}

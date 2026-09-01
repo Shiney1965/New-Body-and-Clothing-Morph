@@ -13,6 +13,20 @@ from .configuration import (
     verify_evidence_inputs,
 )
 from .validation import validate_record
+from .adapters import (
+    adapt_bcbscantily,
+    adapt_coverage,
+    adapt_hash_manifest,
+    adapt_named_target,
+    adapt_one_protected,
+    adapt_package_evidence,
+    adapt_permission_manifest,
+    adapt_protected_manifest,
+    adapt_protected_registry,
+    adapt_true_underwear,
+    adapt_vanitybody,
+    read_observations,
+)
 
 __all__ = [
     "CanonicalIdentityFields",
@@ -30,4 +44,16 @@ __all__ = [
     "validate_output_path",
     "validate_record",
     "verify_evidence_inputs",
+    "adapt_bcbscantily",
+    "adapt_coverage",
+    "adapt_hash_manifest",
+    "adapt_named_target",
+    "adapt_one_protected",
+    "adapt_package_evidence",
+    "adapt_permission_manifest",
+    "adapt_protected_manifest",
+    "adapt_protected_registry",
+    "adapt_true_underwear",
+    "adapt_vanitybody",
+    "read_observations",
 ]
