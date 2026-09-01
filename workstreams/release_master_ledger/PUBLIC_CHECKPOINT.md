@@ -2,7 +2,7 @@
 
 ## TL/DR
 
-The current hash-locked offline evidence generates deterministically into `3,173` observations and `3,173` master-ledger records. The generated audit reports `source_complete=false` and `release_complete=false`: required source-profile completeness is not established, all `3,173` records remain in `in_scope_nonterminal`, all are release-blocking, and later package/gameplay/installer gates remain unproved.
+The current hash-locked offline evidence generates deterministically into `3,179` observations and `3,179` master-ledger records. The generated audit reports `source_complete=false` and `release_complete=false`: required source-profile completeness is not established, all `3,179` records remain in `in_scope_nonterminal`, all are release-blocking, and later package/gameplay/installer gates remain unproved.
 
 The protected registry reconciles exactly `32` immutable controls: `25` `GAMEPLAY_PASS`, `1` `USER_ACCEPTED_RESIDUAL`, `2` `PROTECTED_SOURCE_NATIVE`, and `4` `PROTECTED_SOURCE_NATIVE_PACKAGE_ONLY`. The four package-only Recluse controls remain gameplay-unproven and were not promoted.
 
@@ -12,9 +12,9 @@ These artifacts are local evidence outputs under ignored `workstreams/release_ma
 
 | Artifact | Bytes | SHA-256 |
 |---|---:|---|
-| `REMAINING_TARGET_MASTER_LEDGER.json` | `24,044,344` | `B7BF69AEF819558160AF246F6EB319DEF312EF5D5E340455480A8C32C45371B7` |
-| `REMAINING_TARGET_MASTER_LEDGER.md` | `478` | `5EC08BAEDD4DCA6A66FB513FE0A6EEE19EDACFD7D992D45CC599561BCD76A9A9` |
-| `RELEASE_LEDGER_COMPLETENESS_AUDIT.json` | `251,449` | `6698FA0AAC1EA8935ACB437C928F9EAAC2DED34A38E75B62329DC1C6EA09B6F3` |
+| `REMAINING_TARGET_MASTER_LEDGER.json` | `24,088,669` | `1E1CB4B9202A7520FC00F54C47DBA15923854E024A08708722993EC653229913` |
+| `REMAINING_TARGET_MASTER_LEDGER.md` | `478` | `A02CA0EBE6CFE9ADC99163EB8514EA6863F17F9E772EC234247B986EA5C2E098` |
+| `RELEASE_LEDGER_COMPLETENESS_AUDIT.json` | `252,359` | `507130629E5D46B06030F03F970D110E12EDA1BC978C318B9DFD428E84611F7B` |
 | `EVIDENCE_INPUT_MANIFEST.json` | `7,057` | `E3E65616A94D4B9AB961CA4AF3013721878232548F3571CE018F97F67DF68631` |
 
 Two consecutive CLI generations produced these same four hashes.
@@ -22,9 +22,9 @@ Two consecutive CLI generations produced these same four hashes.
 ## Current ledger and audit facts
 
 - Registered inputs: `16`.
-- Source observations: `3,173`.
-- Emitted records: `3,173`.
-- Release-blocking records: `3,173`.
+- Source observations: `3,179`.
+- Emitted records: `3,179`.
+- Release-blocking records: `3,179`.
 - `UNCLASSIFIED`: `0`.
 - Required source profiles complete: `false`.
 - `source_complete`: `false`.
@@ -34,9 +34,11 @@ Two consecutive CLI generations produced these same four hashes.
 - `unreferenced_prior_evidence`: `0`.
 - `packaged_without_ledger`: `0`.
 - `ledger_without_source`: `0`.
-- `in_scope_nonterminal`: `3,173`.
+- `in_scope_nonterminal`: `3,179`.
 
-The bounded primary channels remain `2,534` coverage records, `68` true-underwear records, and `271` VanityBody records. Supporting inventories, route audits, protection evidence, and class/source-profile manifests are pinned in the evidence manifest but are not promoted into additional garment observations.
+The bounded primary channels remain `2,534` coverage records, `68` true-underwear records, and `271` VanityBody records. The six configured supporting inputs each emit one `SUPPORTING_EVIDENCE_REFERENCE`; they are audit references, not garment observations.
+
+`unreferenced_prior_evidence=0` is earned against six registered normalized supporting IDs, all represented by reconciled evidence records. `packaged_without_ledger=0` is earned against the explicit package ownership ID `PACKAGE_SHA256:A4BB716CB70C8046FE87ECB94A8D081563D953AD1E07BA1F521B01765768E345`, which is present on the Recluse provider record together with source module UUID `096665c7-75aa-4747-9548-6ccafba985c8` and version `36028797018963968`; that record remains release-blocking and gameplay-unassessed.
 
 ## Exact current input boundary
 
@@ -63,6 +65,6 @@ Every input is hashed before parsing. Paths merely named inside retained JSON—
 
 ## Release-blocking boundary
 
-The generated ledger contains `12` stable blocker codes. Each generated blocker entry includes evidence pointers, an owner, a next admissible action, affected record IDs, and a `release_blocking` flag.
+The generated ledger contains `13` stable blocker codes. Each generated blocker entry includes evidence pointers, an owner, a next admissible action, affected record IDs, and a `release_blocking` flag.
 
 This checkpoint is offline evidence only. It does not prove gameplay, fresh package/profile construction, advertised combined-profile behavior, installer/restore behavior, save safety, or release readiness.

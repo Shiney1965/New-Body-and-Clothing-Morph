@@ -20,6 +20,16 @@ AUDIT_SET_NAMES = {
     "ledger_without_source",
     "in_scope_nonterminal",
 }
+SUPPORTING_INPUT_IDS = {
+    "bcbscantily_class_ledger",
+    "coverage_raw_registry_scoped",
+    "protected_hash_manifest_v1",
+    "source_profile_inventory",
+    "true_underwear_route_audit",
+    "vanitybody_route_protection",
+}
+RECLUSE_PACKAGE_SHA256 = "A4BB716CB70C8046FE87ECB94A8D081563D953AD1E07BA1F521B01765768E345"
+RECLUSE_PACKAGE_ID = f"PACKAGE_SHA256:{RECLUSE_PACKAGE_SHA256}"
 
 
 def _json(path):
@@ -75,6 +85,43 @@ def test_current_hash_locked_evidence_generates_truthful_master_ledger():
         for record in protected_records
         if record["disposition"] == "PACKAGE_ONLY_PROTECTED"
     )
+
+    assert set(ledger["summary"]["input_observation_counts"]) == set(by_id)
+    assert all(
+        ledger["summary"]["input_observation_counts"][input_id] == 1
+        for input_id in SUPPORTING_INPUT_IDS
+    )
+    assert ledger["summary"]["observation_kind_counts"]["SUPPORTING_EVIDENCE_REFERENCE"] == 6
+    assert ledger["summary"]["observation_count"] == len(ledger["records"]) == 3179
+
+    supporting_records = [
+        record for record in ledger["records"]
+        if record["evidence_paths"]
+        and record["evidence_paths"][0].removeprefix("input:") in SUPPORTING_INPUT_IDS
+    ]
+    assert len(supporting_records) == 6
+    assert audit["registered_inventories"]["prior_evidence"] == [
+        f"input:{input_id}" for input_id in sorted(SUPPORTING_INPUT_IDS)
+    ]
+    assert audit["unreferenced_prior_evidence"] == []
+
+    recluse_records = [
+        record for record in ledger["records"]
+        if record["evidence_paths"] == ["input:recluse_provider_contract_v2"]
+    ]
+    assert len(recluse_records) == 1
+    recluse = recluse_records[0]
+    assert recluse["source_module"]["uuid"] == "096665c7-75aa-4747-9548-6ccafba985c8"
+    assert recluse["source_module"]["version64"] == "36028797018963968"
+    assert recluse["source_module"]["pak"] == RECLUSE_PACKAGE_ID
+    assert recluse["source_module"]["pak_sha256"] == RECLUSE_PACKAGE_SHA256
+    assert recluse["transformation"]["payload_hash"] == RECLUSE_PACKAGE_SHA256
+    assert recluse["shipped_package_id"] == RECLUSE_PACKAGE_ID
+    assert recluse["disposition"] == "PACKAGE_READY_GAMEPLAY_UNASSESSED"
+    assert recluse["release_blocking"] is True
+    assert "GAMEPLAY_UNASSESSED_PACKAGE_ONLY" in recluse["blocker_codes"]
+    assert audit["registered_inventories"]["packaged_records"] == [RECLUSE_PACKAGE_ID]
+    assert audit["packaged_without_ledger"] == []
 
     assert manifest["inputs"] and len(manifest["inputs"]) == 16
     assert audit["unclassified_count"] == 0

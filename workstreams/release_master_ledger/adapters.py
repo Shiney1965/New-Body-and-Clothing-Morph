@@ -138,12 +138,16 @@ def _identity_fields(record: Mapping[str, Any]) -> CanonicalIdentityFields:
     item_contract = _mapping(source.get("item_contract"))
     inheritance = source.get("inheritance_chain") or source.get("inheritance") or source.get("named_stats_using")
     component_contract = source.get("component_contract") or source.get("component_topology_contract")
-    source_profile = source.get("source_profile_digest") or source_module.get("version_identity")
+    source_profile = (
+        source.get("source_profile_digest")
+        or source_module.get("version_identity")
+        or source.get("source_mod_version")
+    )
     if source_profile is None and source_module:
         source_profile = source_module
     return CanonicalIdentityFields(
         source_module_uuid=_text(
-            source.get("source_module_uuid") or source.get("module_uuid") or source_module.get("uuid"),
+            source.get("source_module_uuid") or source.get("module_uuid") or source.get("source_mod_uuid") or source_module.get("uuid"),
             _UNKNOWN_IDENTITY["source_module_uuid"],
         ),
         source_profile_digest=_digest_value(source_profile, _UNKNOWN_IDENTITY["source_profile_digest"]),
@@ -476,16 +480,65 @@ def adapt_permission_manifest(records: object, verified_input: VerifiedInput) ->
     return observations
 
 
+def adapt_supporting_evidence(verified_input: VerifiedInput) -> list[Observation]:
+    """Represent one hash-verified supporting input without treating it as a garment."""
+    return [_observation(
+        {"observation_id": f"supporting:{verified_input.input_id}"},
+        verified_input,
+        index=0,
+        kind="SUPPORTING_EVIDENCE_REFERENCE",
+        authority="STATIC_EVIDENCE",
+        evidence_status="HASH_VERIFIED_SUPPORTING_EVIDENCE",
+        disposition="DEFERRED_WITH_CAUSE",
+        release_blocking=True,
+        blocker_codes=("SUPPORTING_EVIDENCE_REFERENCE_ONLY",),
+        normalized_payload={
+            "next_admissible_action": "Join this hash-locked supporting input to a concrete source identity.",
+        },
+    )]
+
+
 def adapt_package_evidence(records: object, verified_input: VerifiedInput) -> list[Observation]:
-    return [
-        _observation(
+    observations: list[Observation] = []
+    for index, record in enumerate(_records(records)):
+        candidate_sha = record.get("candidate_pak_sha256")
+        package_sha = (
+            candidate_sha.upper()
+            if isinstance(candidate_sha, str)
+            and len(candidate_sha) == 64
+            and all(character in "0123456789abcdefABCDEF" for character in candidate_sha)
+            else None
+        )
+        package_id = f"PACKAGE_SHA256:{package_sha}" if package_sha else "UNKNOWN_SHIPPED_PACKAGE"
+        source_module: dict[str, Any] = {}
+        if package_sha:
+            source_module = {
+                "name": _text(record.get("source_name"), "UNKNOWN_SOURCE_NAME"),
+                "pak": package_id,
+                "pak_sha256": package_sha,
+                "uuid": _text(record.get("source_mod_uuid"), "UNKNOWN_SOURCE_MODULE_UUID"),
+                "version64": _text(record.get("source_mod_version"), "UNKNOWN_SOURCE_VERSION"),
+            }
+        normalized_payload: dict[str, Any] = {
+            "source_module": source_module,
+            "shipped_package_id": package_id,
+            "transformation": {
+                "package_id": package_id,
+                "candidate_pak_sha256": package_sha or "UNKNOWN_PAYLOAD_HASH",
+                "live_registration_contract": _text(
+                    record.get("live_registration_contract"), "GAMEPLAY_UNASSESSED"
+                ),
+            },
+        }
+        if package_sha:
+            normalized_payload["payload_hash"] = package_sha
+        observations.append(_observation(
             record, verified_input, index=index, kind="PACKAGE_EVIDENCE", authority="PACKAGE_EVIDENCE",
             evidence_status="GAMEPLAY_UNASSESSED_PACKAGE_ONLY", disposition="PACKAGE_READY_GAMEPLAY_UNASSESSED",
             release_blocking=True, blocker_codes=("GAMEPLAY_UNASSESSED_PACKAGE_ONLY",),
-            retain_raw_evidence=True,
-        )
-        for index, record in enumerate(_records(records))
-    ]
+            retain_raw_evidence=True, normalized_payload=normalized_payload,
+        ))
+    return observations
 
 
 def adapt_named_target(records: object, verified_input: VerifiedInput) -> list[Observation]:
@@ -550,7 +603,7 @@ def read_observations(verified_input: VerifiedInput) -> list[Observation]:
     ):
         raise ValueError(f"EVIDENCE_INPUT_HASH_MISMATCH:{verified_input.input_id}")
     if verified_input.kind.upper() == "SUPPORTING_EVIDENCE":
-        return []
+        return adapt_supporting_evidence(verified_input)
     if verified_input.kind.upper() == "NAMED_TARGET" and verified_input.path.suffix.lower() == ".md":
         try:
             content.decode("utf-8")

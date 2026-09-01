@@ -3,6 +3,7 @@ import hashlib
 from workstreams.release_master_ledger.adapters import (
     adapt_bcbscantily,
     adapt_coverage,
+    adapt_package_evidence,
     adapt_protected_registry,
     adapt_true_underwear,
     adapt_vanitybody,
@@ -151,10 +152,45 @@ def test_hash_verified_named_target_markdown_is_one_blocking_observation(tmp_pat
     assert "NAMED_TARGET_UNRESOLVED" in observations[0].blocker_codes
 
 
-def test_supporting_evidence_is_hash_checked_but_not_promoted_to_observation(tmp_path):
+def test_supporting_evidence_is_hash_checked_and_emitted_only_as_reference(tmp_path):
     evidence_file = tmp_path / "support.json"
     evidence_file.write_text('{"files": [{"sha256": "A"}]}\n', encoding="utf-8")
 
     observations = read_observations(verified(evidence_file, kind="SUPPORTING_EVIDENCE"))
 
-    assert observations == []
+    assert len(observations) == 1
+    assert observations[0].observation_kind == "SUPPORTING_EVIDENCE_REFERENCE"
+    assert observations[0].disposition == "DEFERRED_WITH_CAUSE"
+    assert observations[0].release_blocking is True
+
+
+def test_current_recluse_package_contract_preserves_exact_package_and_module_facts(tmp_path):
+    evidence = VerifiedInput(
+        "recluse_provider_contract_v2", "PACKAGE", tmp_path / "provider_contract.json",
+        0, "A" * 64, "A" * 64,
+    )
+    package_sha = "A4BB716CB70C8046FE87ECB94A8D081563D953AD1E07BA1F521B01765768E345"
+    payload = {
+        "candidate_pak_sha256": package_sha,
+        "source_mod_uuid": "096665c7-75aa-4747-9548-6ccafba985c8",
+        "source_mod_version": "36028797018963968",
+        "source_name": "SindaeImportedOutfitsRecluseWave2TEST",
+        "live_registration_contract": "UNASSESSED",
+    }
+
+    observation = adapt_package_evidence(payload, evidence)[0]
+    package_id = f"PACKAGE_SHA256:{package_sha}"
+
+    assert observation.identity_fields.source_module_uuid == "096665c7-75aa-4747-9548-6ccafba985c8"
+    assert observation.payload["source_module"] == {
+        "name": "SindaeImportedOutfitsRecluseWave2TEST",
+        "pak": package_id,
+        "pak_sha256": package_sha,
+        "uuid": "096665c7-75aa-4747-9548-6ccafba985c8",
+        "version64": "36028797018963968",
+    }
+    assert observation.payload["payload_hash"] == package_sha
+    assert observation.payload["shipped_package_id"] == package_id
+    assert observation.disposition == "PACKAGE_READY_GAMEPLAY_UNASSESSED"
+    assert observation.release_blocking is True
+    assert "GAMEPLAY_UNASSESSED_PACKAGE_ONLY" in observation.blocker_codes

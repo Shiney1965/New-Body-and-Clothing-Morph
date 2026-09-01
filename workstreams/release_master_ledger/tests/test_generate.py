@@ -126,3 +126,73 @@ def test_evidence_reference_normalization_precomputes_paths_once(tmp_path):
 
     assert normalized["records"][0]["evidence_paths"] == ["input:0"]
     assert elapsed < 1.0
+
+
+def test_supporting_evidence_inventory_is_nonempty_and_referenced(tmp_path):
+    primary = tmp_path / "evidence" / "primary.json"
+    support = tmp_path / "evidence" / "support.json"
+    primary_sha = _write_json(primary, {"records": [{
+        "observation_id": "primary-row",
+        "root_template_uuid": "root-primary",
+        "disposition": "BLOCKED WITH CAUSE",
+    }]})
+    support_sha = _write_json(support, {"files": [{"sha256": "A" * 64}]})
+    config = LocalConfiguration(
+        inputs=(
+            EvidenceInput("primary", "COVERAGE", primary, primary_sha),
+            EvidenceInput("support", "SUPPORTING_EVIDENCE", support, support_sha),
+        ),
+        output_path=tmp_path / "generated" / "REMAINING_TARGET_MASTER_LEDGER.json",
+    )
+
+    result = generate(config)
+    ledger = json.loads(result.ledger_path.read_text(encoding="utf-8"))
+    audit = json.loads(result.audit_path.read_text(encoding="utf-8"))
+
+    assert ledger["summary"]["input_observation_counts"] == {"primary": 1, "support": 1}
+    assert ledger["summary"]["observation_kind_counts"]["SUPPORTING_EVIDENCE_REFERENCE"] == 1
+    assert audit["registered_inventories"]["prior_evidence"] == ["input:support"]
+    assert audit["unreferenced_prior_evidence"] == []
+
+
+def test_package_inventory_uses_exact_normalized_package_id(tmp_path):
+    package = tmp_path / "evidence" / "package.json"
+    package_sha = _write_json(package, {
+        "candidate_pak_sha256": "A" * 64,
+        "source_mod_uuid": "module-1",
+        "source_mod_version": "36028797018963968",
+        "source_name": "RecluseProvider",
+    })
+    config = LocalConfiguration(
+        inputs=(EvidenceInput("package", "PACKAGE", package, package_sha),),
+        output_path=tmp_path / "generated" / "REMAINING_TARGET_MASTER_LEDGER.json",
+    )
+
+    result = generate(config)
+    ledger = json.loads(result.ledger_path.read_text(encoding="utf-8"))
+    audit = json.loads(result.audit_path.read_text(encoding="utf-8"))
+    package_id = "PACKAGE_SHA256:" + "A" * 64
+
+    assert ledger["records"][0]["shipped_package_id"] == package_id
+    assert audit["registered_inventories"]["packaged_records"] == [package_id]
+    assert audit["packaged_without_ledger"] == []
+
+
+def test_registered_supporting_inventory_is_sorted_by_normalized_input_id(tmp_path):
+    inputs = []
+    for input_id, filename in (("z-input", "a.json"), ("a-input", "z.json")):
+        evidence = tmp_path / filename
+        digest = _write_json(evidence, {"input_id": input_id})
+        inputs.append(EvidenceInput(input_id, "SUPPORTING_EVIDENCE", evidence, digest))
+    config = LocalConfiguration(
+        inputs=tuple(inputs),
+        output_path=tmp_path / "generated" / "REMAINING_TARGET_MASTER_LEDGER.json",
+    )
+
+    result = generate(config)
+    audit = json.loads(result.audit_path.read_text(encoding="utf-8"))
+
+    assert audit["registered_inventories"]["prior_evidence"] == [
+        "input:a-input",
+        "input:z-input",
+    ]

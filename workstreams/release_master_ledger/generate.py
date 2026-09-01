@@ -208,16 +208,39 @@ def generate(config: LocalConfiguration) -> GenerationResult:
         for observation in read_observations(input_)
     ]
     reconciliation = reconcile_observations(observations)
+    supporting_input_ids = sorted(
+        input_.input_id
+        for input_ in verified_inputs
+        if input_.kind.upper() == "SUPPORTING_EVIDENCE"
+    )
+    prior_evidence = frozenset(
+        str(input_.path)
+        for input_ in verified_inputs
+        if input_.kind.upper() == "SUPPORTING_EVIDENCE"
+    )
+    packaged_records = frozenset(
+        package_id
+        for observation in observations
+        if observation.observation_kind == "PACKAGE_EVIDENCE"
+        for package_id in (observation.payload.get("shipped_package_id"),)
+        if isinstance(package_id, str) and package_id != "UNKNOWN_SHIPPED_PACKAGE"
+    )
     inventories = InventorySets(
         source_observations=frozenset(
             observation.observation_id for observation in observations
         ),
+        prior_evidence=prior_evidence,
+        packaged_records=packaged_records,
         required_source_profiles=frozenset(
             input_.input_id for input_ in verified_inputs
         ),
         complete_source_profiles=frozenset(),
     )
     audit = build_completeness_audit(reconciliation, inventories)
+    audit["registered_inventories"] = {
+        "packaged_records": sorted(packaged_records),
+        "prior_evidence": [f"input:{input_id}" for input_id in supporting_input_ids],
+    }
     audit = _stable_evidence_references(audit, verified_inputs)
     ledger = _ledger_payload(reconciliation.records, observations, verified_inputs)
     manifest = _manifest_payload(verified_inputs)
