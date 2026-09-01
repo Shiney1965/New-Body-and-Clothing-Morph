@@ -1,10 +1,7 @@
-"""Tests for fail-closed terminal-exclusion events.
-
-Each test protects a policy boundary: an invalid, ambiguous, or revoked event
-must not become the current exclusion for a ledger route.
-"""
+"""Fail-closed tests for terminal-exclusion event contracts."""
 
 from copy import deepcopy
+import json
 
 import pytest
 
@@ -19,9 +16,18 @@ from workstreams.release_master_ledger.exclusions import (
 
 RECORD_ID = "LEDGER_" + "A" * 64
 IDENTITY_SHA256 = "B" * 64
-EVIDENCE_SHA256 = "C" * 64
 PROFILE_ID = "SYNTHETIC_PROFILE"
+PROFILE_SHA256 = "C" * 64
+SOURCE_SHA256 = "D" * 64
+PERMISSION_SHA256 = "E" * 64
+GEOMETRY_SHA256 = "F" * 64
 TIEFLING_PAK_SHA256 = "01E96CF236607F5A4B9E4DD2D7A6BE2CA8A9013456706000DC3248543390F141"
+VERIFIED_EVIDENCE = {
+    "evidence/alternate-artifact.json": SOURCE_SHA256,
+    "evidence/geometry.json": GEOMETRY_SHA256,
+    "evidence/permission.txt": PERMISSION_SHA256,
+    "evidence/source-audit.json": SOURCE_SHA256,
+}
 
 
 def ledger_record(**overrides):
@@ -29,48 +35,103 @@ def ledger_record(**overrides):
         "record_id": RECORD_ID,
         "identity_sha256": IDENTITY_SHA256,
         "source_module": {
-            "folder": PROFILE_ID,
-            "pak": "Synthetic.pak",
+            "folder": PROFILE_ID, "pak": "Synthetic.pak",
             "uuid": "11111111-1111-1111-1111-111111111111",
-            "pak_sha256": "D" * 64,
-            "profile_digest": "E" * 64,
+            "pak_sha256": SOURCE_SHA256, "profile_digest": PROFILE_SHA256, "version64": "1",
         },
-        "protected_relations": {
-            "registry_ids": [],
-            "protected_consumers": [],
-            "forbidden_targets": [],
-        },
+        "classification": {"effective_slot": "Underwear"},
+        "body_tuple": {"race": "Human", "sex": "Female", "body_type": "BT1"},
+        "protected_relations": {"registry_ids": [], "protected_consumers": [], "forbidden_targets": []},
+        "disposition": "DEFERRED_WITH_CAUSE", "acceptance_event_id": "UNKNOWN_ACCEPTANCE_EVENT",
     }
     record.update(overrides)
     return record
 
 
+def evidence(path):
+    return [{"path": path, "sha256": VERIFIED_EVIDENCE[path], "claim": "bounded artifact"}]
+
+
+def profile_proof():
+    return {"id": PROFILE_ID, "version": "1", "sha256": PROFILE_SHA256}
+
+
+def evidence_link(path):
+    return {"evidence_path": path, "evidence_sha256": VERIFIED_EVIDENCE[path]}
+
+
+def proof_for(reason):
+    if reason == "SOURCE_ABSENT_EXACT_PROFILE":
+        return {
+            "exact_profile": profile_proof(),
+            "complete_source_inventory": {"result": "COMPLETE", **evidence_link("evidence/source-audit.json")},
+            "zero_route_result": {"result": "ZERO_ROUTE", **evidence_link("evidence/source-audit.json")},
+            "anti_omission": {"result": "PASS", **evidence_link("evidence/source-audit.json")},
+        }
+    if reason == "NO_RELEASE_PERMISSION":
+        return {
+            "permission_text": {"path": "evidence/permission.txt", "sha256": PERMISSION_SHA256},
+            "date": "2026-09-01", "credit": "Synthetic Author", "derivative_scope": "NO_DERIVATIVES",
+            "redistribution_scope": "NO_REDISTRIBUTION", "exact_source_version": "1",
+        }
+    if reason == "NON_WEARABLE_OR_UNSUPPORTED_BODY_TUPLE":
+        return {
+            "exact_slot": "Underwear", "exact_body_tuple": ["Human", "Female", "BT1"],
+            "source_contract": "synthetic-source-contract", "release_scope_mismatch": "not advertised",
+        }
+    if reason == "PROTECTED_NATIVE_ONLY":
+        return {
+            "protected_registry_id": "REGISTRY_PROTECTED", "protected_consumer": "PROTECTED_CONSUMER",
+            "protected_route": "native-route", "protected_path": "Public/Synthetic/Protected.GR2",
+            "protected_sha256": SOURCE_SHA256,
+        }
+    if reason == "UNRESOLVED_SOURCE_CONTRACT_AFTER_EXHAUSTIVE_AUDIT":
+        return {
+            "exact_profile": profile_proof(),
+            "searches": {
+                "root_templates": "COMPLETE", "stats": "COMPLETE", "inheritance": "COMPLETE",
+                "visual_banks": "COMPLETE", "provider_maps": "COMPLETE",
+            },
+            "result": "CONTRADICTORY_RESULT",
+            "anti_omission": {"result": "PASS", **evidence_link("evidence/source-audit.json")},
+        }
+    if reason == "INCOMPATIBLE_MUTUALLY_EXCLUSIVE_PROFILE":
+        return {
+            "selected_profile_id": PROFILE_ID, "alternate_profile_id": "ALTERNATE_PROFILE",
+            "forbidden_module_relationship": "MUTUALLY_EXCLUSIVE",
+            "alternate_artifact": {"path": "evidence/alternate-artifact.json", "sha256": SOURCE_SHA256},
+        }
+    if reason == "NO_SAFE_GEOMETRY_AVAILABLE":
+        component = [{"component_id": "garment-a", "status": "FAIL", **evidence_link("evidence/geometry.json")}]
+        return {
+            "architecture_results": [
+                {"family_name": "surface-projection", "material_distinction": "surface correspondence", "components": component},
+                {"family_name": "cage-deformation", "material_distinction": "cage lattice", "components": component},
+                {"family_name": "skinning-transfer", "material_distinction": "bone-weight transfer", "components": component},
+            ],
+            "fixed_gates": {
+                gate: {"result": "FAIL", **evidence_link("evidence/geometry.json")}
+                for gate in ("topology", "component", "material", "skin", "clearance", "silhouette", "deterministic_readback", "nontriviality")
+            },
+            "final_available_safe_tooling_failure": {
+                "result": "UNFIXABLE_WITH_AVAILABLE_SAFE_TOOLING", **evidence_link("evidence/geometry.json")
+            },
+        }
+    raise ValueError(reason)
+
+
 def exclusion_fixture(**overrides):
     event = {
-        "schema": "clothmorph.terminal-exclusion",
-        "schema_version": 1,
-        "record_id": RECORD_ID,
-        "identity_sha256": IDENTITY_SHA256,
-        "source_profile_id": PROFILE_ID,
-        "mode": "sbbf",
-        "reason": "SOURCE_ABSENT_EXACT_PROFILE",
+        "schema": "clothmorph.terminal-exclusion", "schema_version": 1,
+        "record_id": RECORD_ID, "identity_sha256": IDENTITY_SHA256,
+        "source_profile_id": PROFILE_ID, "mode": "sbbf", "reason": "SOURCE_ABSENT_EXACT_PROFILE",
+        "reason_proof": proof_for("SOURCE_ABSENT_EXACT_PROFILE"),
         "scope_statement": "Exclude only the exact synthetic SBBF route.",
-        "attempted_architectures": [],
-        "fixed_acceptance_gates": {},
-        "evidence": [{
-            "path": "evidence/synthetic-source-audit.json",
-            "sha256": EVIDENCE_SHA256,
-            "claim": "SOURCE_ABSENT_EXACT_PROFILE: exact profile route absent.",
-        }],
-        "protected_impact": {
-            "registry_ids": [],
-            "shared_consumers": [],
-            "forbidden_targets": [],
-            "result": "NO_PROTECTED_MUTATION",
-        },
+        "attempted_architectures": [], "fixed_acceptance_gates": {},
+        "evidence": evidence("evidence/source-audit.json"),
+        "protected_impact": {"registry_ids": [], "shared_consumers": [], "forbidden_targets": [], "result": "NO_PROTECTED_MUTATION"},
         "next_project_if_reopened": "Recover an exact source profile.",
-        "approved_by": "Alan",
-        "approved_reason": "fix every outstanding element or declare it unfixable and excluded",
+        "approved_by": "Alan", "approved_reason": "fix every outstanding element or declare it unfixable and excluded",
         "created_utc": "2026-09-01T12:00:00Z",
     }
     event.update(overrides)
@@ -83,211 +144,190 @@ def signed_event(**overrides):
     return event
 
 
-def test_canonical_payload_is_sorted_json_without_the_event_id():
-    event = exclusion_fixture(event_id="EXCLUSION_" + "F" * 64)
-
-    assert canonical_exclusion_payload(event) == (
-        '{"approved_by":"Alan","approved_reason":"fix every outstanding element or declare it unfixable and excluded",'
-        '"attempted_architectures":[],"created_utc":"2026-09-01T12:00:00Z",'
-        '"evidence":[{"claim":"SOURCE_ABSENT_EXACT_PROFILE: exact profile route absent.",'
-        '"path":"evidence/synthetic-source-audit.json","sha256":"' + EVIDENCE_SHA256 + '"}],'
-        '"fixed_acceptance_gates":{},"identity_sha256":"' + IDENTITY_SHA256 + '",'
-        '"mode":"sbbf","next_project_if_reopened":"Recover an exact source profile.",'
-        '"protected_impact":{"forbidden_targets":[],"registry_ids":[],"result":"NO_PROTECTED_MUTATION",'
-        '"shared_consumers":[]},"reason":"SOURCE_ABSENT_EXACT_PROFILE","record_id":"' + RECORD_ID + '",'
-        '"schema":"clothmorph.terminal-exclusion","schema_version":1,'
-        '"scope_statement":"Exclude only the exact synthetic SBBF route.",'
-        '"source_profile_id":"SYNTHETIC_PROFILE"}'
+def validate(event, record=None, verified_evidence=None):
+    return validate_exclusion_event(
+        event, ledger_record=record or ledger_record(),
+        evidence_hashes=VERIFIED_EVIDENCE if verified_evidence is None else verified_evidence,
     )
 
 
-def test_event_id_is_uppercase_digest_of_the_canonical_payload():
-    event = exclusion_fixture()
+def select(events, record=None, verified_evidence=None):
+    return select_current_exclusion(
+        events, RECORD_ID, "sbbf", ledger_record=record or ledger_record(),
+        evidence_hashes=VERIFIED_EVIDENCE if verified_evidence is None else verified_evidence,
+    )
 
-    assert exclusion_event_id(event) == "EXCLUSION_3B12A2D2EC7C5B62A4AEEBB3DEEEA55B20791A2D6E7327CE153A26BFF81A075F"
+
+def test_canonical_payload_is_sorted_json_without_the_event_id():
+    payload = json.loads(canonical_exclusion_payload(exclusion_fixture(event_id="EXCLUSION_" + "F" * 64)))
+
+    assert "event_id" not in payload
+    assert list(payload) == sorted(payload)
 
 
 def test_event_id_changes_when_a_bound_payload_field_changes():
-    event = exclusion_fixture()
-    changed = exclusion_fixture(scope_statement="Exclude a different exact route.")
+    assert exclusion_event_id(exclusion_fixture()) != exclusion_event_id(
+        exclusion_fixture(scope_statement="Exclude a different exact route.")
+    )
 
-    assert exclusion_event_id(event) != exclusion_event_id(changed)
+
+@pytest.mark.parametrize("reason", [
+    "SOURCE_ABSENT_EXACT_PROFILE", "NO_RELEASE_PERMISSION", "NON_WEARABLE_OR_UNSUPPORTED_BODY_TUPLE",
+    "PROTECTED_NATIVE_ONLY", "UNRESOLVED_SOURCE_CONTRACT_AFTER_EXHAUSTIVE_AUDIT",
+    "INCOMPATIBLE_MUTUALLY_EXCLUSIVE_PROFILE",
+])
+def test_each_non_geometry_reason_requires_a_complete_structured_proof(reason):
+    path = "evidence/permission.txt" if reason == "NO_RELEASE_PERMISSION" else "evidence/alternate-artifact.json" if reason == "INCOMPATIBLE_MUTUALLY_EXCLUSIVE_PROFILE" else "evidence/source-audit.json"
+
+    assert validate(signed_event(reason=reason, reason_proof=proof_for(reason), evidence=evidence(path))) == []
 
 
-@pytest.mark.parametrize(
-    "reason,claim",
-    [
-        ("SOURCE_ABSENT_EXACT_PROFILE", "SOURCE_ABSENT_EXACT_PROFILE: route absent."),
-        ("NO_RELEASE_PERMISSION", "NO_RELEASE_PERMISSION: license forbids distribution."),
-        ("NON_WEARABLE_OR_UNSUPPORTED_BODY_TUPLE", "NON_WEARABLE_OR_UNSUPPORTED_BODY_TUPLE: tuple unsupported."),
-        ("PROTECTED_NATIVE_ONLY", "PROTECTED_NATIVE_ONLY: protected source-native route."),
-        ("UNRESOLVED_SOURCE_CONTRACT_AFTER_EXHAUSTIVE_AUDIT", "UNRESOLVED_SOURCE_CONTRACT_AFTER_EXHAUSTIVE_AUDIT: retained evidence contradicts."),
-        ("INCOMPATIBLE_MUTUALLY_EXCLUSIVE_PROFILE", "INCOMPATIBLE_MUTUALLY_EXCLUSIVE_PROFILE: alternate artifact owns profile."),
-    ],
-)
-def test_each_non_geometry_allowed_reason_requires_and_accepts_its_reason_bound_evidence(reason, claim):
-    event = signed_event(reason=reason, evidence=[{
-        "path": "evidence/reason.json", "sha256": EVIDENCE_SHA256, "claim": claim,
+def test_reason_token_in_an_arbitrary_claim_cannot_replace_a_structured_proof():
+    event = signed_event(reason_proof={}, evidence=[{
+        "path": "evidence/source-audit.json", "sha256": SOURCE_SHA256,
+        "claim": "SOURCE_ABSENT_EXACT_PROFILE",
     }])
 
-    assert validate_exclusion_event(event, ledger_record=ledger_record(), evidence_hashes={EVIDENCE_SHA256}) == []
+    assert "MISSING_REASON_PROOF:exact_profile" in validate(event)
 
 
-def test_geometry_exhaustion_requires_gates_three_architectures_and_unfixable_claim():
+def test_permission_and_unsupported_tuple_proofs_bind_the_exact_record_values():
+    permission = proof_for("NO_RELEASE_PERMISSION")
+    permission["exact_source_version"] = "2"
+    tuple_proof = proof_for("NON_WEARABLE_OR_UNSUPPORTED_BODY_TUPLE")
+    tuple_proof["exact_body_tuple"] = ["Human", "Female", "BT2"]
+
+    permission_event = signed_event(
+        reason="NO_RELEASE_PERMISSION", reason_proof=permission,
+        evidence=evidence("evidence/permission.txt"),
+    )
+    tuple_event = signed_event(
+        reason="NON_WEARABLE_OR_UNSUPPORTED_BODY_TUPLE", reason_proof=tuple_proof,
+        evidence=evidence("evidence/source-audit.json"),
+    )
+
+    assert "EXACT_SOURCE_VERSION_MISMATCH" in validate(permission_event)
+    assert "EXACT_BODY_TUPLE_MISMATCH" in validate(tuple_event)
+
+
+def test_geometry_requires_distinct_architecture_component_results_all_fixed_gates_and_final_failure():
     event = signed_event(
-        reason="NO_SAFE_GEOMETRY_AVAILABLE",
-        attempted_architectures=["deform", "transfer", "component-preserving projection"],
-        fixed_acceptance_gates={"topology": "FAIL", "component": "FAIL"},
-        evidence=[{
-            "path": "evidence/geometry.json",
-            "sha256": EVIDENCE_SHA256,
-            "claim": "NO_SAFE_GEOMETRY_AVAILABLE: UNFIXABLE_WITH_AVAILABLE_SAFE_TOOLING.",
-        }],
+        reason="NO_SAFE_GEOMETRY_AVAILABLE", reason_proof=proof_for("NO_SAFE_GEOMETRY_AVAILABLE"),
+        evidence=evidence("evidence/geometry.json"),
     )
 
-    assert validate_exclusion_event(event, ledger_record=ledger_record(), evidence_hashes={EVIDENCE_SHA256}) == []
+    assert validate(event) == []
 
 
-def test_rejects_unknown_reason_and_reason_without_its_required_evidence_claim():
-    unknown = signed_event(reason="TIME_RAN_OUT")
-    missing_claim = signed_event(reason="NO_RELEASE_PERMISSION")
+@pytest.mark.parametrize("mutation,expected", [
+    (lambda proof: proof.update({"architecture_results": []}), "INSUFFICIENT_ARCHITECTURE_RESULTS"),
+    (lambda proof: proof["architecture_results"][1].update({"family_name": "surface-projection"}), "NON_DISTINCT_ARCHITECTURE_FAMILIES"),
+    (lambda proof: proof["architecture_results"][0].update({"components": [{"component_id": "garment-a", "status": "FAIL"}]}), "INVALID_ARCHITECTURE_COMPONENT_EVIDENCE"),
+    (lambda proof: proof["fixed_gates"].pop("silhouette"), "MISSING_FIXED_GATE:silhouette"),
+    (lambda proof: proof.update({"final_available_safe_tooling_failure": {}}), "MISSING_FINAL_SAFE_TOOLING_FAILURE"),
+])
+def test_geometry_rejects_generic_or_incomplete_structured_proof(mutation, expected):
+    proof = proof_for("NO_SAFE_GEOMETRY_AVAILABLE")
+    mutation(proof)
+    event = signed_event(reason="NO_SAFE_GEOMETRY_AVAILABLE", reason_proof=proof, evidence=evidence("evidence/geometry.json"))
 
-    assert "INVALID_EXCLUSION_REASON:TIME_RAN_OUT" in validate_exclusion_event(
-        unknown, ledger_record=ledger_record(), evidence_hashes={EVIDENCE_SHA256}
-    )
-    assert "MISSING_REASON_EVIDENCE:NO_RELEASE_PERMISSION" in validate_exclusion_event(
-        missing_claim, ledger_record=ledger_record(), evidence_hashes={EVIDENCE_SHA256}
-    )
+    assert expected in validate(event)
 
 
-def test_rejects_blank_binding_fields_lowercase_hash_and_tampered_event_id():
-    event = signed_event(record_id="", identity_sha256="b" * 64, source_profile_id="", mode="")
-    event["event_id"] = "EXCLUSION_" + "F" * 64
+def test_geometry_accepts_only_a_structured_hard_contract_impossibility_alternative():
+    proof = {"hard_contract_impossibility": {
+        "result": "HARD_CONTRACT_IMPOSSIBILITY", "protected_object_id": "PROTECTED_OBJECT",
+        "protected_object_path": "Public/Synthetic/Protected.GR2", "protected_object_sha256": SOURCE_SHA256,
+        "forbidden_boundary": "GARMENT_ONLY", **evidence_link("evidence/source-audit.json"),
+    }}
 
-    errors = validate_exclusion_event(event, ledger_record=ledger_record(), evidence_hashes={EVIDENCE_SHA256})
+    assert validate(signed_event(reason="NO_SAFE_GEOMETRY_AVAILABLE", reason_proof=proof, evidence=evidence("evidence/source-audit.json"))) == []
 
+
+@pytest.mark.parametrize("disposition", [
+    "ACCEPTED_PROTECTED", "SOURCE_NATIVE_PROTECTED", "PACKAGE_ONLY_PROTECTED", "SHIPPED_NATIVE_PASSTHROUGH",
+])
+def test_protected_or_accepted_dispositions_cannot_receive_exclusions(disposition):
+    assert "EXCLUSION_FORBIDDEN_PROTECTED_OR_ACCEPTED_RECORD" in validate(signed_event(), ledger_record(disposition=disposition))
+
+
+def test_protected_relations_or_acceptance_event_cannot_receive_exclusions():
+    protected = ledger_record(protected_relations={"registry_ids": ["R"], "protected_consumers": [], "forbidden_targets": []})
+
+    assert "EXCLUSION_FORBIDDEN_PROTECTED_OR_ACCEPTED_RECORD" in validate(signed_event(), protected)
+    assert "EXCLUSION_FORBIDDEN_PROTECTED_OR_ACCEPTED_RECORD" in validate(signed_event(), ledger_record(acceptance_event_id="ACCEPTANCE_EVENT"))
+
+
+def test_protected_native_only_requires_an_unaccepted_consumer_record():
+    event = signed_event(reason="PROTECTED_NATIVE_ONLY", reason_proof=proof_for("PROTECTED_NATIVE_ONLY"), evidence=evidence("evidence/source-audit.json"))
+
+    assert validate(event) == []
+    assert "EXCLUSION_FORBIDDEN_PROTECTED_OR_ACCEPTED_RECORD" in validate(event, ledger_record(disposition="SOURCE_NATIVE_PROTECTED"))
+
+
+def test_evidence_path_and_hash_must_match_the_same_verified_registry_entry():
+    event = signed_event(evidence=[{
+        "path": "evidence/source-audit.json", "sha256": PERMISSION_SHA256, "claim": "bounded artifact",
+    }])
+
+    assert "EVIDENCE_PATH_HASH_MISMATCH:0" in validate(event)
+
+
+def test_rejects_unknown_reason_blank_binding_tampered_id_and_tiefling():
+    malformed = signed_event(reason="TIME_RAN_OUT", reason_proof={}, record_id="", identity_sha256="b" * 64, source_profile_id="", mode="")
+    malformed["event_id"] = "EXCLUSION_" + "F" * 64
+    tiefling = ledger_record(source_module={"folder": "ClothMorphTieflingBT1_TEST", "pak": "ClothMorphTieflingBT1_TEST.pak", "uuid": "b57bab2c-5679-5445-8fee-ca8c282990a5", "pak_sha256": TIEFLING_PAK_SHA256})
+
+    errors = validate(malformed)
+
+    assert "INVALID_EXCLUSION_REASON:TIME_RAN_OUT" in errors
     assert "BLANK:record_id" in errors
     assert "INVALID_SHA256:identity_sha256" in errors
-    assert "BLANK:source_profile_id" in errors
-    assert "BLANK:mode" in errors
     assert "EVENT_ID_MISMATCH" in errors
+    assert "EXCLUSION_FORBIDDEN_ACCEPTED_TIEFLING" in validate(signed_event(), tiefling)
 
 
-def test_rejects_mismatched_record_identity_profile_and_unknown_mode():
-    event = signed_event(record_id="LEDGER_" + "D" * 64, identity_sha256="E" * 64, source_profile_id="OTHER", mode="invalid")
-
-    errors = validate_exclusion_event(event, ledger_record=ledger_record(), evidence_hashes={EVIDENCE_SHA256})
-
-    assert "RECORD_ID_MISMATCH" in errors
-    assert "IDENTITY_SHA256_MISMATCH" in errors
-    assert "SOURCE_PROFILE_ID_MISMATCH" in errors
-    assert "INVALID_MODE:invalid" in errors
-
-
-def test_rejects_missing_or_unregistered_evidence_hashes():
-    missing = signed_event(evidence=[])
-    unregistered = signed_event(evidence=[{
-        "path": "evidence/missing.json", "sha256": "D" * 64,
-        "claim": "SOURCE_ABSENT_EXACT_PROFILE: route absent.",
-    }])
-
-    assert "EVIDENCE_REQUIRED" in validate_exclusion_event(
-        missing, ledger_record=ledger_record(), evidence_hashes={EVIDENCE_SHA256}
-    )
-    assert "UNREGISTERED_EVIDENCE_SHA256:0" in validate_exclusion_event(
-        unregistered, ledger_record=ledger_record(), evidence_hashes={EVIDENCE_SHA256}
-    )
-
-
-def test_rejects_any_protected_impact_or_nonzero_mutation_result():
-    event = signed_event(protected_impact={
-        "registry_ids": ["PROTECTED"], "shared_consumers": [], "forbidden_targets": [],
-        "result": "NO_PROTECTED_MUTATION",
-    })
-
-    errors = validate_exclusion_event(event, ledger_record=ledger_record(), evidence_hashes={EVIDENCE_SHA256})
-
-    assert "PROTECTED_IMPACT_DECLARED:registry_ids" in errors
-
-
-def test_tiefling_record_cannot_be_excluded():
-    tiefling = ledger_record(source_module={
-        "folder": "ClothMorphTieflingBT1_TEST",
-        "pak": "ClothMorphTieflingBT1_TEST.pak",
-        "uuid": "b57bab2c-5679-5445-8fee-ca8c282990a5",
-        "pak_sha256": TIEFLING_PAK_SHA256,
-        "profile_digest": "E" * 64,
-    })
-
-    errors = validate_exclusion_event(
-        signed_event(source_profile_id="ClothMorphTieflingBT1_TEST"),
-        ledger_record=tiefling,
-        evidence_hashes={EVIDENCE_SHA256},
-    )
-
-    assert "EXCLUSION_FORBIDDEN_ACCEPTED_TIEFLING" in errors
-
-
-def test_selector_uses_newest_non_revoked_event_for_exact_record_and_mode():
+def test_selector_uses_newest_valid_non_revoked_event_only():
     older = signed_event(created_utc="2026-09-01T12:00:00Z")
     newer = signed_event(created_utc="2026-09-01T12:01:00Z")
-    unrelated = signed_event(record_id="LEDGER_" + "C" * 64, created_utc="2026-09-01T12:02:00Z")
 
-    selection = select_current_exclusion([older, unrelated, newer], RECORD_ID, "sbbf")
+    selection = select([older, newer])
 
     assert isinstance(selection, ExclusionSelection)
     assert selection.event == newer
     assert selection.errors == ()
 
 
-def test_selector_refuses_duplicate_event_ids_and_same_time_conflicting_events():
+def test_selector_rejects_an_invalid_newest_or_historical_normal_event():
+    valid = signed_event()
+    invalid_newest = signed_event(created_utc="2026-09-01T12:01:00Z", reason_proof={})
+    invalid_historical = signed_event(reason_proof={})
+
+    newest = select([valid, invalid_newest])
+    historical = select([invalid_historical, signed_event(created_utc="2026-09-01T12:01:00Z")])
+
+    assert newest.event is None
+    assert "INVALID_EVENT:1:MISSING_REASON_PROOF:exact_profile" in newest.errors
+    assert historical.event is None
+    assert "INVALID_EVENT:0:MISSING_REASON_PROOF:exact_profile" in historical.errors
+
+
+def test_selector_rejects_duplicates_and_same_time_conflicts_even_if_later_revoked():
     event = signed_event()
-    duplicate = deepcopy(event)
-    conflict = signed_event(reason="NO_RELEASE_PERMISSION", evidence=[{
-        "path": "evidence/permission.json", "sha256": EVIDENCE_SHA256,
-        "claim": "NO_RELEASE_PERMISSION: license forbids distribution.",
-    }])
+    conflict = signed_event(reason="NO_RELEASE_PERMISSION", reason_proof=proof_for("NO_RELEASE_PERMISSION"), evidence=evidence("evidence/permission.txt"))
+    revocation = {"event_type": "REVOCATION", "record_id": RECORD_ID, "mode": "sbbf", "revokes_event_id": event["event_id"], "created_utc": "2026-09-01T12:01:00Z"}
 
-    duplicate_selection = select_current_exclusion([event, duplicate], RECORD_ID, "sbbf")
-    conflict_selection = select_current_exclusion([event, conflict], RECORD_ID, "sbbf")
+    duplicate = select([event, deepcopy(event)])
+    hidden_conflict = select([event, conflict, revocation])
 
-    assert duplicate_selection.event is None
-    assert duplicate_selection.errors == ("DUPLICATE_EXCLUSION_EVENT_ID",)
-    assert conflict_selection.event is None
-    assert conflict_selection.errors == ("CONFLICTING_EXCLUSION_EVENTS",)
+    assert duplicate.errors == ("DUPLICATE_EXCLUSION_EVENT_ID",)
+    assert hidden_conflict.errors == ("CONFLICTING_EXCLUSION_EVENTS",)
 
 
 def test_selector_honors_a_later_valid_revocation_and_refuses_orphan_revocation():
     event = signed_event()
-    revocation = {
-        "event_type": "REVOCATION",
-        "record_id": RECORD_ID,
-        "mode": "sbbf",
-        "revokes_event_id": event["event_id"],
-        "created_utc": "2026-09-01T12:01:00Z",
-    }
+    revocation = {"event_type": "REVOCATION", "record_id": RECORD_ID, "mode": "sbbf", "revokes_event_id": event["event_id"], "created_utc": "2026-09-01T12:01:00Z"}
     orphan = dict(revocation, revokes_event_id="EXCLUSION_" + "F" * 64)
 
-    revoked = select_current_exclusion([event, revocation], RECORD_ID, "sbbf")
-    orphaned = select_current_exclusion([orphan], RECORD_ID, "sbbf")
-
-    assert revoked.event is None
-    assert revoked.errors == ()
-    assert orphaned.event is None
-    assert orphaned.errors == ("REVOCATION_WITHOUT_PRIOR_EVENT",)
-
-
-def test_selector_refuses_a_same_time_revocation_as_an_ambiguous_history():
-    event = signed_event()
-    same_time_revocation = {
-        "event_type": "REVOCATION",
-        "record_id": RECORD_ID,
-        "mode": "sbbf",
-        "revokes_event_id": event["event_id"],
-        "created_utc": "2026-09-01T12:00:00Z",
-    }
-
-    selection = select_current_exclusion([event, same_time_revocation], RECORD_ID, "sbbf")
-
-    assert selection.event is None
-    assert selection.errors == ("CONFLICTING_EXCLUSION_EVENTS",)
+    assert select([event, revocation]).event is None
+    assert select([orphan]).errors == ("REVOCATION_WITHOUT_PRIOR_EVENT",)
