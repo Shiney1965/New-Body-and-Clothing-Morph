@@ -111,6 +111,10 @@ def _record_for(identity: str, digest: str, fields: CanonicalIdentityFields, obs
     creation = {"kind": fields.creation_path_kind, "root_uuid": fields.root_template_uuid, "stats_entry": fields.stats_entry, "inheritance_chain": ["UNKNOWN_INHERITANCE_NODE"], "chain_digest": fields.inheritance_digest} | selected["creation_path"][0]
     classification = {"effective_slot": fields.effective_slot, "body_content": "UNKNOWN_BODY_CONTENT", "garment_family": "UNKNOWN_GARMENT_FAMILY", "class_id": "UNKNOWN_CLASS_ID", "class_contract_digest": "UNKNOWN_CLASS_CONTRACT_DIGEST"} | selected["classification"][0]
     source_route = {"ordered_vrs": list(fields.ordered_source_vrs), "ordered_paths": ["UNKNOWN_SOURCE_PATH"], "ordered_file_hashes": ["UNKNOWN_SOURCE_FILE_HASH"], "component_contract_digest": fields.component_contract_digest} | selected["source_route"][0]
+    source_module.update({"uuid": fields.source_module_uuid, "profile_digest": fields.source_profile_digest})
+    creation.update({"kind": fields.creation_path_kind, "root_uuid": fields.root_template_uuid, "stats_entry": fields.stats_entry, "chain_digest": fields.inheritance_digest})
+    classification["effective_slot"] = fields.effective_slot
+    source_route.update({"ordered_vrs": list(fields.ordered_source_vrs), "component_contract_digest": fields.component_contract_digest})
     protected = {"registry_ids": ["UNKNOWN_PROTECTED_REGISTRY"], "protected_consumers": ["UNKNOWN_PROTECTED_CONSUMER"], "shared_assets": ["UNKNOWN_SHARED_ASSET"], "forbidden_targets": ["UNKNOWN_FORBIDDEN_TARGET"]} | selected["protected_relations"][0]
     transformation = {"eligibility": "UNASSESSED_ELIGIBILITY", "strategy": "UNASSESSED_STRATEGY", "allowed_components": ["UNKNOWN_ALLOWED_COMPONENT"], "allowed_channels": ["UNKNOWN_ALLOWED_CHANNEL"], "exception_id": "UNKNOWN_EXCEPTION_ID", **selected["transformation"][0], "payload_hash": payload_hash}
     gates = {name: "UNASSESSED_GATE" for name in _GATES} | selected["gates"][0]
