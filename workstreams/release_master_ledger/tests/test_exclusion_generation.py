@@ -253,6 +253,40 @@ def test_coordinated_event_or_file_provenance_forgery_fails_against_independent_
 
 
 @pytest.mark.parametrize(
+    "mutate",
+    [
+        lambda event: event.update({"unexpected": "forbidden"}),
+        lambda event: event.pop("reason_proof"),
+        lambda event: event["evidence"][0].update({"unexpected": "forbidden"}),
+        lambda event: event["protected_impact"].update({"registry_ids": [1]}),
+        lambda event: event["reason_proof"].update({"unexpected": "forbidden"}),
+        lambda event: event.update({"attempted_architectures": [{"anything": "goes"}]}),
+        lambda event: event.update({"fixed_acceptance_gates": {"anything": "goes"}}),
+    ],
+)
+def test_terminal_schema_contract_rejects_unconstrained_nested_values(mutate):
+    full_record = _full_record()
+    event = _event_for_record(full_record)
+    discovered = _discovered(event)
+    attached = _attach_terminal_exclusions(
+        (full_record,), (discovered,), {"evidence/source-audit.json": "D" * 64},
+    )
+    document = {"schema_version": 1, "summary": {"record_count": 1}, "blockers": [], "records": [attached[0].to_dict()]}
+    terminal_event = document["records"][0]["terminal_exclusion"]["event"]
+    mutate(terminal_event)
+    terminal_event["event_id"] = exclusion_event_id(terminal_event)
+    document["records"][0]["terminal_exclusion"]["event_file"]["canonical_event_sha256"] = sha256_text(canonical_json(terminal_event))
+
+    errors = validate_generated_ledger(
+        document,
+        verified_evidence={"evidence/source-audit.json": "D" * 64},
+        discovered_event_files={discovered.relative_path: discovered.sha256},
+    )
+
+    assert any(error.startswith("RECORD[0]:TERMINAL_EXCLUSION_SCHEMA:") for error in errors)
+
+
+@pytest.mark.parametrize(
     ("path", "value"),
     [
         (("event", "reason"), "NOT_A_REASON"),

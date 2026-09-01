@@ -174,49 +174,7 @@
               "additionalProperties": false,
               "required": ["event", "event_file"],
               "properties": {
-                "event": {
-                  "type": "object",
-                  "required": [
-                    "schema", "schema_version", "event_id", "record_id", "identity_sha256",
-                    "source_profile_id", "mode", "reason", "scope_statement",
-                    "attempted_architectures", "fixed_acceptance_gates", "evidence",
-                    "protected_impact", "next_project_if_reopened", "approved_by",
-                    "approved_reason", "created_utc"
-                  ],
-                  "properties": {
-                    "schema": {"const": "clothmorph.terminal-exclusion"},
-                    "schema_version": {"type": "integer", "const": 1},
-                    "event_id": {"type": "string", "pattern": "^EXCLUSION_[0-9A-F]{64}$"},
-                    "record_id": {"type": "string", "pattern": "^LEDGER_[0-9A-F]{64}$"},
-                    "identity_sha256": {"type": "string", "pattern": "^[0-9A-F]{64}$"},
-                    "source_profile_id": {"$ref": "#/$defs/text"},
-                    "mode": {"enum": ["vanilla", "sbbf", "bcb", "external", "source"]},
-                    "reason": {"enum": [
-                      "SOURCE_ABSENT_EXACT_PROFILE", "NO_RELEASE_PERMISSION",
-                      "NON_WEARABLE_OR_UNSUPPORTED_BODY_TUPLE", "PROTECTED_NATIVE_ONLY",
-                      "NO_SAFE_GEOMETRY_AVAILABLE", "UNRESOLVED_SOURCE_CONTRACT_AFTER_EXHAUSTIVE_AUDIT",
-                      "INCOMPATIBLE_MUTUALLY_EXCLUSIVE_PROFILE"
-                    ]},
-                    "scope_statement": {"$ref": "#/$defs/text"},
-                    "attempted_architectures": {"type": "array"},
-                    "fixed_acceptance_gates": {"type": "object"},
-                    "evidence": {"type": "array", "minItems": 1, "items": {
-                      "type": "object", "required": ["path", "sha256", "claim"],
-                      "properties": {
-                        "path": {"$ref": "#/$defs/text"},
-                        "sha256": {"type": "string", "pattern": "^[0-9A-F]{64}$"},
-                        "claim": {"$ref": "#/$defs/text"}
-                      }
-                    }},
-                    "protected_impact": {"type": "object", "required": [
-                      "registry_ids", "shared_consumers", "forbidden_targets", "result"
-                    ], "properties": {"result": {"const": "NO_PROTECTED_MUTATION"}}},
-                    "next_project_if_reopened": {"$ref": "#/$defs/text"},
-                    "approved_by": {"$ref": "#/$defs/text"},
-                    "approved_reason": {"$ref": "#/$defs/text"},
-                    "created_utc": {"type": "string", "pattern": "Z$"}
-                  }
-                },
+                "event": {"$ref": "#/$defs/terminal_exclusion_event"},
                 "event_file": {
                   "type": "object",
                   "additionalProperties": false,
@@ -232,6 +190,64 @@
           ]
         }
       }
+    },
+    "exclusion_hash": {"type": "string", "pattern": "^[0-9A-F]{64}$"},
+    "exclusion_evidence": {
+      "type": "object", "additionalProperties": false,
+      "required": ["path", "sha256", "claim"],
+      "properties": {"path": {"$ref": "#/$defs/text"}, "sha256": {"$ref": "#/$defs/exclusion_hash"}, "claim": {"$ref": "#/$defs/text"}}
+    },
+    "exclusion_link": {
+      "type": "object", "additionalProperties": false,
+      "required": ["result", "evidence_path", "evidence_sha256"],
+      "properties": {"result": {"$ref": "#/$defs/text"}, "evidence_path": {"$ref": "#/$defs/text"}, "evidence_sha256": {"$ref": "#/$defs/exclusion_hash"}}
+    },
+    "exclusion_profile": {
+      "type": "object", "additionalProperties": false, "required": ["id", "version", "sha256"],
+      "properties": {"id": {"$ref": "#/$defs/text"}, "version": {"$ref": "#/$defs/text"}, "sha256": {"$ref": "#/$defs/exclusion_hash"}}
+    },
+    "exclusion_component": {
+      "type": "object", "additionalProperties": false,
+      "required": ["component_id", "status", "evidence_path", "evidence_sha256"],
+      "properties": {"component_id": {"$ref": "#/$defs/text"}, "status": {"enum": ["FAIL", "BLOCKED"]}, "evidence_path": {"$ref": "#/$defs/text"}, "evidence_sha256": {"$ref": "#/$defs/exclusion_hash"}}
+    },
+    "exclusion_architecture": {
+      "type": "object", "additionalProperties": false,
+      "required": ["method_id", "method_family", "implementation_path", "implementation_sha256", "candidate_count", "status", "components"],
+      "properties": {"method_id": {"$ref": "#/$defs/text"}, "method_family": {"$ref": "#/$defs/text"}, "implementation_path": {"$ref": "#/$defs/text"}, "implementation_sha256": {"$ref": "#/$defs/exclusion_hash"}, "candidate_count": {"type": "integer", "minimum": 1}, "status": {"const": "FAILED_FIXED_GATES"}, "components": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/exclusion_component"}}}
+    },
+    "exclusion_fixed_gate": {"$ref": "#/$defs/exclusion_link"},
+    "exclusion_fixed_gates": {
+      "type": "object", "additionalProperties": false,
+      "required": ["topology", "component", "material", "skin", "clearance", "silhouette", "deterministic_readback", "nontriviality"],
+      "properties": {"topology": {"$ref": "#/$defs/exclusion_fixed_gate"}, "component": {"$ref": "#/$defs/exclusion_fixed_gate"}, "material": {"$ref": "#/$defs/exclusion_fixed_gate"}, "skin": {"$ref": "#/$defs/exclusion_fixed_gate"}, "clearance": {"$ref": "#/$defs/exclusion_fixed_gate"}, "silhouette": {"$ref": "#/$defs/exclusion_fixed_gate"}, "deterministic_readback": {"$ref": "#/$defs/exclusion_fixed_gate"}, "nontriviality": {"$ref": "#/$defs/exclusion_fixed_gate"}}
+    },
+    "proof_source_absent": {
+      "type": "object", "additionalProperties": false, "required": ["exact_profile", "complete_source_inventory", "zero_route_result", "anti_omission"],
+      "properties": {"exact_profile": {"$ref": "#/$defs/exclusion_profile"}, "complete_source_inventory": {"$ref": "#/$defs/exclusion_link"}, "zero_route_result": {"$ref": "#/$defs/exclusion_link"}, "anti_omission": {"$ref": "#/$defs/exclusion_link"}}
+    },
+    "proof_permission": {
+      "type": "object", "additionalProperties": false, "required": ["permission_text", "permission_result", "requested_operations", "date", "credit", "derivative_scope", "redistribution_scope", "exact_source_version"],
+      "properties": {"permission_text": {"type": "object", "additionalProperties": false, "required": ["path", "sha256"], "properties": {"path": {"$ref": "#/$defs/text"}, "sha256": {"$ref": "#/$defs/exclusion_hash"}}}, "permission_result": {"const": "PROHIBITED"}, "requested_operations": {"type": "array", "minItems": 1, "items": {"enum": ["DERIVATIVE", "REDISTRIBUTION"]}}, "date": {"$ref": "#/$defs/text"}, "credit": {"$ref": "#/$defs/text"}, "derivative_scope": {"enum": ["NO_DERIVATIVES", "DERIVATIVE_DENIED"]}, "redistribution_scope": {"enum": ["NO_REDISTRIBUTION", "REDISTRIBUTION_DENIED"]}, "exact_source_version": {"$ref": "#/$defs/text"}}
+    },
+    "proof_nonwearable": {"type": "object", "additionalProperties": false, "required": ["exact_slot", "exact_body_tuple", "source_contract", "release_scope_mismatch"], "properties": {"exact_slot": {"$ref": "#/$defs/text"}, "exact_body_tuple": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/text"}}, "source_contract": {"$ref": "#/$defs/text"}, "release_scope_mismatch": {"$ref": "#/$defs/text"}}},
+    "proof_protected_native": {"type": "object", "additionalProperties": false, "required": ["protected_registry_id", "protected_consumer", "protected_route", "protected_path", "protected_sha256", "forbidden_target", "new_target"], "properties": {"protected_registry_id": {"$ref": "#/$defs/text"}, "protected_consumer": {"$ref": "#/$defs/text"}, "protected_route": {"$ref": "#/$defs/text"}, "protected_path": {"$ref": "#/$defs/text"}, "protected_sha256": {"$ref": "#/$defs/exclusion_hash"}, "forbidden_target": {"$ref": "#/$defs/text"}, "new_target": {"$ref": "#/$defs/text"}}},
+    "proof_unresolved_source": {"type": "object", "additionalProperties": false, "required": ["exact_profile", "searched_contracts", "search_result", "anti_omission", "anti_omission_pass"], "properties": {"exact_profile": {"$ref": "#/$defs/exclusion_profile"}, "searched_contracts": {"type": "object", "additionalProperties": false, "required": ["root_templates", "named_stats", "inheritance", "visual_banks", "ordered_components", "provider_maps", "uuid_path_hash_aliases"], "properties": {"root_templates": {"$ref": "#/$defs/exclusion_link"}, "named_stats": {"$ref": "#/$defs/exclusion_link"}, "inheritance": {"$ref": "#/$defs/exclusion_link"}, "visual_banks": {"$ref": "#/$defs/exclusion_link"}, "ordered_components": {"$ref": "#/$defs/exclusion_link"}, "provider_maps": {"$ref": "#/$defs/exclusion_link"}, "uuid_path_hash_aliases": {"$ref": "#/$defs/exclusion_link"}}}, "search_result": {"$ref": "#/$defs/exclusion_link"}, "anti_omission": {"$ref": "#/$defs/exclusion_link"}, "anti_omission_pass": {"const": true}}},
+    "proof_geometry": {"type": "object", "additionalProperties": false, "required": ["architecture_results", "fixed_gates"], "properties": {"architecture_results": {"type": "array", "items": {"$ref": "#/$defs/exclusion_architecture"}}, "fixed_gates": {"oneOf": [{"type": "object", "maxProperties": 0}, {"$ref": "#/$defs/exclusion_fixed_gates"}]}, "final_available_safe_tooling_failure": {"$ref": "#/$defs/exclusion_link"}, "hard_contract_impossibility": {"type": "object", "additionalProperties": false, "required": ["result", "protected_object_id", "protected_object_path", "protected_object_sha256", "boundary_contract"], "properties": {"result": {"const": "HARD_CONTRACT_IMPOSSIBILITY"}, "protected_object_id": {"$ref": "#/$defs/text"}, "protected_object_path": {"$ref": "#/$defs/text"}, "protected_object_sha256": {"$ref": "#/$defs/exclusion_hash"}, "boundary_contract": {"type": "object", "additionalProperties": false, "required": ["boundary_type", "record_field", "record_path", "record_value", "evidence_path", "evidence_sha256"], "properties": {"boundary_type": {"enum": ["FORBIDDEN_TARGET", "SHARED_ASSET", "COMPONENT", "MATERIAL", "BODY", "OBJECT"]}, "record_field": {"$ref": "#/$defs/text"}, "record_path": {"$ref": "#/$defs/text"}, "record_value": {"$ref": "#/$defs/text"}, "evidence_path": {"$ref": "#/$defs/text"}, "evidence_sha256": {"$ref": "#/$defs/exclusion_hash"}}}}}}},
+    "proof_mutually_exclusive": {"type": "object", "additionalProperties": false, "required": ["selected_profile_id", "alternate_profile_id", "forbidden_module_relationship", "alternate_artifact"], "properties": {"selected_profile_id": {"$ref": "#/$defs/text"}, "alternate_profile_id": {"$ref": "#/$defs/text"}, "forbidden_module_relationship": {"const": "MUTUALLY_EXCLUSIVE"}, "alternate_artifact": {"type": "object", "additionalProperties": false, "required": ["path", "sha256"], "properties": {"path": {"$ref": "#/$defs/text"}, "sha256": {"$ref": "#/$defs/exclusion_hash"}}}}},
+    "terminal_exclusion_event": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema", "schema_version", "event_id", "record_id", "identity_sha256", "source_profile_id", "mode", "reason", "reason_proof", "scope_statement", "attempted_architectures", "fixed_acceptance_gates", "evidence", "protected_impact", "next_project_if_reopened", "approved_by", "approved_reason", "created_utc"],
+      "properties": {"schema": {"const": "clothmorph.terminal-exclusion"}, "schema_version": {"type": "integer", "const": 1}, "event_id": {"type": "string", "pattern": "^EXCLUSION_[0-9A-F]{64}$"}, "record_id": {"type": "string", "pattern": "^LEDGER_[0-9A-F]{64}$"}, "identity_sha256": {"$ref": "#/$defs/exclusion_hash"}, "source_profile_id": {"$ref": "#/$defs/text"}, "mode": {"enum": ["vanilla", "sbbf", "bcb", "external", "source"]}, "reason": {"enum": ["SOURCE_ABSENT_EXACT_PROFILE", "NO_RELEASE_PERMISSION", "NON_WEARABLE_OR_UNSUPPORTED_BODY_TUPLE", "PROTECTED_NATIVE_ONLY", "NO_SAFE_GEOMETRY_AVAILABLE", "UNRESOLVED_SOURCE_CONTRACT_AFTER_EXHAUSTIVE_AUDIT", "INCOMPATIBLE_MUTUALLY_EXCLUSIVE_PROFILE"]}, "reason_proof": {"type": "object"}, "scope_statement": {"$ref": "#/$defs/text"}, "attempted_architectures": {"type": "array", "items": {"$ref": "#/$defs/exclusion_architecture"}}, "fixed_acceptance_gates": {"oneOf": [{"type": "object", "maxProperties": 0}, {"$ref": "#/$defs/exclusion_fixed_gates"}]}, "evidence": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/exclusion_evidence"}}, "protected_impact": {"type": "object", "additionalProperties": false, "required": ["registry_ids", "shared_consumers", "forbidden_targets", "result"], "properties": {"registry_ids": {"type": "array", "items": {"$ref": "#/$defs/text"}}, "shared_consumers": {"type": "array", "items": {"$ref": "#/$defs/text"}}, "forbidden_targets": {"type": "array", "items": {"$ref": "#/$defs/text"}}, "result": {"const": "NO_PROTECTED_MUTATION"}}}, "next_project_if_reopened": {"$ref": "#/$defs/text"}, "approved_by": {"$ref": "#/$defs/text"}, "approved_reason": {"$ref": "#/$defs/text"}, "created_utc": {"type": "string", "format": "date-time", "pattern": "Z$"}, "event_type": {"const": "EXCLUSION"}},
+      "allOf": [
+        {"if": {"properties": {"reason": {"const": "SOURCE_ABSENT_EXACT_PROFILE"}}}, "then": {"properties": {"reason_proof": {"$ref": "#/$defs/proof_source_absent"}, "attempted_architectures": {"maxItems": 0}, "fixed_acceptance_gates": {"maxProperties": 0}}}},
+        {"if": {"properties": {"reason": {"const": "NO_RELEASE_PERMISSION"}}}, "then": {"properties": {"reason_proof": {"$ref": "#/$defs/proof_permission"}, "attempted_architectures": {"maxItems": 0}, "fixed_acceptance_gates": {"maxProperties": 0}}}},
+        {"if": {"properties": {"reason": {"const": "NON_WEARABLE_OR_UNSUPPORTED_BODY_TUPLE"}}}, "then": {"properties": {"reason_proof": {"$ref": "#/$defs/proof_nonwearable"}, "attempted_architectures": {"maxItems": 0}, "fixed_acceptance_gates": {"maxProperties": 0}}}},
+        {"if": {"properties": {"reason": {"const": "PROTECTED_NATIVE_ONLY"}}}, "then": {"properties": {"reason_proof": {"$ref": "#/$defs/proof_protected_native"}, "attempted_architectures": {"maxItems": 0}, "fixed_acceptance_gates": {"maxProperties": 0}}}},
+        {"if": {"properties": {"reason": {"const": "UNRESOLVED_SOURCE_CONTRACT_AFTER_EXHAUSTIVE_AUDIT"}}}, "then": {"properties": {"reason_proof": {"$ref": "#/$defs/proof_unresolved_source"}, "attempted_architectures": {"maxItems": 0}, "fixed_acceptance_gates": {"maxProperties": 0}}}},
+        {"if": {"properties": {"reason": {"const": "NO_SAFE_GEOMETRY_AVAILABLE"}}}, "then": {"properties": {"reason_proof": {"$ref": "#/$defs/proof_geometry"}, "attempted_architectures": {"items": {"$ref": "#/$defs/exclusion_architecture"}}, "fixed_acceptance_gates": {"oneOf": [{"type": "object", "maxProperties": 0}, {"$ref": "#/$defs/exclusion_fixed_gates"}]}}}},
+        {"if": {"properties": {"reason": {"const": "INCOMPATIBLE_MUTUALLY_EXCLUSIVE_PROFILE"}}}, "then": {"properties": {"reason_proof": {"$ref": "#/$defs/proof_mutually_exclusive"}, "attempted_architectures": {"maxItems": 0}, "fixed_acceptance_gates": {"maxProperties": 0}}}}
+      ]
     }
   }
 }
