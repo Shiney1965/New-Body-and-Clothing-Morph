@@ -1,6 +1,17 @@
+import pytest
+
 from workstreams.release_master_ledger.audit import InventorySets, build_completeness_audit
-from workstreams.release_master_ledger.models import CanonicalIdentityFields, Observation
-from workstreams.release_master_ledger.reconcile import reconcile_observations
+from workstreams.release_master_ledger.models import CanonicalIdentityFields, LedgerRecord, Observation
+from workstreams.release_master_ledger.reconcile import ReconciliationResult, reconcile_observations
+from workstreams.release_master_ledger.tests.test_exclusions import (
+    IDENTITY_SHA256,
+    RECORD_ID,
+    VERIFIED_EVIDENCE,
+    exclusion_event_id,
+    ledger_record,
+    signed_event,
+)
+from workstreams.release_master_ledger.tests.test_validation import complete_record_fixture
 
 
 def observation(observation_id, *, root_template_uuid="22222222-2222-2222-2222-222222222222", disposition="DEFERRED_WITH_CAUSE", release_blocking=True):
@@ -36,6 +47,47 @@ def inventories(**overrides):
     }
     values.update(overrides)
     return InventorySets(**values)
+
+
+def terminal_exclusion_record(event, **overrides):
+    """Build one complete record whose terminal state claims this exact event."""
+    data = complete_record_fixture()
+    data.update({
+        "record_id": RECORD_ID,
+        "identity_sha256": IDENTITY_SHA256,
+        "source_module": ledger_record()["source_module"],
+        "permission": ledger_record()["permission"],
+        "classification": ledger_record()["classification"],
+        "body_tuple": ledger_record()["body_tuple"],
+        "source_route": ledger_record()["source_route"],
+        "protected_relations": ledger_record()["protected_relations"],
+        "disposition": "OUT_OF_SCOPE_WITH_PROOF",
+        "blocker_codes": [],
+        "release_blocking": False,
+        "shipped_package_id": "UNKNOWN_SHIPPED_PACKAGE",
+        "terminal_exclusion": {
+            "event": event,
+            "event_file": {
+                "relative_path": "history/synthetic.json",
+                "sha256": "A" * 64,
+                "canonical_event_sha256": "B" * 64,
+            },
+        },
+    })
+    data.update(overrides)
+    return LedgerRecord(**data)
+
+
+def audit_terminal_event(record, events, *, evidence=VERIFIED_EVIDENCE):
+    result = ReconciliationResult(
+        records=(record,), observation_to_record={}, conflicts=(),
+    )
+    return build_completeness_audit(
+        result,
+        inventories(),
+        exclusion_events=events,
+        verified_evidence=evidence,
+    )
 
 
 def test_missing_source_observation_is_reported_sorted():
@@ -143,3 +195,95 @@ def test_profile_ids_are_emitted_for_traceability():
     assert audit["required_source_profiles"] == ["profile-a", "profile-b"]
     assert audit["complete_source_profiles"] == ["profile-a"]
     assert audit["missing_source_profiles"] == ["profile-b"]
+
+
+def test_current_valid_terminal_exclusion_is_audited_and_no_longer_nonterminal():
+    event = signed_event()
+
+    audit = audit_terminal_event(terminal_exclusion_record(event), (event,))
+
+    assert audit["excluded_with_proof"] == [RECORD_ID]
+    assert audit["exclusion_validation_failures"] == []
+    assert audit["excluded_but_packaged"] == []
+    assert audit["in_scope_nonterminal"] == []
+
+
+@pytest.mark.parametrize(
+    ("mutate", "event_history", "record_overrides"),
+    [
+        pytest.param(
+            lambda event: event["evidence"].clear(),
+            lambda event: (event,),
+            {},
+            id="missing-evidence",
+        ),
+        pytest.param(
+            lambda event: None,
+            lambda event: (),
+            {"terminal_exclusion": None},
+            id="missing-event",
+        ),
+        pytest.param(
+            lambda event: event["protected_impact"].update({"registry_ids": ["PROTECTED"]}),
+            lambda event: (event,),
+            {},
+            id="protected-impact",
+        ),
+        pytest.param(
+            lambda event: event.update({"identity_sha256": "C" * 64}),
+            lambda event: (event,),
+            {},
+            id="identity-mismatch",
+        ),
+        pytest.param(
+            lambda event: event.update({"reason": "TIME_RAN_OUT", "reason_proof": {}}),
+            lambda event: (event,),
+            {},
+            id="forbidden-reason",
+        ),
+        pytest.param(
+            lambda event: None,
+            lambda event: (
+                event,
+                signed_event(created_utc="2026-09-01T12:01:00Z"),
+            ),
+            {},
+            id="stale-event",
+        ),
+        pytest.param(
+            lambda event: None,
+            lambda event: (event,),
+            {"release_blocking": True},
+            id="release-blocking-still-true",
+        ),
+    ],
+)
+def test_invalid_or_stale_terminal_exclusion_remains_nonterminal(
+    mutate, event_history, record_overrides,
+):
+    event = signed_event()
+    mutate(event)
+    event["event_id"] = exclusion_event_id(event)
+
+    audit = audit_terminal_event(
+        terminal_exclusion_record(event, **record_overrides), event_history(event),
+    )
+
+    assert audit["excluded_with_proof"] == []
+    assert audit["exclusion_validation_failures"] == [RECORD_ID]
+    assert audit["excluded_but_packaged"] == []
+    assert audit["in_scope_nonterminal"] == [RECORD_ID]
+
+
+def test_packaged_terminal_exclusion_is_explicitly_blocking():
+    event = signed_event()
+    record = terminal_exclusion_record(
+        event, shipped_package_id="PACKAGE_SHA256:" + "C" * 64,
+    )
+
+    audit = audit_terminal_event(record, (event,))
+
+    assert audit["excluded_with_proof"] == []
+    assert audit["exclusion_validation_failures"] == []
+    assert audit["excluded_but_packaged"] == [RECORD_ID]
+    assert audit["in_scope_nonterminal"] == [RECORD_ID]

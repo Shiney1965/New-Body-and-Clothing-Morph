@@ -334,6 +334,9 @@ def _markdown(ledger: Mapping[str, object], audit: Mapping[str, object]) -> str:
         "packaged_without_ledger",
         "ledger_without_source",
         "in_scope_nonterminal",
+        "excluded_with_proof",
+        "exclusion_validation_failures",
+        "excluded_but_packaged",
     ):
         values = audit[name]
         assert isinstance(values, list)
@@ -406,7 +409,10 @@ def generate(config: LocalConfiguration) -> GenerationResult:
         if input_.kind.upper() == "SUPPORTING_EVIDENCE"
     )
     audit = build_completeness_audit(
-        replace(reconciliation, records=records), inventories.to_audit_sets()
+        replace(reconciliation, records=records),
+        inventories.to_audit_sets(),
+        exclusion_events=tuple(item.event for item in discovered_events),
+        verified_evidence=verified_exclusion_evidence,
     )
     audit["registered_inventories"] = {
         "packaged_records": sorted(inventories.packaged_records),
@@ -417,6 +423,7 @@ def generate(config: LocalConfiguration) -> GenerationResult:
     for name in (
         "missing_from_ledger", "duplicate_identity", "unreferenced_prior_evidence",
         "packaged_without_ledger", "ledger_without_source", "in_scope_nonterminal",
+        "excluded_with_proof", "exclusion_validation_failures", "excluded_but_packaged",
     ):
         audit[name] = sorted(audit[name])
     ledger = _ledger_payload(records, observations, verified_inputs)

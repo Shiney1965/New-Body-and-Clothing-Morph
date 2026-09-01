@@ -2,7 +2,7 @@
 
 ## TL/DR
 
-The current hash-locked offline evidence generates deterministically into `3,173` observations and `3,173` master-ledger records. The generated audit reports `source_complete=false` and `release_complete=false`: all `14` required source profiles are missing, five prior-evidence inputs are not yet joined to concrete records, `208` emitted records have no independently inventoried source observation, and all `3,173` records remain release-blocking/nonterminal.
+The current hash-locked offline evidence generates deterministically into `3,173` observations and `3,173` master-ledger records. The generated audit reports `source_complete=false` and `release_complete=false`: all `14` required source profiles are missing, five prior-evidence inputs are not yet joined to concrete records, `208` emitted records have no independently inventoried source observation, and all `3,173` records remain release-blocking/nonterminal. There are currently no approved exclusion events: `excluded_with_proof=0`, `exclusion_validation_failures=0`, and `excluded_but_packaged=0`.
 
 The protected registry reconciles exactly `32` immutable controls: `25` `GAMEPLAY_PASS`, `1` `USER_ACCEPTED_RESIDUAL`, `2` `PROTECTED_SOURCE_NATIVE`, and `4` `PROTECTED_SOURCE_NATIVE_PACKAGE_ONLY`. The four package-only Recluse controls remain gameplay-unproven and were not promoted.
 
@@ -12,9 +12,9 @@ These artifacts are local evidence outputs under ignored `workstreams/release_ma
 
 | Artifact | Bytes | SHA-256 |
 |---|---:|---|
-| `REMAINING_TARGET_MASTER_LEDGER.json` | `24,068,256` | `C18F407F5BD8CB3820F39F5C7F6701909D4574C3ACA7A4BD93F901737F16161E` |
-| `REMAINING_TARGET_MASTER_LEDGER.md` | `480` | `4E206E34C99D47DE2AD3DDEB3B9D5E79F734CD45876DDF96EF965F39AA296998` |
-| `RELEASE_LEDGER_COMPLETENESS_AUDIT.json` | `790,036` | `89661C991061F09F0CDEA93B7843594069B258F4322628ACDF667D333371B92A` |
+| `REMAINING_TARGET_MASTER_LEDGER.json` | `24,176,138` | `EDD9FA04CA7717C24B1F6D2885F6ECB53AC85920DD6C8701E137CB7C1A90867C` |
+| `REMAINING_TARGET_MASTER_LEDGER.md` | `579` | `A8DF93F5DE4FC5BC804AE01220571B7A80F40984ABA089A809CCD78AF99DFEFB` |
+| `RELEASE_LEDGER_COMPLETENESS_AUDIT.json` | `790,135` | `5EADC427478A8559CE0260488211E52CCC8068AE0486EAADAD496630193C834A` |
 | `EVIDENCE_INPUT_MANIFEST.json` | `7,057` | `E3E65616A94D4B9AB961CA4AF3013721878232548F3571CE018F97F67DF68631` |
 
 Two consecutive CLI generations produced these same four hashes.
@@ -36,6 +36,9 @@ Two consecutive CLI generations produced these same four hashes.
 - `packaged_without_ledger`: `0`.
 - `ledger_without_source`: `208`.
 - `in_scope_nonterminal`: `3,173`.
+- `excluded_with_proof`: `0`.
+- `exclusion_validation_failures`: `0`.
+- `excluded_but_packaged`: `0`.
 - Required source profiles: `14`.
 - Complete source profiles: `0`.
 - Missing source profiles: `14`, including `BASE_GAME_SOURCE_PROFILE_UNRESOLVED`.

@@ -15,6 +15,9 @@ from workstreams.release_master_ledger.validation import validate_generated_ledg
 
 CONFIG_PATH = WORKSTREAM_ROOT / "local" / "config.json"
 AUDIT_SET_NAMES = {
+    "excluded_but_packaged",
+    "excluded_with_proof",
+    "exclusion_validation_failures",
     "missing_from_ledger",
     "duplicate_identity",
     "unreferenced_prior_evidence",
@@ -159,6 +162,9 @@ def test_current_hash_locked_evidence_generates_truthful_master_ledger():
     assert audit["duplicate_identity"] == []
     assert len(audit["ledger_without_source"]) == 208
     assert len(audit["in_scope_nonterminal"]) == 3173
+    assert audit["excluded_with_proof"] == []
+    assert audit["exclusion_validation_failures"] == []
+    assert audit["excluded_but_packaged"] == []
 
     assert manifest["inputs"] and len(manifest["inputs"]) == 16
     assert validate_generated_ledger(ledger) == []
