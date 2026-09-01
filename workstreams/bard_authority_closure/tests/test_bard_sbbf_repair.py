@@ -431,6 +431,157 @@ def _test_pair_digest(positions: dict[str, dict[str, np.ndarray]]) -> str:
     return digest.hexdigest().upper()
 
 
+def _first_passing_496_pair():
+    base, thong, contract, context = _passing_pair()
+    first = BASE_STREAMS[0]
+    source = np.asarray(
+        [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]],
+        dtype="<f4",
+    )
+    retained = np.asarray(
+        [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 0.14667, 0.0]],
+        dtype="<f4",
+    )
+    faces = np.asarray([[0, 1, 2]], dtype="<u4")
+    canonical = solve_local_area_constrained_positions(
+        source,
+        retained,
+        faces,
+        stream_identity=base[first].stream_identity,
+    )
+    assert canonical.status == PASS_REPAIRED
+    assert canonical.blend_step == 496
+    contexts = list(context.base_streams)
+    contexts[0] = build_stream_revalidation_context(
+        source,
+        retained,
+        faces,
+        base[first].stream_identity,
+    )
+    return (
+        base,
+        thong,
+        contract,
+        replace(context, base_streams=tuple(contexts)),
+        canonical,
+        source,
+        retained,
+        faces,
+    )
+
+
+@pytest.mark.parametrize("claimed_step", (496, 497))
+def test_pair_and_writer_reject_next_grid_positions_when_496_is_canonical(
+    tmp_path: Path,
+    claimed_step: int,
+):
+    base, thong, contract, context, canonical, source, retained, faces = _first_passing_496_pair()
+    first = BASE_STREAMS[0]
+    step_497_positions = retained.copy()
+    step_497_positions[:] = (
+        retained + (497.0 / 4096.0) * (source - retained)
+    ).astype("<f4")
+    forged_stream = replace(
+        canonical,
+        positions=step_497_positions,
+        post_metrics=topology_metrics(source, step_497_positions, faces),
+        outside_gate=verify_outside_region_exact(retained, step_497_positions, (0, 1, 2)),
+        blend_step=claimed_step,
+        position_sha256=hashlib.sha256(
+            step_497_positions.tobytes(order="C")
+        ).hexdigest().upper(),
+    )
+    changed = dict(base)
+    changed[first] = forged_stream
+
+    pair_result = complete_sbbf_pair(changed, thong, contract, context)
+
+    assert pair_result.status == "METHOD_SPECIFIC_EXHAUSTION"
+    assert pair_result.exhaustion_reason == f"SBBF_STREAM_REVALIDATION_FAILURE:{first}"
+    assert pair_result.candidate_positions is None
+
+    valid = complete_sbbf_pair(base, thong, contract, _passing_pair()[3])
+    forged_positions = {
+        "base": dict(valid.candidate_positions["base"]),
+        "thong": dict(valid.candidate_positions["thong"]),
+    }
+    forged_positions["base"][first] = step_497_positions
+    forged_complete = replace(
+        valid,
+        base_results=changed,
+        revalidation_context=context,
+        candidate_positions=forged_positions,
+        position_digest=_test_pair_digest(forged_positions),
+    )
+    output = tmp_path / f"next-grid-{claimed_step}"
+
+    with pytest.raises(ValueError, match="OFFLINE_RESULT_NOT_EMITTABLE"):
+        write_offline_result(output, forged_complete)
+
+    assert not output.exists()
+
+
+def test_real_pair_and_writer_reject_step_497_when_sleeve_first_passes_at_496(
+    tmp_path: Path,
+):
+    base_inputs, thong_input, pair_contract, context, _ = _real_sbbf_inputs()
+    base_results = {
+        name: _solve_real_input(base_inputs[name])
+        for name in BASE_STREAMS
+    }
+    thong_result = _solve_real_input(thong_input)
+    valid = complete_sbbf_pair(base_results, thong_result, pair_contract, context)
+    sleeve_source, sleeve_retained, sleeve_faces, _ = base_inputs[SLEEVE_STREAM]
+    sleeve = base_results[SLEEVE_STREAM]
+    assert sleeve.blend_step == 496
+    assert valid.status == "PASS_OFFLINE_SBBF_PAIR"
+
+    step_497_positions = np.asarray(sleeve_retained, dtype="<f4").copy()
+    movable = np.asarray(sleeve.region.movable_vertex_indices, dtype=np.int64)
+    step_497_positions[movable] = (
+        sleeve_retained[movable]
+        + (497.0 / 4096.0) * (sleeve_source[movable] - sleeve_retained[movable])
+    ).astype("<f4")
+    forged_sleeve = replace(
+        sleeve,
+        positions=step_497_positions,
+        post_metrics=topology_metrics(sleeve_source, step_497_positions, sleeve_faces),
+        outside_gate=verify_outside_region_exact(
+            sleeve_retained,
+            step_497_positions,
+            sleeve.region.movable_vertex_indices,
+        ),
+        blend_step=497,
+        position_sha256=hashlib.sha256(
+            step_497_positions.tobytes(order="C")
+        ).hexdigest().upper(),
+    )
+    forged_base = dict(base_results)
+    forged_base[SLEEVE_STREAM] = forged_sleeve
+
+    pair_result = complete_sbbf_pair(forged_base, thong_result, pair_contract, context)
+
+    assert pair_result.status == "METHOD_SPECIFIC_EXHAUSTION"
+    assert pair_result.exhaustion_reason == f"SBBF_STREAM_REVALIDATION_FAILURE:{SLEEVE_STREAM}"
+    forged_positions = {
+        "base": dict(valid.candidate_positions["base"]),
+        "thong": dict(valid.candidate_positions["thong"]),
+    }
+    forged_positions["base"][SLEEVE_STREAM] = step_497_positions
+    forged_complete = replace(
+        valid,
+        base_results=forged_base,
+        candidate_positions=forged_positions,
+        position_digest=_test_pair_digest(forged_positions),
+    )
+    output = tmp_path / "real-next-grid"
+
+    with pytest.raises(ValueError, match="OFFLINE_RESULT_NOT_EMITTABLE"):
+        write_offline_result(output, forged_complete)
+
+    assert not output.exists()
+
+
 def test_writer_rejects_zeroed_positions_with_stale_summaries_before_creating_directory(
     tmp_path: Path,
 ):

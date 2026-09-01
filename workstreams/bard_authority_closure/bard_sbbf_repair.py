@@ -500,12 +500,73 @@ def _context_contract_valid(context: StreamRevalidationContext) -> bool:
     )
 
 
+def _context_cache_key(context: StreamRevalidationContext) -> tuple[object, ...]:
+    return (
+        context.stream_identity,
+        context.source_position_sha256,
+        context.retained_candidate_sha256,
+        _exact_array_sha256(context.faces),
+        context.threshold,
+    )
+
+
+def _canonical_result(
+    context: StreamRevalidationContext,
+    cache: dict[tuple[object, ...], CandidateResult],
+) -> CandidateResult:
+    """Rerun the fixed-grid solver only from frozen verified context data."""
+    key = _context_cache_key(context)
+    if key not in cache:
+        cache[key] = solve_local_area_constrained_positions(
+            context.source_positions,
+            context.retained_candidate_positions,
+            context.faces,
+            context.threshold,
+            stream_identity=context.stream_identity,
+        )
+    return cache[key]
+
+
+def _candidate_result_exact(
+    supplied: CandidateResult,
+    canonical: CandidateResult,
+) -> bool:
+    if (
+        supplied.stream_identity != canonical.stream_identity
+        or supplied.status != canonical.status
+        or supplied.pre_metrics != canonical.pre_metrics
+        or supplied.post_metrics != canonical.post_metrics
+        or supplied.region != canonical.region
+        or supplied.outside_gate != canonical.outside_gate
+        or supplied.blend_step != canonical.blend_step
+        or supplied.blend_steps != canonical.blend_steps
+        or supplied.position_sha256 != canonical.position_sha256
+        or supplied.exhaustion_reason != canonical.exhaustion_reason
+    ):
+        return False
+    if (supplied.positions is None) != (canonical.positions is None):
+        return False
+    if supplied.positions is None:
+        return True
+    supplied_positions = np.asarray(supplied.positions)
+    canonical_positions = np.asarray(canonical.positions)
+    return (
+        supplied_positions.dtype == np.dtype("<f4")
+        and canonical_positions.dtype == np.dtype("<f4")
+        and supplied_positions.shape == canonical_positions.shape
+        and supplied_positions.tobytes(order="C") == canonical_positions.tobytes(order="C")
+    )
+
+
 def _result_admitted(
     result: CandidateResult,
     context: StreamRevalidationContext,
+    canonical: CandidateResult,
 ) -> bool:
     """Recompute every admission fact from verified rows; trust no result summary."""
     if not _context_contract_valid(context) or result.stream_identity != context.stream_identity:
+        return False
+    if not _candidate_result_exact(result, canonical):
         return False
     if result.status not in {PASS_REPAIRED, PASS_UNCHANGED}:
         return False
@@ -616,6 +677,7 @@ def complete_sbbf_pair(
             "SBBF_BASE_STREAM_SET_INCOMPLETE",
         )
     expected_base = pair_contract.base_by_id
+    canonical_cache: dict[tuple[object, ...], CandidateResult] = {}
     for name in BASE_STREAMS:
         result = base_results[name]
         if result.stream_identity != expected_base[name] or result.stream_identity.stream_id != name:
@@ -642,7 +704,8 @@ def complete_sbbf_pair(
                 revalidation_context,
                 f"SBBF_COMPLETION_FLOOR_FAILURE:{name}",
             )
-        if not _result_admitted(result, revalidation_context.base_by_id[name]):
+        context = revalidation_context.base_by_id[name]
+        if not _result_admitted(result, context, _canonical_result(context, canonical_cache)):
             return _exhausted_pair(
                 base_results,
                 thong_result,
@@ -680,7 +743,11 @@ def complete_sbbf_pair(
             revalidation_context,
             "SBBF_COMPLETION_FLOOR_FAILURE:thong",
         )
-    if not _result_admitted(thong_result, revalidation_context.thong_stream):
+    if not _result_admitted(
+        thong_result,
+        revalidation_context.thong_stream,
+        _canonical_result(revalidation_context.thong_stream, canonical_cache),
+    ):
         return _exhausted_pair(
             base_results,
             thong_result,
