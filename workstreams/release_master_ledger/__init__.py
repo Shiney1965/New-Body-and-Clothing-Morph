@@ -27,6 +27,8 @@ from .adapters import (
     adapt_vanitybody,
     read_observations,
 )
+from .reconcile import ReconciliationResult, reconcile_observations
+from .audit import InventorySets, build_completeness_audit
 
 __all__ = [
     "CanonicalIdentityFields",
@@ -56,4 +58,8 @@ __all__ = [
     "adapt_true_underwear",
     "adapt_vanitybody",
     "read_observations",
+    "InventorySets",
+    "ReconciliationResult",
+    "build_completeness_audit",
+    "reconcile_observations",
 ]
