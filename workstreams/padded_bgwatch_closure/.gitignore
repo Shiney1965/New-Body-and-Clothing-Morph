@@ -1,0 +1,5 @@
+# Local paths are workstation-specific; generated evidence is never public source.
+/local/
+/__pycache__/
+/tests/__pycache__/
+/.pytest_cache/
