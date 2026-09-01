@@ -1,7 +1,8 @@
 """Standard-library validation for public release-ledger records."""
 
 import re
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
+from datetime import datetime
 from typing import Any
 
 from .exclusions import EXCLUSION_MODES, EXCLUSION_REASONS, validate_exclusion_event
@@ -43,14 +44,6 @@ NON_EXCLUSION_TERMINAL_DISPOSITIONS = frozenset({
     "ACCEPTED_PROTECTED", "SOURCE_NATIVE_PROTECTED",
     "SHIPPED_NATIVE_PASSTHROUGH", "SHIPPED_REFIT",
 })
-TERMINAL_EVENT_FIELDS = frozenset({
-    "schema", "schema_version", "event_id", "record_id", "identity_sha256",
-    "source_profile_id", "mode", "reason", "reason_proof", "scope_statement",
-    "attempted_architectures", "fixed_acceptance_gates", "evidence",
-    "protected_impact", "next_project_if_reopened", "approved_by",
-    "approved_reason", "created_utc", "event_type",
-})
-TERMINAL_EVENT_REQUIRED = TERMINAL_EVENT_FIELDS - {"event_type"}
 TERMINAL_GATES = (
     "topology", "component", "material", "skin", "clearance", "silhouette",
     "deterministic_readback", "nontriviality",
@@ -346,96 +339,292 @@ def _closed_mapping(
     return errors
 
 
-def _link_contract(value: object, path: str) -> list[str]:
+StructuralContract = Callable[[object, str], list[str]]
+
+
+def _mapping_contract(
+    value: object, path: str, fields: Mapping[str, StructuralContract], *,
+    optional: frozenset[str] = frozenset(),
+) -> list[str]:
+    """Apply one closed-object contract and recursively validate every field."""
+    required = frozenset(fields) - optional
     errors = _closed_mapping(
-        value, allowed=frozenset({"result", "evidence_path", "evidence_sha256"}),
-        required=frozenset({"result", "evidence_path", "evidence_sha256"}), path=path,
+        value, allowed=frozenset(fields), required=required, path=path,
     )
-    if isinstance(value, Mapping) and (
-        not isinstance(value.get("result"), str) or not value["result"]
-        or not isinstance(value.get("evidence_path"), str) or not value["evidence_path"]
-        or not isinstance(value.get("evidence_sha256"), str)
-        or SHA256_RE.fullmatch(value["evidence_sha256"]) is None
-    ):
-        errors.append(f"{path}:INVALID_FIELDS")
+    if isinstance(value, Mapping):
+        for name, contract in fields.items():
+            if name in value:
+                errors.extend(contract(value[name], f"{path}.{name}"))
     return errors
+
+
+def _text_contract(value: object, path: str) -> list[str]:
+    return [] if isinstance(value, str) and value else [f"{path}:INVALID_TYPE"]
+
+
+def _hash_contract(value: object, path: str) -> list[str]:
+    return [] if isinstance(value, str) and SHA256_RE.fullmatch(value) else [f"{path}:INVALID_TYPE"]
+
+
+def _integer_contract(value: object, path: str) -> list[str]:
+    return [] if isinstance(value, int) and not isinstance(value, bool) and value >= 1 else [f"{path}:INVALID_TYPE"]
+
+
+def _constant_contract(expected: object) -> StructuralContract:
+    def validate(value: object, path: str) -> list[str]:
+        if isinstance(expected, bool):
+            valid = isinstance(value, bool) and value is expected
+        elif isinstance(expected, int):
+            valid = isinstance(value, int) and not isinstance(value, bool) and value == expected
+        else:
+            valid = value == expected
+        return [] if valid else [f"{path}:INVALID_VALUE"]
+
+    return validate
+
+
+def _enum_contract(allowed: frozenset[object]) -> StructuralContract:
+    def validate(value: object, path: str) -> list[str]:
+        try:
+            valid = value in allowed
+        except TypeError:
+            valid = False
+        return [] if valid else [f"{path}:INVALID_VALUE"]
+
+    return validate
+
+
+def _pattern_contract(pattern: re.Pattern[str]) -> StructuralContract:
+    def validate(value: object, path: str) -> list[str]:
+        return [] if isinstance(value, str) and pattern.fullmatch(value) else [f"{path}:INVALID_TYPE"]
+
+    return validate
+
+
+def _sequence_contract(
+    item_contract: StructuralContract, *, minimum: int = 0,
+) -> StructuralContract:
+    def validate(value: object, path: str) -> list[str]:
+        if not isinstance(value, list):
+            return [f"{path}:INVALID_TYPE"]
+        errors = [f"{path}:INVALID_LENGTH"] if len(value) < minimum else []
+        for index, item in enumerate(value):
+            errors.extend(item_contract(item, f"{path}[{index}]"))
+        return errors
+
+    return validate
+
+
+def _date_time_contract(value: object, path: str) -> list[str]:
+    if not isinstance(value, str) or not value.endswith("Z"):
+        return [f"{path}:INVALID_TYPE"]
+    try:
+        parsed = datetime.fromisoformat(value[:-1] + "+00:00")
+    except ValueError:
+        return [f"{path}:INVALID_TYPE"]
+    return [] if parsed.tzinfo is not None else [f"{path}:INVALID_TYPE"]
+
+
+def _mapping_only_contract(value: object, path: str) -> list[str]:
+    return [] if isinstance(value, Mapping) else [f"{path}:INVALID_TYPE"]
+
+
+def _profile_contract(value: object, path: str) -> list[str]:
+    return _mapping_contract(value, path, {
+        "id": _text_contract,
+        "version": _text_contract,
+        "sha256": _hash_contract,
+    })
+
+
+def _path_hash_contract(value: object, path: str) -> list[str]:
+    return _mapping_contract(value, path, {
+        "path": _text_contract,
+        "sha256": _hash_contract,
+    })
+
+
+def _link_contract(value: object, path: str) -> list[str]:
+    return _mapping_contract(value, path, {
+        "result": _text_contract,
+        "evidence_path": _text_contract,
+        "evidence_sha256": _hash_contract,
+    })
+
+
+def _component_contract(value: object, path: str) -> list[str]:
+    return _mapping_contract(value, path, {
+        "component_id": _text_contract,
+        "status": _enum_contract(frozenset({"FAIL", "BLOCKED"})),
+        "evidence_path": _text_contract,
+        "evidence_sha256": _hash_contract,
+    })
+
+
+def _architecture_contract(value: object, path: str) -> list[str]:
+    return _mapping_contract(value, path, {
+        "method_id": _text_contract,
+        "method_family": _text_contract,
+        "implementation_path": _text_contract,
+        "implementation_sha256": _hash_contract,
+        "candidate_count": _integer_contract,
+        "status": _constant_contract("FAILED_FIXED_GATES"),
+        "components": _sequence_contract(_component_contract, minimum=1),
+    })
+
+
+def _fixed_gates_contract(value: object, path: str) -> list[str]:
+    if isinstance(value, Mapping) and not value:
+        return []
+    return _mapping_contract(
+        value, path, {gate: _link_contract for gate in TERMINAL_GATES},
+    )
+
+
+def _boundary_contract(value: object, path: str) -> list[str]:
+    return _mapping_contract(value, path, {
+        "boundary_type": _enum_contract(frozenset({
+            "FORBIDDEN_TARGET", "SHARED_ASSET", "COMPONENT", "MATERIAL",
+            "BODY", "OBJECT",
+        })),
+        "record_field": _text_contract,
+        "record_path": _text_contract,
+        "record_value": _text_contract,
+        "evidence_path": _text_contract,
+        "evidence_sha256": _hash_contract,
+    })
+
+
+def _hard_contract_impossibility_contract(value: object, path: str) -> list[str]:
+    return _mapping_contract(value, path, {
+        "result": _constant_contract("HARD_CONTRACT_IMPOSSIBILITY"),
+        "protected_object_id": _text_contract,
+        "protected_object_path": _text_contract,
+        "protected_object_sha256": _hash_contract,
+        "boundary_contract": _boundary_contract,
+    })
+
+
+def _evidence_contract(value: object, path: str) -> list[str]:
+    return _mapping_contract(value, path, {
+        "path": _text_contract,
+        "sha256": _hash_contract,
+        "claim": _text_contract,
+    })
+
+
+def _protected_impact_contract(value: object, path: str) -> list[str]:
+    text_array = _sequence_contract(_text_contract)
+    return _mapping_contract(value, path, {
+        "registry_ids": text_array,
+        "shared_consumers": text_array,
+        "forbidden_targets": text_array,
+        "result": _constant_contract("NO_PROTECTED_MUTATION"),
+    })
 
 
 def _terminal_reason_proof_contract(event: Mapping[str, Any]) -> list[str]:
     proof = event.get("reason_proof")
     reason = event.get("reason")
     if reason == "SOURCE_ABSENT_EXACT_PROFILE":
-        errors = _closed_mapping(proof, allowed=frozenset({"exact_profile", "complete_source_inventory", "zero_route_result", "anti_omission"}), required=frozenset({"exact_profile", "complete_source_inventory", "zero_route_result", "anti_omission"}), path="reason_proof")
-        if isinstance(proof, Mapping):
-            errors.extend(_closed_mapping(proof.get("exact_profile"), allowed=frozenset({"id", "version", "sha256"}), required=frozenset({"id", "version", "sha256"}), path="reason_proof.exact_profile"))
-            for name in ("complete_source_inventory", "zero_route_result", "anti_omission"):
-                errors.extend(_link_contract(proof.get(name), f"reason_proof.{name}"))
-        return errors
+        return _mapping_contract(proof, "reason_proof", {
+            "exact_profile": _profile_contract,
+            "complete_source_inventory": _link_contract,
+            "zero_route_result": _link_contract,
+            "anti_omission": _link_contract,
+        })
     if reason == "NO_RELEASE_PERMISSION":
-        return _closed_mapping(proof, allowed=frozenset({"permission_text", "permission_result", "requested_operations", "date", "credit", "derivative_scope", "redistribution_scope", "exact_source_version"}), required=frozenset({"permission_text", "permission_result", "requested_operations", "date", "credit", "derivative_scope", "redistribution_scope", "exact_source_version"}), path="reason_proof")
+        return _mapping_contract(proof, "reason_proof", {
+            "permission_text": _path_hash_contract,
+            "permission_result": _constant_contract("PROHIBITED"),
+            "requested_operations": _sequence_contract(
+                _enum_contract(frozenset({"DERIVATIVE", "REDISTRIBUTION"})),
+                minimum=1,
+            ),
+            "date": _text_contract,
+            "credit": _text_contract,
+            "derivative_scope": _enum_contract(frozenset({
+                "NO_DERIVATIVES", "DERIVATIVE_DENIED",
+            })),
+            "redistribution_scope": _enum_contract(frozenset({
+                "NO_REDISTRIBUTION", "REDISTRIBUTION_DENIED",
+            })),
+            "exact_source_version": _text_contract,
+        })
     if reason == "NON_WEARABLE_OR_UNSUPPORTED_BODY_TUPLE":
-        return _closed_mapping(proof, allowed=frozenset({"exact_slot", "exact_body_tuple", "source_contract", "release_scope_mismatch"}), required=frozenset({"exact_slot", "exact_body_tuple", "source_contract", "release_scope_mismatch"}), path="reason_proof")
+        return _mapping_contract(proof, "reason_proof", {
+            "exact_slot": _text_contract,
+            "exact_body_tuple": _sequence_contract(_text_contract, minimum=1),
+            "source_contract": _text_contract,
+            "release_scope_mismatch": _text_contract,
+        })
     if reason == "PROTECTED_NATIVE_ONLY":
-        fields = frozenset({"protected_registry_id", "protected_consumer", "protected_route", "protected_path", "protected_sha256", "forbidden_target", "new_target"})
-        return _closed_mapping(proof, allowed=fields, required=fields, path="reason_proof")
+        return _mapping_contract(proof, "reason_proof", {
+            "protected_registry_id": _text_contract,
+            "protected_consumer": _text_contract,
+            "protected_route": _text_contract,
+            "protected_path": _text_contract,
+            "protected_sha256": _hash_contract,
+            "forbidden_target": _text_contract,
+            "new_target": _text_contract,
+        })
     if reason == "UNRESOLVED_SOURCE_CONTRACT_AFTER_EXHAUSTIVE_AUDIT":
-        errors = _closed_mapping(proof, allowed=frozenset({"exact_profile", "searched_contracts", "search_result", "anti_omission", "anti_omission_pass"}), required=frozenset({"exact_profile", "searched_contracts", "search_result", "anti_omission", "anti_omission_pass"}), path="reason_proof")
-        if isinstance(proof, Mapping):
-            errors.extend(_closed_mapping(proof.get("exact_profile"), allowed=frozenset({"id", "version", "sha256"}), required=frozenset({"id", "version", "sha256"}), path="reason_proof.exact_profile"))
-            contracts = proof.get("searched_contracts")
-            names = frozenset({"root_templates", "named_stats", "inheritance", "visual_banks", "ordered_components", "provider_maps", "uuid_path_hash_aliases"})
-            errors.extend(_closed_mapping(contracts, allowed=names, required=names, path="reason_proof.searched_contracts"))
-            if isinstance(contracts, Mapping):
-                for name in names:
-                    errors.extend(_link_contract(contracts.get(name), f"reason_proof.searched_contracts.{name}"))
-            for name in ("search_result", "anti_omission"):
-                errors.extend(_link_contract(proof.get(name), f"reason_proof.{name}"))
-        return errors
+        searched_contracts = {
+            name: _link_contract for name in (
+                "root_templates", "named_stats", "inheritance", "visual_banks",
+                "ordered_components", "provider_maps", "uuid_path_hash_aliases",
+            )
+        }
+        return _mapping_contract(proof, "reason_proof", {
+            "exact_profile": _profile_contract,
+            "searched_contracts": lambda value, path: _mapping_contract(
+                value, path, searched_contracts,
+            ),
+            "search_result": _link_contract,
+            "anti_omission": _link_contract,
+            "anti_omission_pass": _constant_contract(True),
+        })
     if reason == "INCOMPATIBLE_MUTUALLY_EXCLUSIVE_PROFILE":
-        return _closed_mapping(proof, allowed=frozenset({"selected_profile_id", "alternate_profile_id", "forbidden_module_relationship", "alternate_artifact"}), required=frozenset({"selected_profile_id", "alternate_profile_id", "forbidden_module_relationship", "alternate_artifact"}), path="reason_proof")
+        return _mapping_contract(proof, "reason_proof", {
+            "selected_profile_id": _text_contract,
+            "alternate_profile_id": _text_contract,
+            "forbidden_module_relationship": _constant_contract("MUTUALLY_EXCLUSIVE"),
+            "alternate_artifact": _path_hash_contract,
+        })
     if reason == "NO_SAFE_GEOMETRY_AVAILABLE":
-        allowed = frozenset({"hard_contract_impossibility", "architecture_results", "fixed_gates", "final_available_safe_tooling_failure"})
-        errors = _closed_mapping(proof, allowed=allowed, required=frozenset({"architecture_results", "fixed_gates"}), path="reason_proof")
-        if isinstance(proof, Mapping):
-            architectures = proof.get("architecture_results")
-            if not isinstance(architectures, list):
-                errors.append("reason_proof.architecture_results:INVALID_TYPE")
-            else:
-                fields = frozenset({"method_id", "method_family", "implementation_path", "implementation_sha256", "candidate_count", "status", "components"})
-                for index, result in enumerate(architectures):
-                    errors.extend(_closed_mapping(result, allowed=fields, required=fields, path=f"reason_proof.architecture_results[{index}]"))
-                    if isinstance(result, Mapping):
-                        components = result.get("components")
-                        if not isinstance(components, list) or not components:
-                            errors.append(f"reason_proof.architecture_results[{index}].components:INVALID_TYPE")
-                        else:
-                            for component_index, component in enumerate(components):
-                                errors.extend(_closed_mapping(component, allowed=frozenset({"component_id", "status", "evidence_path", "evidence_sha256"}), required=frozenset({"component_id", "status", "evidence_path", "evidence_sha256"}), path=f"reason_proof.architecture_results[{index}].components[{component_index}]"))
-            gates = proof.get("fixed_gates")
-            errors.extend(_closed_mapping(gates, allowed=frozenset(TERMINAL_GATES), required=frozenset(TERMINAL_GATES) if architectures else frozenset(), path="reason_proof.fixed_gates"))
-            if isinstance(gates, Mapping):
-                for gate in gates:
-                    errors.extend(_closed_mapping(gates[gate], allowed=frozenset({"result", "evidence_path", "evidence_sha256"}), required=frozenset({"result", "evidence_path", "evidence_sha256"}), path=f"reason_proof.fixed_gates.{gate}"))
-        return errors
+        return _mapping_contract(proof, "reason_proof", {
+            "hard_contract_impossibility": _hard_contract_impossibility_contract,
+            "architecture_results": _sequence_contract(_architecture_contract),
+            "fixed_gates": _fixed_gates_contract,
+            "final_available_safe_tooling_failure": _link_contract,
+        }, optional=frozenset({
+            "hard_contract_impossibility", "final_available_safe_tooling_failure",
+        }))
     return ["reason_proof:UNKNOWN_REASON"]
 
 
 def _terminal_schema_contract_errors(event: Mapping[str, Any]) -> list[str]:
-    errors = _closed_mapping(event, allowed=TERMINAL_EVENT_FIELDS, required=TERMINAL_EVENT_REQUIRED, path="event")
-    evidence = event.get("evidence")
-    if not isinstance(evidence, list) or not evidence:
-        errors.append("event.evidence:INVALID_TYPE")
-    else:
-        for index, item in enumerate(evidence):
-            errors.extend(_closed_mapping(item, allowed=frozenset({"path", "sha256", "claim"}), required=frozenset({"path", "sha256", "claim"}), path=f"event.evidence[{index}]"))
-    impact = event.get("protected_impact")
-    required_impact = frozenset({"registry_ids", "shared_consumers", "forbidden_targets", "result"})
-    errors.extend(_closed_mapping(impact, allowed=required_impact, required=required_impact, path="event.protected_impact"))
-    if isinstance(impact, Mapping):
-        for name in ("registry_ids", "shared_consumers", "forbidden_targets"):
-            value = impact.get(name)
-            if not isinstance(value, list) or any(not isinstance(item, str) or not item for item in value):
-                errors.append(f"event.protected_impact.{name}:INVALID_TYPE")
+    errors = _mapping_contract(event, "event", {
+        "schema": _constant_contract("clothmorph.terminal-exclusion"),
+        "schema_version": _constant_contract(1),
+        "event_id": _pattern_contract(EXCLUSION_EVENT_ID_RE),
+        "record_id": _pattern_contract(re.compile(r"^LEDGER_[0-9A-F]{64}$")),
+        "identity_sha256": _hash_contract,
+        "source_profile_id": _text_contract,
+        "mode": _enum_contract(frozenset(EXCLUSION_MODES)),
+        "reason": _enum_contract(frozenset(EXCLUSION_REASONS)),
+        "reason_proof": _mapping_only_contract,
+        "scope_statement": _text_contract,
+        "attempted_architectures": _sequence_contract(_architecture_contract),
+        "fixed_acceptance_gates": _fixed_gates_contract,
+        "evidence": _sequence_contract(_evidence_contract, minimum=1),
+        "protected_impact": _protected_impact_contract,
+        "next_project_if_reopened": _text_contract,
+        "approved_by": _text_contract,
+        "approved_reason": _text_contract,
+        "created_utc": _date_time_contract,
+        "event_type": _constant_contract("EXCLUSION"),
+    }, optional=frozenset({"event_type"}))
     if event.get("reason") != "NO_SAFE_GEOMETRY_AVAILABLE" and (
         event.get("attempted_architectures") != [] or event.get("fixed_acceptance_gates") != {}
     ):

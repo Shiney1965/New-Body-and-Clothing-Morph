@@ -20,8 +20,16 @@ from workstreams.release_master_ledger.generate import (
     discover_exclusion_events,
 )
 from workstreams.release_master_ledger.models import LedgerRecord
-from workstreams.release_master_ledger.validation import validate_generated_ledger
+from workstreams.release_master_ledger.validation import (
+    _terminal_schema_contract_errors,
+    validate_generated_ledger,
+)
 from workstreams.release_master_ledger.tests.test_validation import complete_record_fixture
+from workstreams.release_master_ledger.tests.test_exclusions import (
+    hard_contract_proof,
+    proof_for,
+    signed_event,
+)
 
 
 RECORD_ID = "LEDGER_" + "A" * 64
@@ -104,6 +112,24 @@ def _event_for_record(record: LedgerRecord) -> dict[str, object]:
     }
     event["event_id"] = exclusion_event_id(event)
     return event
+
+
+def _structural_event(reason: str, *, hard_contract: bool = False) -> dict[str, object]:
+    proof = hard_contract_proof() if hard_contract else proof_for(reason)
+    return signed_event(
+        reason=reason,
+        reason_proof=proof,
+        attempted_architectures=proof.get("architecture_results", []),
+        fixed_acceptance_gates=proof.get("fixed_gates", {}),
+    )
+
+
+def _add_extra(mapping: dict[str, object]) -> None:
+    mapping["unexpected"] = "forbidden"
+
+
+def _set(mapping: dict[str, object], key: str, value: object) -> None:
+    mapping[key] = value
 
 
 def test_configuration_refuses_an_exclusion_directory_outside_the_local_boundary(tmp_path, monkeypatch):
@@ -284,6 +310,231 @@ def test_terminal_schema_contract_rejects_unconstrained_nested_values(mutate):
     )
 
     assert any(error.startswith("RECORD[0]:TERMINAL_EXCLUSION_SCHEMA:") for error in errors)
+
+
+@pytest.mark.parametrize(
+    "reason",
+    [
+        "SOURCE_ABSENT_EXACT_PROFILE",
+        "NO_RELEASE_PERMISSION",
+        "NON_WEARABLE_OR_UNSUPPORTED_BODY_TUPLE",
+        "PROTECTED_NATIVE_ONLY",
+        "UNRESOLVED_SOURCE_CONTRACT_AFTER_EXHAUSTIVE_AUDIT",
+        "INCOMPATIBLE_MUTUALLY_EXCLUSIVE_PROFILE",
+        "NO_SAFE_GEOMETRY_AVAILABLE",
+    ],
+)
+def test_structural_contract_accepts_the_complete_schema_shape_for_every_reason(reason):
+    assert _terminal_schema_contract_errors(_structural_event(reason)) == []
+
+
+def test_structural_contract_accepts_the_hard_contract_geometry_shape():
+    assert _terminal_schema_contract_errors(
+        _structural_event("NO_SAFE_GEOMETRY_AVAILABLE", hard_contract=True)
+    ) == []
+
+
+@pytest.mark.parametrize(
+    ("reason", "mutate", "expected_path"),
+    [
+        pytest.param(
+            "SOURCE_ABSENT_EXACT_PROFILE",
+            lambda event: _set(event["reason_proof"]["exact_profile"], "version", 1),
+            "reason_proof.exact_profile.version",
+            id="source-profile-field-type",
+        ),
+        pytest.param(
+            "NO_RELEASE_PERMISSION",
+            lambda event: _add_extra(event["reason_proof"]["permission_text"]),
+            "reason_proof.permission_text:UNEXPECTED:unexpected",
+            id="permission-text-closed",
+        ),
+        pytest.param(
+            "NO_RELEASE_PERMISSION",
+            lambda event: _set(event["reason_proof"]["permission_text"], "path", 7),
+            "reason_proof.permission_text.path",
+            id="permission-text-field-type",
+        ),
+        pytest.param(
+            "NON_WEARABLE_OR_UNSUPPORTED_BODY_TUPLE",
+            lambda event: event["reason_proof"]["exact_body_tuple"].append(7),
+            "reason_proof.exact_body_tuple[3]",
+            id="unsupported-tuple-member-type",
+        ),
+        pytest.param(
+            "PROTECTED_NATIVE_ONLY",
+            lambda event: _set(event["reason_proof"], "protected_sha256", 7),
+            "reason_proof.protected_sha256",
+            id="protected-native-hash-type",
+        ),
+        pytest.param(
+            "UNRESOLVED_SOURCE_CONTRACT_AFTER_EXHAUSTIVE_AUDIT",
+            lambda event: _set(
+                event["reason_proof"]["searched_contracts"]["root_templates"],
+                "result",
+                7,
+            ),
+            "reason_proof.searched_contracts.root_templates.result",
+            id="source-search-record-field-type",
+        ),
+        pytest.param(
+            "UNRESOLVED_SOURCE_CONTRACT_AFTER_EXHAUSTIVE_AUDIT",
+            lambda event: _set(event["reason_proof"], "anti_omission_pass", 1),
+            "reason_proof.anti_omission_pass",
+            id="source-search-boolean-type",
+        ),
+        pytest.param(
+            "INCOMPATIBLE_MUTUALLY_EXCLUSIVE_PROFILE",
+            lambda event: _add_extra(event["reason_proof"]["alternate_artifact"]),
+            "reason_proof.alternate_artifact:UNEXPECTED:unexpected",
+            id="alternate-artifact-closed",
+        ),
+        pytest.param(
+            "INCOMPATIBLE_MUTUALLY_EXCLUSIVE_PROFILE",
+            lambda event: _set(event["reason_proof"]["alternate_artifact"], "sha256", 7),
+            "reason_proof.alternate_artifact.sha256",
+            id="alternate-artifact-field-type",
+        ),
+    ],
+)
+def test_reason_specific_structural_contract_rejects_nested_extra_or_wrong_type(
+    reason, mutate, expected_path,
+):
+    event = _structural_event(reason)
+    mutate(event)
+
+    assert any(
+        expected_path in error for error in _terminal_schema_contract_errors(event)
+    )
+
+
+@pytest.mark.parametrize(
+    ("mutate", "expected_path"),
+    [
+        pytest.param(
+            lambda event: _add_extra(event["reason_proof"]["architecture_results"][0]),
+            "reason_proof.architecture_results[0]:UNEXPECTED:unexpected",
+            id="architecture-closed",
+        ),
+        pytest.param(
+            lambda event: _set(
+                event["reason_proof"]["architecture_results"][0],
+                "candidate_count",
+                True,
+            ),
+            "reason_proof.architecture_results[0].candidate_count",
+            id="architecture-candidate-count-type",
+        ),
+        pytest.param(
+            lambda event: _add_extra(
+                event["reason_proof"]["architecture_results"][0]["components"][0]
+            ),
+            "reason_proof.architecture_results[0].components[0]:UNEXPECTED:unexpected",
+            id="component-closed",
+        ),
+        pytest.param(
+            lambda event: _set(
+                event["reason_proof"]["architecture_results"][0]["components"][0],
+                "evidence_path",
+                7,
+            ),
+            "reason_proof.architecture_results[0].components[0].evidence_path",
+            id="component-field-type",
+        ),
+        pytest.param(
+            lambda event: _set(
+                event["reason_proof"]["fixed_gates"]["topology"], "result", 7
+            ),
+            "reason_proof.fixed_gates.topology.result",
+            id="fixed-gate-field-type",
+        ),
+        pytest.param(
+            lambda event: _add_extra(
+                event["reason_proof"]["final_available_safe_tooling_failure"]
+            ),
+            "reason_proof.final_available_safe_tooling_failure:UNEXPECTED:unexpected",
+            id="final-tooling-link-closed",
+        ),
+        pytest.param(
+            lambda event: _set(
+                event["reason_proof"]["final_available_safe_tooling_failure"],
+                "evidence_sha256",
+                7,
+            ),
+            "reason_proof.final_available_safe_tooling_failure.evidence_sha256",
+            id="final-tooling-link-field-type",
+        ),
+        pytest.param(
+            lambda event: _add_extra(event["attempted_architectures"][0]),
+            "event.attempted_architectures[0]:UNEXPECTED:unexpected",
+            id="top-level-architecture-closed",
+        ),
+        pytest.param(
+            lambda event: _set(
+                event["fixed_acceptance_gates"]["topology"], "evidence_path", 7
+            ),
+            "event.fixed_acceptance_gates.topology.evidence_path",
+            id="top-level-fixed-gate-field-type",
+        ),
+    ],
+)
+def test_bounded_geometry_structural_contract_recurses_through_every_summary(
+    mutate, expected_path,
+):
+    event = _structural_event("NO_SAFE_GEOMETRY_AVAILABLE")
+    event["attempted_architectures"] = deepcopy(event["attempted_architectures"])
+    event["fixed_acceptance_gates"] = deepcopy(event["fixed_acceptance_gates"])
+    mutate(event)
+
+    assert any(
+        expected_path in error for error in _terminal_schema_contract_errors(event)
+    )
+
+
+@pytest.mark.parametrize(
+    ("mutate", "expected_path"),
+    [
+        pytest.param(
+            lambda event: _add_extra(event["reason_proof"]["hard_contract_impossibility"]),
+            "reason_proof.hard_contract_impossibility:UNEXPECTED:unexpected",
+            id="hard-contract-closed",
+        ),
+        pytest.param(
+            lambda event: _set(
+                event["reason_proof"]["hard_contract_impossibility"],
+                "protected_object_sha256",
+                7,
+            ),
+            "reason_proof.hard_contract_impossibility.protected_object_sha256",
+            id="hard-contract-field-type",
+        ),
+        pytest.param(
+            lambda event: _add_extra(
+                event["reason_proof"]["hard_contract_impossibility"]["boundary_contract"]
+            ),
+            "reason_proof.hard_contract_impossibility.boundary_contract:UNEXPECTED:unexpected",
+            id="boundary-contract-closed",
+        ),
+        pytest.param(
+            lambda event: _set(
+                event["reason_proof"]["hard_contract_impossibility"]["boundary_contract"],
+                "record_value",
+                7,
+            ),
+            "reason_proof.hard_contract_impossibility.boundary_contract.record_value",
+            id="boundary-contract-field-type",
+        ),
+    ],
+)
+def test_hard_contract_geometry_structural_contract_closes_the_boundary(
+    mutate, expected_path,
+):
+    event = _structural_event("NO_SAFE_GEOMETRY_AVAILABLE", hard_contract=True)
+    mutate(event)
+
+    assert any(
+        expected_path in error for error in _terminal_schema_contract_errors(event)
+    )
 
 
 @pytest.mark.parametrize(
