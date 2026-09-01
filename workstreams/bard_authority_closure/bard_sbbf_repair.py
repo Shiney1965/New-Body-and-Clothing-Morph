@@ -108,6 +108,46 @@ class SBBFPairContract:
 
 
 @dataclass(frozen=True)
+class StreamRevalidationContext:
+    stream_identity: StreamIdentity
+    source_positions: np.ndarray
+    retained_candidate_positions: np.ndarray
+    faces: np.ndarray
+    expected_pre_metrics: TopologyMetrics
+    expected_region: RepairRegion
+    source_position_sha256: str
+    retained_candidate_sha256: str
+    threshold: float
+
+    def __post_init__(self) -> None:
+        for array in (self.source_positions, self.retained_candidate_positions, self.faces):
+            if array.flags.writeable:
+                raise ValueError("REVALIDATION_CONTEXT_ARRAY_MUTABLE")
+
+
+@dataclass(frozen=True)
+class SBBFPairRevalidationContext:
+    pair_contract: SBBFPairContract
+    base_streams: tuple[StreamRevalidationContext, ...]
+    thong_stream: StreamRevalidationContext
+
+    def __post_init__(self) -> None:
+        if tuple(context.stream_identity.stream_id for context in self.base_streams) != BASE_STREAMS:
+            raise ValueError("SBBF_BASE_REVALIDATION_SET_INVALID")
+        if tuple(context.stream_identity for context in self.base_streams) != self.pair_contract.base_identities:
+            raise ValueError("SBBF_BASE_REVALIDATION_IDENTITY_MISMATCH")
+        if self.thong_stream.stream_identity != self.pair_contract.thong_identity:
+            raise ValueError("SBBF_THONG_REVALIDATION_IDENTITY_MISMATCH")
+
+    @property
+    def base_by_id(self) -> dict[str, StreamRevalidationContext]:
+        return {
+            context.stream_identity.stream_id: context
+            for context in self.base_streams
+        }
+
+
+@dataclass(frozen=True)
 class CandidateResult:
     stream_identity: StreamIdentity
     status: str
@@ -130,6 +170,7 @@ class CompletePairResult:
     position_digest: str | None
     exhaustion_reason: str | None
     pair_contract: SBBFPairContract
+    revalidation_context: SBBFPairRevalidationContext
     base_results: Mapping[str, CandidateResult]
     thong_result: CandidateResult
 
@@ -289,6 +330,65 @@ def _position_sha256(positions: np.ndarray) -> str:
     return hashlib.sha256(np.asarray(positions, dtype="<f4").tobytes(order="C")).hexdigest().upper()
 
 
+def _immutable_array(values: np.ndarray, dtype: str, shape: tuple[int, ...]) -> np.ndarray:
+    encoded = np.asarray(values, dtype=dtype).tobytes(order="C")
+    return np.frombuffer(encoded, dtype=dtype).reshape(shape)
+
+
+def _exact_array_sha256(values: np.ndarray) -> str:
+    array = np.asarray(values)
+    digest = hashlib.sha256()
+    digest.update(array.dtype.str.encode("ascii"))
+    digest.update(str(array.shape).encode("ascii"))
+    digest.update(array.tobytes(order="C"))
+    return digest.hexdigest().upper()
+
+
+def build_stream_revalidation_context(
+    source: np.ndarray,
+    retained_candidate: np.ndarray,
+    faces: np.ndarray,
+    stream_identity: StreamIdentity,
+    threshold: float = 0.25,
+) -> StreamRevalidationContext:
+    """Freeze the verified input rows and all pre-repair contracts for later admission."""
+    source_array, candidate_array, face_array = _validated_arrays(
+        source,
+        retained_candidate,
+        faces,
+    )
+    if stream_identity.position_shape != tuple(map(int, source_array.shape)):
+        raise ValueError("STREAM_POSITION_SHAPE_MISMATCH")
+    if stream_identity.index_topology_sha256 != index_topology_digest(face_array):
+        raise ValueError("STREAM_INDEX_TOPOLOGY_DIGEST_MISMATCH")
+    frozen_source = _immutable_array(source_array, "<f8", source_array.shape)
+    frozen_candidate = _immutable_array(candidate_array, "<f8", candidate_array.shape)
+    frozen_faces = _immutable_array(face_array, "<i8", face_array.shape)
+    expected_pre = topology_metrics(
+        frozen_source,
+        frozen_candidate,
+        frozen_faces,
+        threshold,
+    )
+    expected_region = failing_face_neighborhood(
+        frozen_source,
+        frozen_candidate,
+        frozen_faces,
+        threshold,
+    )
+    return StreamRevalidationContext(
+        stream_identity=stream_identity,
+        source_positions=frozen_source,
+        retained_candidate_positions=frozen_candidate,
+        faces=frozen_faces,
+        expected_pre_metrics=expected_pre,
+        expected_region=expected_region,
+        source_position_sha256=_exact_array_sha256(frozen_source),
+        retained_candidate_sha256=_exact_array_sha256(frozen_candidate),
+        threshold=threshold,
+    )
+
+
 def solve_local_area_constrained_positions(
     source: np.ndarray,
     candidate: np.ndarray,
@@ -374,14 +474,95 @@ def solve_local_area_constrained_positions(
     )
 
 
-def _result_admitted(result: CandidateResult) -> bool:
+def _context_contract_valid(context: StreamRevalidationContext) -> bool:
+    try:
+        source, candidate, faces = _validated_arrays(
+            context.source_positions,
+            context.retained_candidate_positions,
+            context.faces,
+        )
+        recomputed_pre = topology_metrics(source, candidate, faces, context.threshold)
+        recomputed_region = failing_face_neighborhood(source, candidate, faces, context.threshold)
+    except (TypeError, ValueError):
+        return False
     return (
-        result.status in {PASS_REPAIRED, PASS_UNCHANGED}
-        and result.positions is not None
-        and result.post_metrics is not None
-        and result.post_metrics.passed
-        and result.outside_gate is not None
-        and result.outside_gate.passed
+        not context.source_positions.flags.writeable
+        and not context.retained_candidate_positions.flags.writeable
+        and not context.faces.flags.writeable
+        and context.stream_identity.position_shape == tuple(map(int, source.shape))
+        and context.stream_identity.index_topology_sha256 == index_topology_digest(faces)
+        and context.source_position_sha256 == _exact_array_sha256(context.source_positions)
+        and context.retained_candidate_sha256 == _exact_array_sha256(
+            context.retained_candidate_positions
+        )
+        and context.expected_pre_metrics == recomputed_pre
+        and context.expected_region == recomputed_region
+    )
+
+
+def _result_admitted(
+    result: CandidateResult,
+    context: StreamRevalidationContext,
+) -> bool:
+    """Recompute every admission fact from verified rows; trust no result summary."""
+    if not _context_contract_valid(context) or result.stream_identity != context.stream_identity:
+        return False
+    if result.status not in {PASS_REPAIRED, PASS_UNCHANGED}:
+        return False
+    if result.exhaustion_reason is not None or result.positions is None:
+        return False
+    positions = np.asarray(result.positions)
+    if positions.dtype != np.dtype("<f4"):
+        return False
+    if positions.shape != context.stream_identity.position_shape:
+        return False
+    if not np.isfinite(positions).all():
+        return False
+    if result.position_sha256 != _position_sha256(positions):
+        return False
+    if result.blend_steps != SEARCH_STEPS or result.blend_step is None:
+        return False
+    if result.blend_step < 0 or result.blend_step > SEARCH_STEPS:
+        return False
+    if (SEARCH_STEPS - result.blend_step) * 2 < SEARCH_STEPS:
+        return False
+
+    source = context.source_positions
+    retained = context.retained_candidate_positions
+    faces = context.faces
+    recomputed_pre = topology_metrics(source, retained, faces, context.threshold)
+    recomputed_region = failing_face_neighborhood(source, retained, faces, context.threshold)
+    if (
+        result.pre_metrics != recomputed_pre
+        or result.region != recomputed_region
+        or recomputed_pre != context.expected_pre_metrics
+        or recomputed_region != context.expected_region
+    ):
+        return False
+    recomputed_post = topology_metrics(source, positions, faces, context.threshold)
+    recomputed_outside = verify_outside_region_exact(
+        retained,
+        positions,
+        recomputed_region.movable_vertex_indices,
+    )
+    if (
+        result.post_metrics != recomputed_post
+        or result.outside_gate != recomputed_outside
+        or not recomputed_post.passed
+        or not recomputed_outside.passed
+    ):
+        return False
+    retained_f32 = np.asarray(retained, dtype="<f4")
+    if result.status == PASS_UNCHANGED:
+        return (
+            result.blend_step == 0
+            and recomputed_pre.passed
+            and positions.tobytes(order="C") == retained_f32.tobytes(order="C")
+        )
+    return (
+        result.blend_step > 0
+        and not recomputed_pre.passed
+        and bool(recomputed_region.failing_face_indices)
     )
 
 
@@ -389,6 +570,7 @@ def _exhausted_pair(
     base_results: Mapping[str, CandidateResult],
     thong_result: CandidateResult,
     pair_contract: SBBFPairContract,
+    revalidation_context: SBBFPairRevalidationContext,
     reason: str,
 ) -> CompletePairResult:
     return CompletePairResult(
@@ -398,6 +580,7 @@ def _exhausted_pair(
         position_digest=None,
         exhaustion_reason=reason,
         pair_contract=pair_contract,
+        revalidation_context=revalidation_context,
         base_results=base_results,
         thong_result=thong_result,
     )
@@ -407,11 +590,31 @@ def complete_sbbf_pair(
     base_results: Mapping[str, CandidateResult],
     thong_result: CandidateResult,
     pair_contract: SBBFPairContract,
+    revalidation_context: SBBFPairRevalidationContext,
 ) -> CompletePairResult:
     """Admit no output unless the exact four-stream base and thong pair both pass."""
     load_bard_contract().require_emittable_pair("sbbf", ("base", "thong"))
+    if (
+        revalidation_context.pair_contract != pair_contract
+        or tuple(context.stream_identity for context in revalidation_context.base_streams)
+        != pair_contract.base_identities
+        or revalidation_context.thong_stream.stream_identity != pair_contract.thong_identity
+    ):
+        return _exhausted_pair(
+            base_results,
+            thong_result,
+            pair_contract,
+            revalidation_context,
+            "SBBF_REVALIDATION_CONTEXT_CONTRACT_FAILURE",
+        )
     if set(base_results) != set(BASE_STREAMS):
-        return _exhausted_pair(base_results, thong_result, pair_contract, "SBBF_BASE_STREAM_SET_INCOMPLETE")
+        return _exhausted_pair(
+            base_results,
+            thong_result,
+            pair_contract,
+            revalidation_context,
+            "SBBF_BASE_STREAM_SET_INCOMPLETE",
+        )
     expected_base = pair_contract.base_by_id
     for name in BASE_STREAMS:
         result = base_results[name]
@@ -420,6 +623,7 @@ def complete_sbbf_pair(
                 base_results,
                 thong_result,
                 pair_contract,
+                revalidation_context,
                 f"SBBF_STREAM_IDENTITY_MISMATCH:{name}",
             )
         if result.blend_steps != SEARCH_STEPS:
@@ -427,6 +631,7 @@ def complete_sbbf_pair(
                 base_results,
                 thong_result,
                 pair_contract,
+                revalidation_context,
                 f"SBBF_SEARCH_INVARIANT_FAILURE:{name}",
             )
         if result.blend_step is None or (SEARCH_STEPS - result.blend_step) * 2 < SEARCH_STEPS:
@@ -434,14 +639,16 @@ def complete_sbbf_pair(
                 base_results,
                 thong_result,
                 pair_contract,
+                revalidation_context,
                 f"SBBF_COMPLETION_FLOOR_FAILURE:{name}",
             )
-        if not _result_admitted(result):
+        if not _result_admitted(result, revalidation_context.base_by_id[name]):
             return _exhausted_pair(
                 base_results,
                 thong_result,
                 pair_contract,
-                f"SBBF_BASE_STREAM_GATE_FAILURE:{name}",
+                revalidation_context,
+                f"SBBF_STREAM_REVALIDATION_FAILURE:{name}",
             )
     if (
         thong_result.stream_identity != pair_contract.thong_identity
@@ -451,6 +658,7 @@ def complete_sbbf_pair(
             base_results,
             thong_result,
             pair_contract,
+            revalidation_context,
             "SBBF_STREAM_IDENTITY_MISMATCH:thong",
         )
     if thong_result.blend_steps != SEARCH_STEPS:
@@ -458,6 +666,7 @@ def complete_sbbf_pair(
             base_results,
             thong_result,
             pair_contract,
+            revalidation_context,
             "SBBF_SEARCH_INVARIANT_FAILURE:thong",
         )
     if (
@@ -468,13 +677,15 @@ def complete_sbbf_pair(
             base_results,
             thong_result,
             pair_contract,
+            revalidation_context,
             "SBBF_COMPLETION_FLOOR_FAILURE:thong",
         )
-    if not _result_admitted(thong_result):
+    if not _result_admitted(thong_result, revalidation_context.thong_stream):
         return _exhausted_pair(
             base_results,
             thong_result,
             pair_contract,
+            revalidation_context,
             "SBBF_THONG_GATE_FAILURE",
         )
 
@@ -489,6 +700,7 @@ def complete_sbbf_pair(
         position_digest=_position_digest(positions),
         exhaustion_reason=None,
         pair_contract=pair_contract,
+        revalidation_context=revalidation_context,
         base_results=base_results,
         thong_result=thong_result,
     )
@@ -522,6 +734,7 @@ def _validate_offline_result(result: CompletePairResult) -> None:
         result.base_results,
         result.thong_result,
         result.pair_contract,
+        result.revalidation_context,
     )
     if result.status == METHOD_EXHAUSTED:
         if (

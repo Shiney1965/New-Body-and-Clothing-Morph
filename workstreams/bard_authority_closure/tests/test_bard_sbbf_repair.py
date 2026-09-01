@@ -17,7 +17,9 @@ from workstreams.bard_authority_closure.bard_sbbf_repair import (
     PASS_UNCHANGED,
     CompletePairResult,
     SBBFPairContract,
+    SBBFPairRevalidationContext,
     StreamIdentity,
+    build_stream_revalidation_context,
     complete_sbbf_pair,
     failing_face_neighborhood,
     index_topology_digest,
@@ -110,7 +112,12 @@ def _passing_result(stream_id: str, offset: float = 0.0, *, component: str = "ba
     )
 
 
-def _passing_pair() -> tuple[dict[str, object], object, SBBFPairContract]:
+def _passing_pair() -> tuple[
+    dict[str, object],
+    object,
+    SBBFPairContract,
+    SBBFPairRevalidationContext,
+]:
     base = {
         name: _passing_result(name, float(index) * 10.0)
         for index, name in enumerate(BASE_STREAMS)
@@ -120,7 +127,26 @@ def _passing_pair() -> tuple[dict[str, object], object, SBBFPairContract]:
         base_identities=tuple(base[name].stream_identity for name in BASE_STREAMS),
         thong_identity=thong.stream_identity,
     )
-    return base, thong, contract
+    faces = np.asarray([[0, 1, 2]], dtype="<u4")
+    context = SBBFPairRevalidationContext(
+        pair_contract=contract,
+        base_streams=tuple(
+            build_stream_revalidation_context(
+                base[name].positions,
+                base[name].positions,
+                faces,
+                base[name].stream_identity,
+            )
+            for name in BASE_STREAMS
+        ),
+        thong_stream=build_stream_revalidation_context(
+            thong.positions,
+            thong.positions,
+            faces,
+            thong.stream_identity,
+        ),
+    )
+    return base, thong, contract, context
 
 
 def test_failing_face_neighborhood_is_only_the_seed_face_one_ring():
@@ -248,11 +274,11 @@ def test_outside_region_gate_compares_float32_bytes_not_numeric_values():
 
 
 def test_complete_pair_fails_closed_for_partial_or_contract_changed_output(tmp_path: Path):
-    base, thong, contract = _passing_pair()
+    base, thong, contract, context = _passing_pair()
     missing = dict(base)
     missing.pop(BASE_STREAMS[-1])
 
-    partial = complete_sbbf_pair(missing, thong, contract)
+    partial = complete_sbbf_pair(missing, thong, contract, context)
     changed_identity = replace(
         base[BASE_STREAMS[0]],
         stream_identity=replace(
@@ -262,7 +288,7 @@ def test_complete_pair_fails_closed_for_partial_or_contract_changed_output(tmp_p
     )
     changed = dict(base)
     changed[BASE_STREAMS[0]] = changed_identity
-    semantic_change = complete_sbbf_pair(changed, thong, contract)
+    semantic_change = complete_sbbf_pair(changed, thong, contract, context)
 
     for index, result in enumerate((partial, semantic_change), start=1):
         assert result.status == "METHOD_SPECIFIC_EXHAUSTION"
@@ -285,7 +311,7 @@ def test_complete_pair_fails_closed_for_partial_or_contract_changed_output(tmp_p
     ),
 )
 def test_complete_pair_derives_and_compares_every_stream_identity_field(field: str, value):
-    base, thong, contract = _passing_pair()
+    base, thong, contract, context = _passing_pair()
     first = BASE_STREAMS[0]
     changed = dict(base)
     changed[first] = replace(
@@ -293,7 +319,7 @@ def test_complete_pair_derives_and_compares_every_stream_identity_field(field: s
         stream_identity=replace(base[first].stream_identity, **{field: value}),
     )
 
-    result = complete_sbbf_pair(changed, thong, contract)
+    result = complete_sbbf_pair(changed, thong, contract, context)
 
     assert result.status == "METHOD_SPECIFIC_EXHAUSTION"
     assert result.exhaustion_reason == f"SBBF_STREAM_IDENTITY_MISMATCH:{first}"
@@ -301,7 +327,7 @@ def test_complete_pair_derives_and_compares_every_stream_identity_field(field: s
 
 
 def test_complete_pair_rejects_mapping_relabel_thong_relabel_and_removed_default_gates():
-    base, thong, contract = _passing_pair()
+    base, thong, contract, context = _passing_pair()
     relabeled = dict(base)
     relabeled[BASE_STREAMS[0]] = replace(
         base[BASE_STREAMS[0]],
@@ -315,22 +341,22 @@ def test_complete_pair_rejects_mapping_relabel_thong_relabel_and_removed_default
         stream_identity=replace(thong.stream_identity, stream_id=BASE_STREAMS[0]),
     )
 
-    assert complete_sbbf_pair(relabeled, thong, contract).status == "METHOD_SPECIFIC_EXHAUSTION"
-    assert complete_sbbf_pair(base, wrong_thong, contract).status == "METHOD_SPECIFIC_EXHAUSTION"
+    assert complete_sbbf_pair(relabeled, thong, contract, context).status == "METHOD_SPECIFIC_EXHAUSTION"
+    assert complete_sbbf_pair(base, wrong_thong, contract, context).status == "METHOD_SPECIFIC_EXHAUSTION"
     with pytest.raises(TypeError):
-        complete_sbbf_pair(base, thong, contract, semantic_contract_exact=False)
+        complete_sbbf_pair(base, thong, contract, context, semantic_contract_exact=False)
 
 
 def test_complete_pair_rechecks_fixed_search_and_half_completion_floor():
-    base, thong, contract = _passing_pair()
+    base, thong, contract, context = _passing_pair()
     first = BASE_STREAMS[0]
     wrong_search = dict(base)
     wrong_search[first] = replace(base[first], blend_steps=2048)
     below_floor = dict(base)
     below_floor[first] = replace(base[first], blend_step=2049)
 
-    search_result = complete_sbbf_pair(wrong_search, thong, contract)
-    floor_result = complete_sbbf_pair(below_floor, thong, contract)
+    search_result = complete_sbbf_pair(wrong_search, thong, contract, context)
+    floor_result = complete_sbbf_pair(below_floor, thong, contract, context)
 
     assert search_result.status == "METHOD_SPECIFIC_EXHAUSTION"
     assert search_result.exhaustion_reason == f"SBBF_SEARCH_INVARIANT_FAILURE:{first}"
@@ -338,10 +364,106 @@ def test_complete_pair_rechecks_fixed_search_and_half_completion_floor():
     assert floor_result.exhaustion_reason == f"SBBF_COMPLETION_FLOOR_FAILURE:{first}"
 
 
-def test_complete_pair_emits_only_all_four_base_streams_plus_passing_thong(tmp_path: Path):
-    base, thong, contract = _passing_pair()
+@pytest.mark.parametrize(
+    "mutation",
+    ("zeros", "wrong_shape", "nonfinite", "position_hash", "status_blend"),
+)
+def test_complete_pair_recomputes_positions_instead_of_trusting_candidate_summaries(mutation: str):
+    base, thong, contract, context = _passing_pair()
+    first = BASE_STREAMS[0]
+    original = base[first]
+    if mutation == "zeros":
+        forged = replace(original, positions=np.zeros_like(original.positions))
+    elif mutation == "wrong_shape":
+        forged = replace(original, positions=original.positions[:-1])
+    elif mutation == "nonfinite":
+        positions = original.positions.copy()
+        positions[0, 0] = np.nan
+        forged = replace(original, positions=positions)
+    elif mutation == "position_hash":
+        forged = replace(original, position_sha256="F" * 64)
+    else:
+        forged = replace(original, status=PASS_REPAIRED, blend_step=0)
+    changed = dict(base)
+    changed[first] = forged
 
-    result = complete_sbbf_pair(base, thong, contract)
+    result = complete_sbbf_pair(changed, thong, contract, context)
+
+    assert result.status == "METHOD_SPECIFIC_EXHAUSTION"
+    assert result.exhaustion_reason == f"SBBF_STREAM_REVALIDATION_FAILURE:{first}"
+    assert result.candidate_positions is None
+
+
+@pytest.mark.parametrize("summary", ("topology", "outside"))
+def test_complete_pair_rejects_stale_topology_and_outside_summaries(summary: str):
+    base, thong, contract, context = _passing_pair()
+    first = BASE_STREAMS[0]
+    original = base[first]
+    if summary == "topology":
+        forged = replace(
+            original,
+            post_metrics=replace(
+                original.post_metrics,
+                minimum_area_ratio=original.post_metrics.minimum_area_ratio + 0.125,
+            ),
+        )
+    else:
+        forged = replace(
+            original,
+            outside_gate=replace(original.outside_gate, changed_outside_rows=(0,)),
+        )
+    changed = dict(base)
+    changed[first] = forged
+
+    result = complete_sbbf_pair(changed, thong, contract, context)
+
+    assert result.status == "METHOD_SPECIFIC_EXHAUSTION"
+    assert result.exhaustion_reason == f"SBBF_STREAM_REVALIDATION_FAILURE:{first}"
+
+
+def _test_pair_digest(positions: dict[str, dict[str, np.ndarray]]) -> str:
+    digest = hashlib.sha256()
+    for component in ("base", "thong"):
+        for stream in sorted(positions[component]):
+            digest.update(component.encode("utf-8"))
+            digest.update(stream.encode("utf-8"))
+            digest.update(np.asarray(positions[component][stream], dtype="<f4").tobytes(order="C"))
+    return digest.hexdigest().upper()
+
+
+def test_writer_rejects_zeroed_positions_with_stale_summaries_before_creating_directory(
+    tmp_path: Path,
+):
+    base, thong, contract, context = _passing_pair()
+    valid = complete_sbbf_pair(base, thong, contract, context)
+    first = BASE_STREAMS[0]
+    zero_positions = np.zeros_like(base[first].positions)
+    forged_stream = replace(base[first], positions=zero_positions)
+    forged_base = dict(base)
+    forged_base[first] = forged_stream
+    forged_positions = {
+        "base": dict(valid.candidate_positions["base"]),
+        "thong": dict(valid.candidate_positions["thong"]),
+    }
+    forged_positions["base"][first] = zero_positions
+    forged = replace(
+        valid,
+        base_results=forged_base,
+        candidate_positions=forged_positions,
+        position_digest=_test_pair_digest(forged_positions),
+    )
+    output = tmp_path / "must-not-exist"
+
+    with pytest.raises(ValueError, match="OFFLINE_RESULT_NOT_EMITTABLE"):
+        write_offline_result(output, forged)
+
+    assert not output.exists()
+
+
+def test_complete_pair_emits_only_all_four_base_streams_plus_passing_thong(tmp_path: Path):
+    base, thong, contract, context = _passing_pair()
+
+    result = complete_sbbf_pair(base, thong, contract, context)
     report_path, candidate_path = write_offline_result(tmp_path, result)
 
     assert result.status == "PASS_OFFLINE_SBBF_PAIR"
@@ -385,8 +507,8 @@ def test_writer_revalidates_complete_pair_instead_of_trusting_pass_label(
     tmp_path: Path,
     mutation: str,
 ):
-    base, thong, contract = _passing_pair()
-    result = complete_sbbf_pair(base, thong, contract)
+    base, thong, contract, context = _passing_pair()
+    result = complete_sbbf_pair(base, thong, contract, context)
     if mutation == "status":
         tampered = replace(result, status="METHOD_SPECIFIC_EXHAUSTION")
     elif mutation == "routes":
@@ -419,9 +541,9 @@ def test_writer_revalidates_complete_pair_instead_of_trusting_pass_label(
 
 
 def test_writer_refuses_prior_artifacts_and_never_labels_a_stale_candidate_exhausted(tmp_path: Path):
-    base, thong, contract = _passing_pair()
-    passing = complete_sbbf_pair(base, thong, contract)
-    exhausted = complete_sbbf_pair({key: value for key, value in base.items() if key != BASE_STREAMS[0]}, thong, contract)
+    base, thong, contract, context = _passing_pair()
+    passing = complete_sbbf_pair(base, thong, contract, context)
+    exhausted = complete_sbbf_pair({key: value for key, value in base.items() if key != BASE_STREAMS[0]}, thong, contract, context)
     output = tmp_path / "fresh-only"
 
     write_offline_result(output, passing)
@@ -440,8 +562,8 @@ def test_writer_refuses_prior_artifacts_and_never_labels_a_stale_candidate_exhau
     ("bard_sbbf_candidate_positions.npz", "bard_sbbf_repair_report.json"),
 )
 def test_writer_refuses_each_prior_artifact_independently(tmp_path: Path, prior_name: str):
-    base, thong, contract = _passing_pair()
-    passing = complete_sbbf_pair(base, thong, contract)
+    base, thong, contract, context = _passing_pair()
+    passing = complete_sbbf_pair(base, thong, contract, context)
     output = tmp_path / prior_name.replace(".", "-")
     output.mkdir()
     (output / prior_name).write_bytes(b"retained prior artifact")
@@ -615,7 +737,15 @@ def _real_sbbf_inputs():
         base_identities=tuple(base_inputs[name][3] for name in BASE_STREAMS),
         thong_identity=thong_input[3],
     )
-    return base_inputs, thong_input, pair_contract, input_hashes
+    revalidation_context = SBBFPairRevalidationContext(
+        pair_contract=pair_contract,
+        base_streams=tuple(
+            build_stream_revalidation_context(*base_inputs[name])
+            for name in BASE_STREAMS
+        ),
+        thong_stream=build_stream_revalidation_context(*thong_input),
+    )
+    return base_inputs, thong_input, pair_contract, revalidation_context, input_hashes
 
 
 def _solve_real_input(stream_input):
@@ -629,7 +759,7 @@ def _solve_real_input(stream_input):
 
 
 def test_real_hash_locked_alpha_floor_is_repaired_deterministically(tmp_path: Path):
-    base_inputs, thong_input, pair_contract, input_hashes = _real_sbbf_inputs()
+    base_inputs, thong_input, pair_contract, revalidation_context, input_hashes = _real_sbbf_inputs()
     sleeve_source, sleeve_candidate, sleeve_faces, sleeve_identity = base_inputs[SLEEVE_STREAM]
     retained = topology_metrics(sleeve_source, sleeve_candidate, sleeve_faces)
 
@@ -645,7 +775,12 @@ def test_real_hash_locked_alpha_floor_is_repaired_deterministically(tmp_path: Pa
             for name in BASE_STREAMS
         }
         thong_result = _solve_real_input(thong_input)
-        complete = complete_sbbf_pair(base_results, thong_result, pair_contract)
+        complete = complete_sbbf_pair(
+            base_results,
+            thong_result,
+            pair_contract,
+            revalidation_context,
+        )
         run_results.append(complete)
         report_path, candidate_path = write_offline_result(
             tmp_path / f"run-{run_number}",
