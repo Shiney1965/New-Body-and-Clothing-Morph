@@ -279,8 +279,9 @@ def _ledger_payload(
 
 
 def _manifest_payload(
-    verified_inputs: list[VerifiedInput],
+    verified_inputs: list[VerifiedInput], *,
     discovered_events: Iterable[DiscoveredExclusionEvent] = (),
+    verified_evidence: Mapping[str, str] = {},
 ) -> dict[str, object]:
     payload: dict[str, object] = {
         "inputs": [
@@ -297,10 +298,17 @@ def _manifest_payload(
     }
     events = tuple(discovered_events)
     if events:
-        payload["exclusion_event_files"] = [
+        event_files = [
             {"relative_path": item.relative_path, "sha256": item.sha256}
             for item in events
         ]
+        payload["exclusion_event_files"] = event_files
+        payload["terminal_exclusion_validation_trace"] = {
+            "discovered_event_files": {
+                item["relative_path"]: item["sha256"] for item in event_files
+            },
+            "verified_evidence": dict(sorted(verified_evidence.items())),
+        }
     return payload
 
 
@@ -383,10 +391,14 @@ def generate(config: LocalConfiguration) -> GenerationResult:
             observations.append(namespaced)
     reconciliation = reconcile_observations(observations)
     discovered_events = discover_exclusion_events(config.exclusion_events_dir)
+    verified_exclusion_evidence = _local_verified_evidence_registry(config, verified_inputs)
+    discovered_event_files = {
+        item.relative_path: item.sha256 for item in discovered_events
+    }
     records = _attach_terminal_exclusions(
         reconciliation.records,
         discovered_events,
-        _local_verified_evidence_registry(config, verified_inputs),
+        verified_exclusion_evidence,
     )
     supporting_input_ids = sorted(
         input_.input_id
@@ -408,10 +420,18 @@ def generate(config: LocalConfiguration) -> GenerationResult:
     ):
         audit[name] = sorted(audit[name])
     ledger = _ledger_payload(records, observations, verified_inputs)
-    ledger_errors = validate_generated_ledger(ledger)
+    ledger_errors = validate_generated_ledger(
+        ledger,
+        verified_evidence=verified_exclusion_evidence,
+        discovered_event_files=discovered_event_files,
+    )
     if ledger_errors:
         raise ValueError("GENERATED_LEDGER_INVALID:" + ",".join(ledger_errors))
-    manifest = _manifest_payload(verified_inputs, discovered_events)
+    manifest = _manifest_payload(
+        verified_inputs,
+        discovered_events=discovered_events,
+        verified_evidence=verified_exclusion_evidence,
+    )
 
     output_dir = config.output_path.parent
     ledger_path = output_dir / LEDGER_NAME

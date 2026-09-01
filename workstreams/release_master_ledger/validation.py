@@ -324,24 +324,11 @@ def _validate_blocker_codes(
         errors.append("BLOCKER_CODES_REQUIRED")
 
 
-def _terminal_event_evidence_registry(event: Mapping[str, Any]) -> dict[str, str] | None:
-    evidence = event.get("evidence")
-    if not isinstance(evidence, (list, tuple)) or not evidence:
-        return None
-    registry: dict[str, str] = {}
-    for entry in evidence:
-        if not isinstance(entry, Mapping):
-            return None
-        path, digest = entry.get("path"), entry.get("sha256")
-        if not isinstance(path, str) or not isinstance(digest, str) or SHA256_RE.fullmatch(digest) is None:
-            return None
-        if path in registry and registry[path] != digest:
-            return None
-        registry[path] = digest
-    return registry
-
-
-def _validate_terminal_exclusion(record: Mapping[str, Any], errors: list[str]) -> bool:
+def _validate_terminal_exclusion(
+    record: Mapping[str, Any], errors: list[str], *,
+    verified_evidence: Mapping[str, str] | None,
+    discovered_event_files: Mapping[str, str] | None,
+) -> bool:
     """Validate a selected Task-1 event and the immutable event-file provenance."""
     if "terminal_exclusion" not in record:
         errors.append("MISSING:terminal_exclusion")
@@ -361,6 +348,9 @@ def _validate_terminal_exclusion(record: Mapping[str, Any], errors: list[str]) -
     if not isinstance(value, Mapping):
         errors.append("INVALID:terminal_exclusion")
         return False
+    if verified_evidence is None or discovered_event_files is None:
+        errors.append("MISSING_TERMINAL_EXCLUSION_VALIDATION_CONTEXT")
+        return False
     event = value.get("event")
     file_provenance = value.get("event_file")
     valid = isinstance(event, Mapping) and isinstance(file_provenance, Mapping)
@@ -369,16 +359,11 @@ def _validate_terminal_exclusion(record: Mapping[str, Any], errors: list[str]) -
     if not isinstance(file_provenance, Mapping):
         errors.append("TERMINAL_EXCLUSION_EVENT_FILE_INVALID")
     if isinstance(event, Mapping):
-        registry = _terminal_event_evidence_registry(event)
-        if registry is None:
-            errors.append("TERMINAL_EXCLUSION_EVENT_INVALID:INVALID:evidence")
+        for error in validate_exclusion_event(
+            event, ledger_record=record, evidence_hashes=verified_evidence
+        ):
+            errors.append(f"TERMINAL_EXCLUSION_EVENT_INVALID:{error}")
             valid = False
-        else:
-            for error in validate_exclusion_event(
-                event, ledger_record=record, evidence_hashes=registry
-            ):
-                errors.append(f"TERMINAL_EXCLUSION_EVENT_INVALID:{error}")
-                valid = False
     if isinstance(file_provenance, Mapping):
         relative_path = file_provenance.get("relative_path")
         digest = file_provenance.get("sha256")
@@ -390,6 +375,7 @@ def _validate_terminal_exclusion(record: Mapping[str, Any], errors: list[str]) -
             or not isinstance(canonical_digest, str) or SHA256_RE.fullmatch(canonical_digest) is None
             or not isinstance(event, Mapping)
             or canonical_digest != sha256_text(canonical_json(event))
+            or discovered_event_files.get(relative_path) != digest
         ):
             errors.append("TERMINAL_EXCLUSION_EVENT_FILE_INVALID")
             valid = False
@@ -407,7 +393,10 @@ def _validate_terminal_exclusion(record: Mapping[str, Any], errors: list[str]) -
     return valid
 
 
-def validate_record(record: dict[str, object]) -> list[str]:
+def validate_record(
+    record: dict[str, object], *, verified_evidence: Mapping[str, str] | None = None,
+    discovered_event_files: Mapping[str, str] | None = None,
+) -> list[str]:
     """Return stable errors for an emitted record; an empty list is valid."""
     if not isinstance(record, dict):
         return ["INVALID:record"]
@@ -443,7 +432,12 @@ def validate_record(record: dict[str, object]) -> list[str]:
     elif record["disposition"] not in DISPOSITIONS:
         errors.append(f"INVALID_DISPOSITION:{record['disposition']}")
 
-    terminal_exclusion_valid = _validate_terminal_exclusion(record, errors)
+    terminal_exclusion_valid = _validate_terminal_exclusion(
+        record,
+        errors,
+        verified_evidence=verified_evidence,
+        discovered_event_files=discovered_event_files,
+    )
     _validate_blocker_codes(record, errors, terminal_exclusion_valid)
 
     fields = _identity_fields_from_record(record)
@@ -458,7 +452,10 @@ def validate_record(record: dict[str, object]) -> list[str]:
     return errors
 
 
-def validate_generated_ledger(document: object) -> list[str]:
+def validate_generated_ledger(
+    document: object, *, verified_evidence: Mapping[str, str] | None = None,
+    discovered_event_files: Mapping[str, str] | None = None,
+) -> list[str]:
     """Validate a complete generated ledger envelope and every record."""
     if not isinstance(document, Mapping):
         return ["INVALID:document"]
@@ -477,7 +474,12 @@ def validate_generated_ledger(document: object) -> list[str]:
                 errors.append(f"RECORD[{index}]:INVALID:record")
                 continue
             errors.extend(
-                f"RECORD[{index}]:{error}" for error in validate_record(dict(record))
+                f"RECORD[{index}]:{error}"
+                for error in validate_record(
+                    dict(record),
+                    verified_evidence=verified_evidence,
+                    discovered_event_files=discovered_event_files,
+                )
             )
         summary = document.get("summary")
         if isinstance(summary, Mapping) and summary.get("record_count") != len(records):
