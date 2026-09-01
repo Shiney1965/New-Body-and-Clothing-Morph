@@ -6,7 +6,7 @@ from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from typing import Any
 
-from .identity import build_identity
+from .identity import build_identity, sha256_text
 from .models import CanonicalIdentityFields, LedgerRecord, Observation
 from .validation import validate_record
 
@@ -75,6 +75,9 @@ def _unresolved(value: object) -> bool:
 def _provisional_fields(fields: CanonicalIdentityFields, observation_id: str) -> CanonicalIdentityFields:
     values = fields.to_dict()
     suffix = f"__OBSERVATION__{observation_id}"
+    for key in ("source_profile_digest", "inheritance_digest", "component_contract_digest"):
+        if _unresolved(values[key]):
+            values[key] = sha256_text(f"{values[key]}:{observation_id}")
     for key in ("source_module_uuid", "creation_path_kind", "root_template_uuid", "stats_entry", "effective_slot"):
         if _unresolved(values[key]):
             values[key] = values[key] + suffix

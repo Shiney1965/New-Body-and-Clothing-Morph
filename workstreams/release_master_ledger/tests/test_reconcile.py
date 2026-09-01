@@ -1,5 +1,6 @@
 from workstreams.release_master_ledger.models import CanonicalIdentityFields, Observation
 from workstreams.release_master_ledger.reconcile import reconcile_observations
+from workstreams.release_master_ledger.validation import validate_record
 import pytest
 
 
@@ -121,3 +122,25 @@ def test_duplicate_observation_id_is_rejected_before_reconciliation():
             observation(duplicate_id),
             observation(duplicate_id, fields=identity(root_template_uuid="different-root")),
         ])
+
+
+@pytest.mark.parametrize(
+    ("field_name", "placeholder"),
+    [
+        ("source_profile_digest", "AMBIGUOUS_SOURCE_PROFILE_DIGEST"),
+        ("inheritance_digest", "UNKNOWN_INHERITANCE_DIGEST"),
+        ("component_contract_digest", "AMBIGUOUS_COMPONENT_CONTRACT_DIGEST"),
+    ],
+)
+def test_unresolved_hash_identity_field_becomes_distinct_valid_provisional_records(field_name, placeholder):
+    fields = identity(**{field_name: placeholder})
+
+    result = reconcile_observations([
+        observation(f"{field_name}-first", fields=fields, display_name="First"),
+        observation(f"{field_name}-second", fields=fields, display_name="Second"),
+    ])
+
+    assert len(result.records) == 2
+    assert all(record.release_blocking is True for record in result.records)
+    assert all("IDENTITY_FIELDS_UNRESOLVED" in record.blocker_codes for record in result.records)
+    assert all(validate_record(record.to_dict()) == [] for record in result.records)
