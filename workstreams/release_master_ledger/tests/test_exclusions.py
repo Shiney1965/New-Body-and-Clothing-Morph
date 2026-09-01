@@ -27,6 +27,9 @@ VERIFIED_EVIDENCE = {
     "evidence/geometry.json": GEOMETRY_SHA256,
     "evidence/permission.txt": PERMISSION_SHA256,
     "evidence/source-audit.json": SOURCE_SHA256,
+    "implementations/cage.py": "2" * 64,
+    "implementations/projection.py": "1" * 64,
+    "implementations/skinning.py": "3" * 64,
     "Public/Synthetic/Protected.GR2": SOURCE_SHA256,
 }
 
@@ -55,6 +58,10 @@ def ledger_record(**overrides):
 
 def evidence(path):
     return [{"path": path, "sha256": VERIFIED_EVIDENCE[path], "claim": "bounded artifact"}]
+
+
+def evidence_many(*paths):
+    return [entry for path in paths for entry in evidence(path)]
 
 
 def profile_proof():
@@ -92,6 +99,7 @@ def proof_for(reason):
         return {
             "permission_text": {"path": "evidence/permission.txt", "sha256": PERMISSION_SHA256},
             "permission_result": "PROHIBITED",
+            "requested_operations": ["DERIVATIVE", "REDISTRIBUTION"],
             "date": "2026-09-01", "credit": "Synthetic Author", "derivative_scope": "NO_DERIVATIVES",
             "redistribution_scope": "NO_REDISTRIBUTION", "exact_source_version": "1",
         }
@@ -114,7 +122,7 @@ def proof_for(reason):
                 category: {"result": "COMPLETE", **evidence_link("evidence/source-audit.json")}
                 for category in ("root_templates", "named_stats", "inheritance", "visual_banks", "ordered_components", "provider_maps", "uuid_path_hash_aliases")
             },
-            "search_result": "ZERO_ROUTE",
+            "search_result": {"result": "ZERO_ROUTE", **evidence_link("evidence/source-audit.json")},
             "anti_omission": {"result": "PASS", **evidence_link("evidence/source-audit.json")},
             "anti_omission_pass": True,
         }
@@ -127,9 +135,9 @@ def proof_for(reason):
     if reason == "NO_SAFE_GEOMETRY_AVAILABLE":
         component = [{"component_id": "garment-a", "status": "FAIL", **evidence_link("evidence/geometry.json")}]
         architectures = [
-            {"method_id": "projection-v1", "method_family": "surface-projection", "implementation_sha256": "1" * 64, "candidate_count": 1, "status": "FAILED_FIXED_GATES", "components": component},
-            {"method_id": "cage-v1", "method_family": "cage-deformation", "implementation_sha256": "2" * 64, "candidate_count": 1, "status": "FAILED_FIXED_GATES", "components": component},
-            {"method_id": "skinning-v1", "method_family": "skinning-transfer", "implementation_sha256": "3" * 64, "candidate_count": 1, "status": "FAILED_FIXED_GATES", "components": component},
+            {"method_id": "projection-v1", "method_family": "surface-projection", "implementation_path": "implementations/projection.py", "implementation_sha256": "1" * 64, "candidate_count": 1, "status": "FAILED_FIXED_GATES", "components": component},
+            {"method_id": "cage-v1", "method_family": "cage-deformation", "implementation_path": "implementations/cage.py", "implementation_sha256": "2" * 64, "candidate_count": 1, "status": "FAILED_FIXED_GATES", "components": component},
+            {"method_id": "skinning-v1", "method_family": "skinning-transfer", "implementation_path": "implementations/skinning.py", "implementation_sha256": "3" * 64, "candidate_count": 1, "status": "FAILED_FIXED_GATES", "components": component},
         ]
         gates = {
             gate: {"result": "FAIL", **evidence_link("evidence/geometry.json")}
@@ -174,7 +182,10 @@ def geometry_event(proof=None, **overrides):
         "reason": "NO_SAFE_GEOMETRY_AVAILABLE", "reason_proof": proof,
         "attempted_architectures": proof.get("architecture_results", []),
         "fixed_acceptance_gates": proof.get("fixed_gates", {}),
-        "evidence": evidence("evidence/geometry.json"),
+        "evidence": evidence_many(
+            "evidence/geometry.json", "implementations/projection.py",
+            "implementations/cage.py", "implementations/skinning.py",
+        ),
     }
     values.update(overrides)
     return signed_event(**values)
@@ -273,7 +284,7 @@ def test_geometry_accepts_only_a_structured_hard_contract_impossibility_alternat
         "result": "HARD_CONTRACT_IMPOSSIBILITY", "protected_object_id": "PROTECTED_OBJECT",
         "protected_object_path": "Public/Synthetic/Protected.GR2", "protected_object_sha256": SOURCE_SHA256,
         "forbidden_boundary": "GARMENT_ONLY", **evidence_link("Public/Synthetic/Protected.GR2"),
-    }}
+    }, "architecture_results": [], "fixed_gates": {}}
 
     assert validate(
         signed_event(reason="NO_SAFE_GEOMETRY_AVAILABLE", reason_proof=proof, evidence=evidence("Public/Synthetic/Protected.GR2")),
@@ -312,6 +323,35 @@ def test_permission_proof_must_prohibit_the_requested_release_operation():
     assert "DERIVATIVE_SCOPE_NOT_PROHIBITED" in validate(event)
 
 
+@pytest.mark.parametrize(
+    "requested_operations,derivative_scope,redistribution_scope",
+    [
+        (["DERIVATIVE"], "NO_DERIVATIVES", "ALLOWED"),
+        (["REDISTRIBUTION"], "ALLOWED", "NO_REDISTRIBUTION"),
+    ],
+)
+def test_permission_proof_requires_denial_only_for_each_requested_operation(
+    requested_operations, derivative_scope, redistribution_scope,
+):
+    proof = proof_for("NO_RELEASE_PERMISSION")
+    proof.update({
+        "requested_operations": requested_operations,
+        "derivative_scope": derivative_scope,
+        "redistribution_scope": redistribution_scope,
+    })
+    event = signed_event(reason="NO_RELEASE_PERMISSION", reason_proof=proof, evidence=evidence("evidence/permission.txt"))
+
+    assert validate(event) == []
+
+
+def test_permission_proof_rejects_a_granted_requested_operation():
+    proof = proof_for("NO_RELEASE_PERMISSION")
+    proof.update({"requested_operations": ["REDISTRIBUTION"], "redistribution_scope": "ALLOWED"})
+    event = signed_event(reason="NO_RELEASE_PERMISSION", reason_proof=proof, evidence=evidence("evidence/permission.txt"))
+
+    assert "REDISTRIBUTION_SCOPE_NOT_PROHIBITED" in validate(event)
+
+
 def test_protected_native_proof_must_match_the_record_relationship_and_verified_pair():
     proof = proof_for("PROTECTED_NATIVE_ONLY")
     proof["protected_registry_id"] = "UNRELATED"
@@ -325,10 +365,28 @@ def test_hard_contract_geometry_rejects_an_unrelated_object_pair():
         "result": "HARD_CONTRACT_IMPOSSIBILITY", "protected_object_id": "PROTECTED_OBJECT",
         "protected_object_path": "evidence/source-audit.json", "protected_object_sha256": SOURCE_SHA256,
         "forbidden_boundary": "GARMENT_ONLY", **evidence_link("evidence/source-audit.json"),
-    }}
+    }, "architecture_results": [], "fixed_gates": {}}
     event = signed_event(reason="NO_SAFE_GEOMETRY_AVAILABLE", reason_proof=proof, evidence=evidence("evidence/source-audit.json"))
 
     assert "HARD_CONTRACT_OBJECT_MISMATCH" in validate(event, protected_consumer_record())
+
+
+def test_hard_contract_geometry_rejects_contradictory_event_summaries():
+    proof = {"hard_contract_impossibility": {
+        "result": "HARD_CONTRACT_IMPOSSIBILITY", "protected_object_id": "PROTECTED_OBJECT",
+        "protected_object_path": "Public/Synthetic/Protected.GR2", "protected_object_sha256": SOURCE_SHA256,
+        "forbidden_boundary": "GARMENT_ONLY", **evidence_link("Public/Synthetic/Protected.GR2"),
+    }, "architecture_results": [], "fixed_gates": {}}
+    event = signed_event(
+        reason="NO_SAFE_GEOMETRY_AVAILABLE", reason_proof=proof,
+        attempted_architectures=[{"contradictory": True}], fixed_acceptance_gates={"topology": "FAIL"},
+        evidence=evidence("Public/Synthetic/Protected.GR2"),
+    )
+
+    errors = validate(event, protected_consumer_record())
+
+    assert "ATTEMPTED_ARCHITECTURES_MISMATCH" in errors
+    assert "FIXED_ACCEPTANCE_GATES_MISMATCH" in errors
 
 
 def test_source_exhaustion_requires_every_enumerated_contract_category_and_anti_omission_true():
@@ -343,6 +401,14 @@ def test_source_exhaustion_requires_every_enumerated_contract_category_and_anti_
     assert "ANTI_OMISSION_NOT_TRUE" in errors
 
 
+def test_source_exhaustion_accepts_an_evidence_bound_contradictory_route():
+    proof = proof_for("UNRESOLVED_SOURCE_CONTRACT_AFTER_EXHAUSTIVE_AUDIT")
+    proof["search_result"] = {"result": "CONTRADICTORY_ROUTE", **evidence_link("evidence/source-audit.json")}
+    event = signed_event(reason="UNRESOLVED_SOURCE_CONTRACT_AFTER_EXHAUSTIVE_AUDIT", reason_proof=proof, evidence=evidence("evidence/source-audit.json"))
+
+    assert validate(event) == []
+
+
 def test_geometry_summary_must_exactly_match_the_structured_architectures_and_gates():
     proof = proof_for("NO_SAFE_GEOMETRY_AVAILABLE")
     event = geometry_event(proof, attempted_architectures=[], fixed_acceptance_gates={})
@@ -351,6 +417,16 @@ def test_geometry_summary_must_exactly_match_the_structured_architectures_and_ga
 
     assert "ATTEMPTED_ARCHITECTURES_MISMATCH" in errors
     assert "FIXED_ACCEPTANCE_GATES_MISMATCH" in errors
+
+
+def test_geometry_architecture_requires_a_verified_implementation_artifact_pair():
+    proof = proof_for("NO_SAFE_GEOMETRY_AVAILABLE")
+    proof["architecture_results"][0].update({
+        "implementation_path": "implementations/unknown.py", "implementation_sha256": "A" * 64,
+    })
+    event = geometry_event(proof)
+
+    assert "INVALID_ARCHITECTURE_IMPLEMENTATION_EVIDENCE" in validate(event)
 
 
 def test_evidence_path_and_hash_must_match_the_same_verified_registry_entry():

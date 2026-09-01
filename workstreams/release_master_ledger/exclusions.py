@@ -226,11 +226,15 @@ def _validate_reason_proof(
         if permission is not None and not _validate_link(permission, registry, links):
             errors.append("INVALID_REASON_PROOF:permission_text")
         _nonblank_fields(proof, ("date", "credit", "derivative_scope", "redistribution_scope", "exact_source_version"), errors)
+        requested_operations = proof.get("requested_operations")
+        if not isinstance(requested_operations, (list, tuple)) or not requested_operations or not all(operation in {"DERIVATIVE", "REDISTRIBUTION"} for operation in requested_operations):
+            errors.append("INVALID_REQUESTED_OPERATIONS")
+            requested_operations = ()
         if proof.get("permission_result") != "PROHIBITED":
             errors.append("PERMISSION_NOT_PROHIBITED")
-        if proof.get("derivative_scope") not in {"NO_DERIVATIVES", "DERIVATIVE_DENIED"}:
+        if "DERIVATIVE" in requested_operations and proof.get("derivative_scope") not in {"NO_DERIVATIVES", "DERIVATIVE_DENIED"}:
             errors.append("DERIVATIVE_SCOPE_NOT_PROHIBITED")
-        if proof.get("redistribution_scope") not in {"NO_REDISTRIBUTION", "REDISTRIBUTION_DENIED"}:
+        if "REDISTRIBUTION" in requested_operations and proof.get("redistribution_scope") not in {"NO_REDISTRIBUTION", "REDISTRIBUTION_DENIED"}:
             errors.append("REDISTRIBUTION_SCOPE_NOT_PROHIBITED")
         module = record.get("source_module")
         if isinstance(module, Mapping) and proof.get("exact_source_version") != module.get("version64"):
@@ -274,7 +278,8 @@ def _validate_reason_proof(
                     errors.append(f"MISSING_SEARCHED_CONTRACT:{key}")
                 elif value.get("result") != "COMPLETE" or not _validate_link(value, registry, links):
                     errors.append(f"INVALID_SEARCHED_CONTRACT:{key}")
-        if proof.get("search_result") != "ZERO_ROUTE":
+        search_result = proof.get("search_result")
+        if not isinstance(search_result, Mapping) or search_result.get("result") not in {"ZERO_ROUTE", "CONTRADICTORY_ROUTE"} or not _validate_link(search_result, registry, links):
             errors.append("INVALID_SEARCH_RESULT")
         _validate_linked_result(proof, "anti_omission", "PASS", registry, links, errors)
         if proof.get("anti_omission_pass") is not True:
@@ -314,6 +319,10 @@ def _validate_geometry_proof(
     errors: list[str], record: Mapping[str, object], attempted_architectures: object,
     fixed_acceptance_gates: object,
 ) -> None:
+    if proof.get("architecture_results") != attempted_architectures:
+        errors.append("ATTEMPTED_ARCHITECTURES_MISMATCH")
+    if proof.get("fixed_gates") != fixed_acceptance_gates:
+        errors.append("FIXED_ACCEPTANCE_GATES_MISMATCH")
     hard_contract = proof.get("hard_contract_impossibility")
     if isinstance(hard_contract, Mapping):
         if not _nonblank_fields(hard_contract, ("protected_object_id", "protected_object_path", "protected_object_sha256", "forbidden_boundary"), errors):
@@ -330,13 +339,15 @@ def _validate_geometry_proof(
     else:
         families: list[object] = []
         for result in results:
-            if not isinstance(result, Mapping) or not _nonblank_fields(result, ("method_id", "method_family", "implementation_sha256", "status"), errors):
+            if not isinstance(result, Mapping) or not _nonblank_fields(result, ("method_id", "method_family", "implementation_path", "implementation_sha256", "status"), errors):
                 errors.append("INVALID_ARCHITECTURE_RESULT")
                 continue
             families.append(result.get("method_family"))
             implementation = result.get("implementation_sha256")
             if not isinstance(implementation, str) or SHA256_RE.fullmatch(implementation) is None or not isinstance(result.get("candidate_count"), int) or isinstance(result.get("candidate_count"), bool) or result["candidate_count"] <= 0 or result.get("status") != "FAILED_FIXED_GATES":
                 errors.append("INVALID_ARCHITECTURE_RESULT")
+            elif not _validate_pair(result.get("implementation_path"), implementation, registry, links):
+                errors.append("INVALID_ARCHITECTURE_IMPLEMENTATION_EVIDENCE")
             components = result.get("components")
             if not isinstance(components, (list, tuple)) or not components:
                 errors.append("INVALID_ARCHITECTURE_COMPONENT_EVIDENCE")
@@ -362,10 +373,6 @@ def _validate_geometry_proof(
     final = proof.get("final_available_safe_tooling_failure")
     if not isinstance(final, Mapping) or final.get("result") != "UNFIXABLE_WITH_AVAILABLE_SAFE_TOOLING" or not _validate_link(final, registry, links):
         errors.append("MISSING_FINAL_SAFE_TOOLING_FAILURE")
-    if proof.get("architecture_results") != attempted_architectures:
-        errors.append("ATTEMPTED_ARCHITECTURES_MISMATCH")
-    if proof.get("fixed_gates") != fixed_acceptance_gates:
-        errors.append("FIXED_ACCEPTANCE_GATES_MISMATCH")
 
 
 def _protected_or_accepted(record: Mapping[str, object]) -> bool:
