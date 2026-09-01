@@ -36,6 +36,13 @@ from .inventory import (
     ProtectedManifestRelation,
     extract_independent_inventories,
 )
+from .exclusions import (
+    ExclusionSelection,
+    canonical_exclusion_payload,
+    exclusion_event_id,
+    select_current_exclusion,
+    validate_exclusion_event,
+)
 
 __all__ = [
     "CanonicalIdentityFields",
@@ -75,4 +82,9 @@ __all__ = [
     "build_completeness_audit",
     "reconcile_observations",
     "extract_independent_inventories",
+    "ExclusionSelection",
+    "canonical_exclusion_payload",
+    "exclusion_event_id",
+    "select_current_exclusion",
+    "validate_exclusion_event",
 ]
