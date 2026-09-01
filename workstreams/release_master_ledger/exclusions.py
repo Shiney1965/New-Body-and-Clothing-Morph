@@ -28,6 +28,15 @@ GEOMETRY_GATES = (
     "topology", "component", "material", "skin", "clearance", "silhouette",
     "deterministic_readback", "nontriviality",
 )
+BOUNDARY_RECORD_FIELDS = {
+    "FORBIDDEN_TARGET": ("protected_relations", "forbidden_targets", "sequence"),
+    "SHARED_ASSET": ("protected_relations", "shared_assets", "sequence"),
+    "COMPONENT": ("transformation", "allowed_components", "sequence"),
+    "MATERIAL": ("transformation", "allowed_channels", "sequence"),
+    "BODY": ("classification", "body_content", "scalar"),
+    "OBJECT": ("protected_relations", "relationships", "object"),
+}
+PERMISSION_OPERATIONS = frozenset({"DERIVATIVE", "REDISTRIBUTION"})
 SHA256_RE = re.compile(r"^[0-9A-F]{64}$")
 RECORD_ID_RE = re.compile(r"^LEDGER_[0-9A-F]{64}$")
 TIEFLING_PAK = "ClothMorphTieflingBT1_TEST.pak"
@@ -206,6 +215,21 @@ def _validate_linked_result(
         errors.append(f"INVALID_REASON_PROOF:{key}")
 
 
+def _record_required_operations(record: Mapping[str, object], errors: list[str]) -> tuple[str, ...]:
+    permission = record.get("permission")
+    operations = permission.get("required_operations") if isinstance(permission, Mapping) else None
+    if not isinstance(operations, (list, tuple)) or not operations:
+        errors.append("MISSING_RECORD_REQUIRED_OPERATIONS")
+        return ()
+    if (
+        any(operation not in PERMISSION_OPERATIONS for operation in operations)
+        or len(set(operations)) != len(operations)
+    ):
+        errors.append("INVALID_RECORD_REQUIRED_OPERATIONS")
+        return ()
+    return tuple(operations)
+
+
 def _validate_reason_proof(
     event: Mapping[str, object], record: Mapping[str, object], registry: Mapping[str, str], links: set[tuple[str, str]], errors: list[str]
 ) -> None:
@@ -226,15 +250,22 @@ def _validate_reason_proof(
         if permission is not None and not _validate_link(permission, registry, links):
             errors.append("INVALID_REASON_PROOF:permission_text")
         _nonblank_fields(proof, ("date", "credit", "derivative_scope", "redistribution_scope", "exact_source_version"), errors)
+        required_operations = _record_required_operations(record, errors)
         requested_operations = proof.get("requested_operations")
-        if not isinstance(requested_operations, (list, tuple)) or not requested_operations or not all(operation in {"DERIVATIVE", "REDISTRIBUTION"} for operation in requested_operations):
+        if (
+            not isinstance(requested_operations, (list, tuple)) or not requested_operations
+            or any(operation not in PERMISSION_OPERATIONS for operation in requested_operations)
+            or len(set(requested_operations)) != len(requested_operations)
+        ):
             errors.append("INVALID_REQUESTED_OPERATIONS")
             requested_operations = ()
+        if required_operations and set(requested_operations) != set(required_operations):
+            errors.append("REQUESTED_OPERATIONS_MISMATCH")
         if proof.get("permission_result") != "PROHIBITED":
             errors.append("PERMISSION_NOT_PROHIBITED")
-        if "DERIVATIVE" in requested_operations and proof.get("derivative_scope") not in {"NO_DERIVATIVES", "DERIVATIVE_DENIED"}:
+        if "DERIVATIVE" in required_operations and proof.get("derivative_scope") not in {"NO_DERIVATIVES", "DERIVATIVE_DENIED"}:
             errors.append("DERIVATIVE_SCOPE_NOT_PROHIBITED")
-        if "REDISTRIBUTION" in requested_operations and proof.get("redistribution_scope") not in {"NO_REDISTRIBUTION", "REDISTRIBUTION_DENIED"}:
+        if "REDISTRIBUTION" in required_operations and proof.get("redistribution_scope") not in {"NO_REDISTRIBUTION", "REDISTRIBUTION_DENIED"}:
             errors.append("REDISTRIBUTION_SCOPE_NOT_PROHIBITED")
         module = record.get("source_module")
         if isinstance(module, Mapping) and proof.get("exact_source_version") != module.get("version64"):
@@ -314,6 +345,55 @@ def _record_has_object_pair(record: Mapping[str, object], object_id: object, pat
     return route_pairs and relation_pairs
 
 
+def _validate_boundary_contract(
+    contract: object, record: Mapping[str, object], object_path: object, object_digest: object,
+    registry: Mapping[str, str], links: set[tuple[str, str]], errors: list[str],
+) -> None:
+    if not isinstance(contract, Mapping):
+        errors.append("INVALID_BOUNDARY_CONTRACT")
+        return
+    if not _nonblank_fields(
+        contract,
+        ("boundary_type", "record_field", "record_path", "record_value", "evidence_path", "evidence_sha256"),
+        errors,
+    ):
+        errors.append("INVALID_BOUNDARY_CONTRACT")
+        return
+    boundary_type = contract.get("boundary_type")
+    field_contract = BOUNDARY_RECORD_FIELDS.get(boundary_type)
+    if field_contract is None:
+        errors.append("INVALID_BOUNDARY_CONTRACT")
+        return
+    family_name, member_name, value_kind = field_contract
+    if contract.get("record_field") != f"{family_name}.{member_name}":
+        errors.append("BOUNDARY_RECORD_MISMATCH")
+    family = record.get(family_name)
+    member = family.get(member_name) if isinstance(family, Mapping) else None
+    record_value = contract.get("record_value")
+    if value_kind == "sequence":
+        matches_record = isinstance(member, (list, tuple)) and record_value in member
+    elif value_kind == "scalar":
+        matches_record = member == record_value
+    else:
+        matches_record = isinstance(member, (list, tuple)) and any(
+            isinstance(relation, Mapping)
+            and relation.get("object_id") == record_value
+            and relation.get("path") == contract.get("record_path")
+            and relation.get("sha256") == contract.get("evidence_sha256")
+            for relation in member
+        )
+    if not matches_record:
+        errors.append("BOUNDARY_RECORD_MISMATCH")
+    boundary_path = contract.get("evidence_path")
+    boundary_digest = contract.get("evidence_sha256")
+    if (
+        contract.get("record_path") != object_path
+        or boundary_path != object_path or boundary_digest != object_digest
+        or not _validate_pair(boundary_path, boundary_digest, registry, links)
+    ):
+        errors.append("BOUNDARY_EVIDENCE_MISMATCH")
+
+
 def _validate_geometry_proof(
     proof: Mapping[str, object], registry: Mapping[str, str], links: set[tuple[str, str]],
     errors: list[str], record: Mapping[str, object], attempted_architectures: object,
@@ -325,13 +405,17 @@ def _validate_geometry_proof(
         errors.append("FIXED_ACCEPTANCE_GATES_MISMATCH")
     hard_contract = proof.get("hard_contract_impossibility")
     if isinstance(hard_contract, Mapping):
-        if not _nonblank_fields(hard_contract, ("protected_object_id", "protected_object_path", "protected_object_sha256", "forbidden_boundary"), errors):
+        if not _nonblank_fields(hard_contract, ("protected_object_id", "protected_object_path", "protected_object_sha256"), errors):
             return
         digest = hard_contract.get("protected_object_sha256")
         if hard_contract.get("result") != "HARD_CONTRACT_IMPOSSIBILITY" or not isinstance(digest, str) or SHA256_RE.fullmatch(digest) is None or not _validate_pair(hard_contract.get("protected_object_path"), digest, registry, links):
             errors.append("INVALID_HARD_CONTRACT_IMPOSSIBILITY")
         elif not _record_has_object_pair(record, hard_contract.get("protected_object_id"), hard_contract.get("protected_object_path"), digest):
             errors.append("HARD_CONTRACT_OBJECT_MISMATCH")
+        _validate_boundary_contract(
+            hard_contract.get("boundary_contract"), record,
+            hard_contract.get("protected_object_path"), digest, registry, links, errors,
+        )
         return
     results = proof.get("architecture_results")
     if not isinstance(results, (list, tuple)) or len(results) < 3:

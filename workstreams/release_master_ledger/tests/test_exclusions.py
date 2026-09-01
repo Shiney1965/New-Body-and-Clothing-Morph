@@ -43,13 +43,21 @@ def ledger_record(**overrides):
             "uuid": "11111111-1111-1111-1111-111111111111",
             "pak_sha256": SOURCE_SHA256, "profile_digest": PROFILE_SHA256, "version64": "1",
         },
-        "classification": {"effective_slot": "Underwear"},
+        "permission": {"required_operations": ["DERIVATIVE", "REDISTRIBUTION"]},
+        "classification": {"effective_slot": "Underwear", "body_content": "GARMENT_ONLY"},
         "body_tuple": {"race": "Human", "sex": "Female", "body_type": "BT1"},
         "source_route": {
             "ordered_paths": ["Public/Synthetic/Protected.GR2"],
             "ordered_file_hashes": [SOURCE_SHA256],
         },
-        "protected_relations": {"registry_ids": [], "protected_consumers": [], "forbidden_targets": []},
+        "protected_relations": {
+            "registry_ids": [], "protected_consumers": [],
+            "shared_assets": ["Public/Synthetic/Protected.GR2"],
+            "forbidden_targets": ["EMBEDDED_BODY_DATA"],
+        },
+        "transformation": {
+            "allowed_components": ["GARMENT"], "allowed_channels": ["GEOMETRY"],
+        },
         "disposition": "DEFERRED_WITH_CAUSE", "acceptance_event_id": "UNKNOWN_ACCEPTANCE_EVENT",
     }
     record.update(overrides)
@@ -82,9 +90,34 @@ def protected_relationship():
 
 
 def protected_consumer_record(**overrides):
-    record = ledger_record(protected_relations={"relationships": [protected_relationship()]})
+    record = ledger_record(protected_relations={
+        "registry_ids": [], "protected_consumers": [],
+        "shared_assets": ["Public/Synthetic/Protected.GR2"],
+        "forbidden_targets": ["EMBEDDED_BODY_DATA"],
+        "relationships": [protected_relationship()],
+    })
     record.update(overrides)
     return record
+
+
+def hard_contract_proof():
+    return {
+        "hard_contract_impossibility": {
+            "result": "HARD_CONTRACT_IMPOSSIBILITY",
+            "protected_object_id": "PROTECTED_OBJECT",
+            "protected_object_path": "Public/Synthetic/Protected.GR2",
+            "protected_object_sha256": SOURCE_SHA256,
+            "boundary_contract": {
+                "boundary_type": "BODY",
+                "record_field": "classification.body_content",
+                "record_path": "Public/Synthetic/Protected.GR2",
+                "record_value": "GARMENT_ONLY",
+                **evidence_link("Public/Synthetic/Protected.GR2"),
+            },
+        },
+        "architecture_results": [],
+        "fixed_gates": {},
+    }
 
 
 def proof_for(reason):
@@ -280,11 +313,7 @@ def test_geometry_rejects_generic_or_incomplete_structured_proof(mutation, expec
 
 
 def test_geometry_accepts_only_a_structured_hard_contract_impossibility_alternative():
-    proof = {"hard_contract_impossibility": {
-        "result": "HARD_CONTRACT_IMPOSSIBILITY", "protected_object_id": "PROTECTED_OBJECT",
-        "protected_object_path": "Public/Synthetic/Protected.GR2", "protected_object_sha256": SOURCE_SHA256,
-        "forbidden_boundary": "GARMENT_ONLY", **evidence_link("Public/Synthetic/Protected.GR2"),
-    }, "architecture_results": [], "fixed_gates": {}}
+    proof = hard_contract_proof()
 
     assert validate(
         signed_event(reason="NO_SAFE_GEOMETRY_AVAILABLE", reason_proof=proof, evidence=evidence("Public/Synthetic/Protected.GR2")),
@@ -340,8 +369,9 @@ def test_permission_proof_requires_denial_only_for_each_requested_operation(
         "redistribution_scope": redistribution_scope,
     })
     event = signed_event(reason="NO_RELEASE_PERMISSION", reason_proof=proof, evidence=evidence("evidence/permission.txt"))
+    record = ledger_record(permission={"required_operations": requested_operations})
 
-    assert validate(event) == []
+    assert validate(event, record) == []
 
 
 def test_permission_proof_rejects_a_granted_requested_operation():
@@ -361,22 +391,20 @@ def test_protected_native_proof_must_match_the_record_relationship_and_verified_
 
 
 def test_hard_contract_geometry_rejects_an_unrelated_object_pair():
-    proof = {"hard_contract_impossibility": {
-        "result": "HARD_CONTRACT_IMPOSSIBILITY", "protected_object_id": "PROTECTED_OBJECT",
-        "protected_object_path": "evidence/source-audit.json", "protected_object_sha256": SOURCE_SHA256,
-        "forbidden_boundary": "GARMENT_ONLY", **evidence_link("evidence/source-audit.json"),
-    }, "architecture_results": [], "fixed_gates": {}}
+    proof = hard_contract_proof()
+    hard_contract = proof["hard_contract_impossibility"]
+    hard_contract["protected_object_path"] = "evidence/source-audit.json"
+    hard_contract["boundary_contract"].update({
+        "record_path": "evidence/source-audit.json",
+        **evidence_link("evidence/source-audit.json"),
+    })
     event = signed_event(reason="NO_SAFE_GEOMETRY_AVAILABLE", reason_proof=proof, evidence=evidence("evidence/source-audit.json"))
 
     assert "HARD_CONTRACT_OBJECT_MISMATCH" in validate(event, protected_consumer_record())
 
 
 def test_hard_contract_geometry_rejects_contradictory_event_summaries():
-    proof = {"hard_contract_impossibility": {
-        "result": "HARD_CONTRACT_IMPOSSIBILITY", "protected_object_id": "PROTECTED_OBJECT",
-        "protected_object_path": "Public/Synthetic/Protected.GR2", "protected_object_sha256": SOURCE_SHA256,
-        "forbidden_boundary": "GARMENT_ONLY", **evidence_link("Public/Synthetic/Protected.GR2"),
-    }, "architecture_results": [], "fixed_gates": {}}
+    proof = hard_contract_proof()
     event = signed_event(
         reason="NO_SAFE_GEOMETRY_AVAILABLE", reason_proof=proof,
         attempted_architectures=[{"contradictory": True}], fixed_acceptance_gates={"topology": "FAIL"},
@@ -387,6 +415,92 @@ def test_hard_contract_geometry_rejects_contradictory_event_summaries():
 
     assert "ATTEMPTED_ARCHITECTURES_MISMATCH" in errors
     assert "FIXED_ACCEPTANCE_GATES_MISMATCH" in errors
+
+
+def test_hard_contract_geometry_rejects_an_arbitrary_boundary_type():
+    proof = hard_contract_proof()
+    proof["hard_contract_impossibility"]["boundary_contract"]["boundary_type"] = "ARBITRARY_PROSE"
+    event = signed_event(
+        reason="NO_SAFE_GEOMETRY_AVAILABLE", reason_proof=proof,
+        evidence=evidence("Public/Synthetic/Protected.GR2"),
+    )
+
+    assert "INVALID_BOUNDARY_CONTRACT" in validate(event, protected_consumer_record())
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        lambda contract: contract.update({"record_field": "protected_relations.forbidden_targets"}),
+        lambda contract: contract.update({"record_value": "CLOTHING"}),
+    ],
+)
+def test_hard_contract_geometry_requires_the_exact_record_field_and_value(mutation):
+    proof = hard_contract_proof()
+    mutation(proof["hard_contract_impossibility"]["boundary_contract"])
+    event = signed_event(
+        reason="NO_SAFE_GEOMETRY_AVAILABLE", reason_proof=proof,
+        evidence=evidence("Public/Synthetic/Protected.GR2"),
+    )
+
+    assert "BOUNDARY_RECORD_MISMATCH" in validate(event, protected_consumer_record())
+
+
+def test_hard_contract_geometry_rejects_real_but_unrelated_boundary_evidence():
+    proof = hard_contract_proof()
+    proof["hard_contract_impossibility"]["boundary_contract"].update({
+        **evidence_link("evidence/source-audit.json"),
+    })
+    event = signed_event(
+        reason="NO_SAFE_GEOMETRY_AVAILABLE", reason_proof=proof,
+        evidence=evidence_many("Public/Synthetic/Protected.GR2", "evidence/source-audit.json"),
+    )
+
+    assert "BOUNDARY_EVIDENCE_MISMATCH" in validate(event, protected_consumer_record())
+
+
+def test_hard_contract_geometry_fails_when_record_has_no_matching_boundary():
+    proof = hard_contract_proof()
+    record = protected_consumer_record(classification={
+        "effective_slot": "Underwear", "body_content": "CLOTHING",
+    })
+    event = signed_event(
+        reason="NO_SAFE_GEOMETRY_AVAILABLE", reason_proof=proof,
+        evidence=evidence("Public/Synthetic/Protected.GR2"),
+    )
+
+    assert "BOUNDARY_RECORD_MISMATCH" in validate(event, record)
+
+
+def test_permission_operations_must_exactly_match_record_required_operations():
+    omitted = proof_for("NO_RELEASE_PERMISSION")
+    omitted["requested_operations"] = ["DERIVATIVE"]
+    extra = proof_for("NO_RELEASE_PERMISSION")
+    record = ledger_record(permission={"required_operations": ["DERIVATIVE"]})
+
+    omitted_event = signed_event(
+        reason="NO_RELEASE_PERMISSION", reason_proof=omitted,
+        evidence=evidence("evidence/permission.txt"),
+    )
+    extra_event = signed_event(
+        reason="NO_RELEASE_PERMISSION", reason_proof=extra,
+        evidence=evidence("evidence/permission.txt"),
+    )
+
+    assert "REQUESTED_OPERATIONS_MISMATCH" in validate(omitted_event)
+    assert "REQUESTED_OPERATIONS_MISMATCH" in validate(extra_event, record)
+
+
+@pytest.mark.parametrize("permission", [{}, {"required_operations": []}])
+def test_permission_exclusion_fails_closed_without_record_required_operations(permission):
+    event = signed_event(
+        reason="NO_RELEASE_PERMISSION", reason_proof=proof_for("NO_RELEASE_PERMISSION"),
+        evidence=evidence("evidence/permission.txt"),
+    )
+
+    assert "MISSING_RECORD_REQUIRED_OPERATIONS" in validate(
+        event, ledger_record(permission=permission),
+    )
 
 
 def test_source_exhaustion_requires_every_enumerated_contract_category_and_anti_omission_true():
