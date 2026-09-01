@@ -71,6 +71,17 @@ class ParsedColladaGeometry(TriangleMesh):
     non_position_sha256: str
     face_indices_sha256: str
 
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        for digest in (self.content_sha256, self.non_position_sha256, self.face_indices_sha256):
+            if re.fullmatch(r"[0-9A-F]{64}", digest) is None:
+                raise ValueError("PARSED_SOURCE_DIGEST_INVALID")
+        expected_face_digest = hashlib.sha256(
+            np.asarray(self.faces, dtype="<i8").tobytes(order="C")
+        ).hexdigest().upper()
+        if self.face_indices_sha256 != expected_face_digest:
+            raise ValueError("PARSED_SOURCE_FACE_IDENTITY_MISMATCH")
+
 
 @dataclass(frozen=True)
 class RoiContract:
@@ -234,7 +245,9 @@ def parse_collada_geometry(verified: VerifiedInput) -> ParsedColladaGeometry:
         geometry_id=geometry_id,
         content_sha256=digest,
         non_position_sha256=_non_position_digest(verified.content, array_id),
-        face_indices_sha256=hashlib.sha256(checked_faces.tobytes(order="C")).hexdigest().upper(),
+        face_indices_sha256=hashlib.sha256(
+            np.asarray(checked_faces, dtype="<i8").tobytes(order="C")
+        ).hexdigest().upper(),
     )
 
 
@@ -501,12 +514,30 @@ def _closest_points(points: np.ndarray, mesh: TriangleMesh) -> tuple[np.ndarray,
         face_ids[point_index] = nearest
         barycentric[point_index] = bary[nearest]
         distances[point_index] = squared[nearest]
-        finite = squared[np.isfinite(squared)]
-        if len(finite) < 2:
+        finite_ids = np.flatnonzero(np.isfinite(squared))
+        if len(finite_ids) < 2:
             ambiguous[point_index] = False
         else:
-            first, second = np.partition(finite, 1)[:2]
-            ambiguous[point_index] = (np.sqrt(second) - np.sqrt(first)) <= 1e-9
+            best_distance = np.sqrt(squared[nearest])
+            tied = finite_ids[
+                (np.sqrt(squared[finite_ids]) - best_distance) <= 1e-9
+            ]
+            if len(tied) < 2:
+                ambiguous[point_index] = False
+            else:
+                same_point = np.linalg.norm(
+                    candidates[tied] - candidates[nearest], axis=1,
+                ) <= 1e-9
+                nearest_normal = face_vectors[nearest] / face_lengths[nearest]
+                tied_normals = face_vectors[tied] / face_lengths[tied, None]
+                aligned_normal = (tied_normals @ nearest_normal) >= (1.0 - 1e-9)
+                same_topological_sheet = np.asarray([
+                    bool(np.intersect1d(mesh.faces[face_id], mesh.faces[nearest]).size)
+                    for face_id in tied
+                ])
+                ambiguous[point_index] = not bool(np.all(
+                    same_point & aligned_normal & same_topological_sheet
+                ))
     return closest, normals, face_ids, barycentric, np.sqrt(distances), ambiguous
 
 

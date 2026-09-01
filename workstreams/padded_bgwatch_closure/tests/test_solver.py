@@ -11,6 +11,7 @@ import pytest
 
 from workstreams.padded_bgwatch_closure.configuration import VerifiedInput
 from workstreams.padded_bgwatch_closure.geometry import (
+    ParsedColladaGeometry,
     SurfaceConstraints,
     TriangleMesh,
     build_surface_constraints,
@@ -21,6 +22,8 @@ from workstreams.padded_bgwatch_closure.geometry import (
 from workstreams.padded_bgwatch_closure.solver import (
     Candidate,
     CandidateContract,
+    CoverageContract,
+    SyntheticCandidateContract,
     evaluate_candidate,
     solve_coherent_field,
 )
@@ -144,7 +147,7 @@ def test_candidate_clearance_requeries_exact_surface_after_tangential_move():
     moved[0] = [0.9995, 0.2, 0.001]
     candidate = Candidate.from_positions(base, faces, moved, status="CANDIDATE")
 
-    report = evaluate_candidate((base, faces), candidate, CandidateContract(roi, constraints))
+    report = evaluate_candidate((base, faces), candidate, SyntheticCandidateContract(roi, constraints))
 
     assert report.active_vertices_below_clearance == 1
     assert report.passed is False
@@ -165,12 +168,159 @@ def test_ambiguous_closest_surface_is_retained_and_fails_clearance_gate():
     constraints = build_surface_constraints(base, body, active_ids=[0])
     candidate = Candidate.from_positions(base, faces, base, status="CANDIDATE")
 
-    report = evaluate_candidate((base, faces), candidate, CandidateContract(roi, constraints))
+    report = evaluate_candidate((base, faces), candidate, SyntheticCandidateContract(roi, constraints))
 
     assert constraints.ambiguous.tolist() == [True]
     assert report.active_surface_ambiguities == 1
     assert report.active_vertices_below_clearance == 1
     assert report.passed is False
+
+
+def test_coplanar_shared_edge_tie_is_same_sheet_not_ambiguous():
+    """Catches a harmless triangulation seam being treated as conflicting surfaces."""
+    base = np.array([[0.5, 0.5, 0.2]], dtype=float)
+    body = TriangleMesh(
+        positions=np.array([[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0]], dtype=float),
+        faces=np.array([[0, 1, 2], [0, 2, 3]], dtype=int),
+    )
+
+    constraints = build_surface_constraints(base, body, active_ids=[0])
+
+    assert constraints.ambiguous.tolist() == [False]
+
+
+def test_coincident_aligned_but_disconnected_surfaces_remain_ambiguous():
+    """Catches disconnected duplicate layers being coalesced as one topological sheet."""
+    base = np.array([[0.25, 0.25, 0.2]], dtype=float)
+    body = TriangleMesh(
+        positions=np.array([
+            [0, 0, 0], [1, 0, 0], [0, 1, 0],
+            [0, 0, 0], [1, 0, 0], [0, 1, 0],
+        ], dtype=float),
+        faces=np.array([[0, 1, 2], [3, 4, 5]], dtype=int),
+    )
+
+    constraints = build_surface_constraints(base, body, active_ids=[0])
+
+    assert constraints.ambiguous.tolist() == [True]
+
+
+@pytest.mark.parametrize("constraint_ids", [(0,), (1, 0)])
+def test_contract_and_solver_require_exact_ordered_active_vertex_identity(constraint_ids):
+    """Catches subset or reordered constraints silently omitting an original active vertex."""
+    base = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0]], dtype=float)
+    faces = np.array([[0, 1, 2]], dtype=int)
+    body = TriangleMesh(
+        positions=np.array([[-2, -2, 0.1], [2, -2, 0.1], [0, 2, 0.1]], dtype=float),
+        faces=np.array([[0, 1, 2]], dtype=int),
+    )
+    roi = derive_minimal_roi(base, faces, active_ids=[0, 1])
+    constraints = build_surface_constraints(base, body, active_ids=constraint_ids)
+
+    with pytest.raises(ValueError, match="ACTIVE_VERTEX_IDENTITY_MISMATCH"):
+        SyntheticCandidateContract(roi, constraints)
+    with pytest.raises(ValueError, match="ACTIVE_VERTEX_IDENTITY_MISMATCH"):
+        solve_coherent_field(
+            base, faces, roi, constraints, scale=1.0, fairness=0.0, iterations=1,
+        )
+
+
+def test_production_contract_requires_body_surface_and_nonempty_fixed_cohort():
+    """Catches production evaluation being configured without dynamic clearance or coverage."""
+    base = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0]], dtype=float)
+    faces = np.array([[0, 1, 2]], dtype=int)
+    roi = derive_minimal_roi(base, faces, active_ids=[0])
+    constraints = SurfaceConstraints(
+        active_ids=(0,),
+        closest_points=np.array([[0, 0, 0.1]]),
+        surface_normals=np.array([[0, 0, 1.0]]),
+        signed_clearances=np.array([-0.1]),
+        target_positions=np.array([[0, 0, 0.101]]),
+        face_ids=np.array([0]),
+        barycentric=np.array([[1.0, 0.0, 0.0]]),
+    )
+    cohort = CoverageContract(
+        points=np.array([[0.2, 0.2, -0.01]]),
+        normals=np.array([[0.0, 0.0, 1.0]]),
+    )
+
+    with pytest.raises(ValueError, match="PRODUCTION_BODY_SURFACE_REQUIRED"):
+        CandidateContract(roi, constraints, fixed_cohort=cohort)
+
+    constraints_with_body = build_surface_constraints(
+        base,
+        TriangleMesh(
+            positions=np.array([[-2, -2, 0.1], [2, -2, 0.1], [0, 2, 0.1]]),
+            faces=np.array([[0, 1, 2]]),
+        ),
+        active_ids=[0],
+    )
+    with pytest.raises(ValueError, match="PRODUCTION_FIXED_COHORT_REQUIRED"):
+        CandidateContract(roi, constraints_with_body)
+
+    with pytest.raises(ValueError, match="COVERAGE_VALUES_MUST_BE_FINITE"):
+        CoverageContract(
+            points=np.array([[0.2, 0.2, -0.01]]),
+            normals=np.array([[np.nan, 0.0, 1.0]]),
+        )
+
+
+def test_parsed_source_solver_propagates_semantics_and_rejects_none_or_tuple_bypass():
+    """Catches a production candidate severing its verified DAE semantic identity."""
+    base = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0]], dtype=float)
+    faces = np.array([[0, 1, 2]], dtype=int)
+    face_digest = hashlib.sha256(np.asarray(faces, dtype="<i8").tobytes()).hexdigest().upper()
+    source = ParsedColladaGeometry(
+        positions=base,
+        faces=faces,
+        geometry_id="lod0",
+        content_sha256="A" * 64,
+        non_position_sha256="B" * 64,
+        face_indices_sha256=face_digest,
+    )
+    with pytest.raises(ValueError, match="PARSED_SOURCE_FACE_IDENTITY_MISMATCH"):
+        ParsedColladaGeometry(
+            positions=base,
+            faces=faces,
+            geometry_id="lod0",
+            content_sha256="A" * 64,
+            non_position_sha256="B" * 64,
+            face_indices_sha256="C" * 64,
+        )
+    body = TriangleMesh(
+        positions=np.array([[-2, -2, 0.1], [2, -2, 0.1], [0, 2, 0.1]], dtype=float),
+        faces=np.array([[0, 1, 2]], dtype=int),
+    )
+    roi = derive_minimal_roi(base, faces, active_ids=[0, 1, 2])
+    constraints = build_surface_constraints(base, body, active_ids=[0, 1, 2])
+    contract = CandidateContract(
+        roi,
+        constraints,
+        fixed_cohort=CoverageContract(
+            points=np.array([[0.2, 0.2, 0.0]]),
+            normals=np.array([[0.0, 0.0, 1.0]]),
+            maximum_distance=0.2,
+        ),
+    )
+
+    candidate = solve_coherent_field(
+        source, source.faces, roi, constraints, scale=1.0, fairness=0.0, iterations=1,
+    )
+    report = evaluate_candidate(source, candidate, contract)
+
+    assert candidate.source_non_position_sha256 == source.non_position_sha256
+    assert candidate.source_face_indices_sha256 == source.face_indices_sha256
+    assert report.passed is True
+    assert report.production_passed is True
+    assert report.status == "PRODUCTION_PASS"
+
+    missing_semantics = Candidate.from_positions(
+        source.positions, source.faces, candidate.positions, status="CANDIDATE",
+    )
+    with pytest.raises(ValueError, match="PRODUCTION_SOURCE_SEMANTIC_IDENTITY_REQUIRED"):
+        evaluate_candidate(source, missing_semantics, contract)
+    with pytest.raises(TypeError, match="PRODUCTION_PARSED_COLLADA_SOURCE_REQUIRED"):
+        evaluate_candidate((source.positions, source.faces), candidate, contract)
 
 
 def test_coherent_field_moves_connected_edge_when_independent_push_breaks_topology():
@@ -188,7 +338,7 @@ def test_coherent_field_moves_connected_edge_when_independent_push_breaks_topolo
         face_ids=np.array([0, 1, 2]),
         barycentric=np.tile([1.0, 0.0, 0.0], (3, 1)),
     )
-    contract = CandidateContract(roi=roi, constraints=constraints)
+    contract = SyntheticCandidateContract(roi=roi, constraints=constraints)
     independent = base.copy()
     independent[0] = constraints.target_positions[0]
     independent_candidate = Candidate.from_positions(base, faces, independent, status="CANDIDATE")
@@ -204,6 +354,8 @@ def test_coherent_field_moves_connected_edge_when_independent_push_breaks_topolo
     assert coherent.status == "CANDIDATE"
     assert coherent.moved_vertex_count == 3
     assert coherent_report.passed is True
+    assert coherent_report.production_passed is False
+    assert coherent_report.status == "SYNTHETIC_PASS"
     assert coherent_report.flipped_faces == 0
     assert coherent_report.new_zero_area_faces == 0
     assert coherent_report.minimum_area_ratio >= 0.5
@@ -254,7 +406,7 @@ def test_published_area_gate_cannot_be_weakened_by_contract(bad_value: float):
     candidate_positions[1, 0] = bad_value
     candidate = Candidate.from_positions(base, faces, candidate_positions, status="CANDIDATE")
 
-    report = evaluate_candidate((base, faces), candidate, CandidateContract(roi, constraints))
+    report = evaluate_candidate((base, faces), candidate, SyntheticCandidateContract(roi, constraints))
 
     assert report.passed is False
     if bad_value < 1.0:
