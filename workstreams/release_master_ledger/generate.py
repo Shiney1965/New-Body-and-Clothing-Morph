@@ -17,7 +17,8 @@ from .configuration import (
     load_local_configuration,
     verify_evidence_inputs,
 )
-from .exclusions import select_current_exclusion
+from .exclusions import EXCLUSION_MODES, select_current_exclusion
+from .identity import canonical_json, sha256_text
 from .models import LedgerRecord, Observation
 from .inventory import (
     IndependentInventories,
@@ -67,11 +68,6 @@ def _sha256(content: bytes) -> str:
     return hashlib.sha256(content).hexdigest().upper()
 
 
-def _hash_event_file(path: Path) -> str:
-    """Digest one exact event file before its content is interpreted."""
-    return _sha256(path.read_bytes())
-
-
 def discover_exclusion_events(directory: Path | None) -> tuple[DiscoveredExclusionEvent, ...]:
     """Read a local event history in normalized-path order without mutation."""
     if directory is None or not directory.is_dir():
@@ -88,10 +84,11 @@ def discover_exclusion_events(directory: Path | None) -> tuple[DiscoveredExclusi
         candidates.append((relative, resolved))
     discovered: list[DiscoveredExclusionEvent] = []
     for relative, path in sorted(candidates):
-        digest = _hash_event_file(path)
+        content = path.read_bytes()
+        digest = _sha256(content)
         try:
-            event = json.loads(path.read_text(encoding="utf-8"))
-        except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
+            event = json.loads(content.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as error:
             raise ValueError(f"EXCLUSION_EVENT_INVALID_JSON:{relative}:{digest}") from error
         if not isinstance(event, Mapping):
             raise ValueError(f"EXCLUSION_EVENT_INVALID_ROOT:{relative}:{digest}")
@@ -116,43 +113,44 @@ def _local_verified_evidence_registry(
     return dict(sorted(registry.items()))
 
 
-def _terminal_exclusion_summary(event: Mapping[str, object]) -> dict[str, object]:
-    """Emit the bounded generated form of an already-selected valid event."""
+def _terminal_exclusion_summary(event_file: DiscoveredExclusionEvent) -> dict[str, object]:
+    """Retain the full selected event and its immutable-file provenance."""
+    event = event_file.event
     return {
-        "event_id": event["event_id"],
-        "record_id": event["record_id"],
-        "identity_sha256": event["identity_sha256"],
-        "source_profile_id": event["source_profile_id"],
-        "mode": event["mode"],
-        "reason": event["reason"],
-        "scope_statement": event["scope_statement"],
-        "evidence": event["evidence"],
-        "protected_impact": {"result": event["protected_impact"]["result"]},
-        "next_project_if_reopened": event["next_project_if_reopened"],
-        "approved_by": event["approved_by"],
-        "approved_reason": event["approved_reason"],
-        "created_utc": event["created_utc"],
+        "event": event,
+        "event_file": {
+            "relative_path": event_file.relative_path,
+            "sha256": event_file.sha256,
+            "canonical_event_sha256": sha256_text(canonical_json(event)),
+        },
     }
 
 
 def _attach_terminal_exclusions(
     records: tuple[LedgerRecord, ...],
-    events: Iterable[Mapping[str, object]],
+    events: Iterable[DiscoveredExclusionEvent],
     verified_evidence: Mapping[str, str],
 ) -> tuple[LedgerRecord, ...]:
     """Attach only one valid selected event; invalid histories leave records untouched."""
     history = tuple(events)
+    event_history = tuple(item.event for item in history)
     attached: list[LedgerRecord] = []
     for record in records:
         record_data = record.to_dict()
-        modes = sorted({
-            event.get("mode") for event in history
-            if event.get("record_id") == record.record_id
-            and isinstance(event.get("mode"), str)
-        })
+        claimed_history = tuple(
+            item for item in history if item.event.get("record_id") == record.record_id
+        )
+        if any(
+            not isinstance(item.event.get("mode"), str)
+            or item.event["mode"] not in EXCLUSION_MODES
+            for item in claimed_history
+        ):
+            attached.append(record)
+            continue
+        modes = sorted({item.event["mode"] for item in claimed_history})
         selections = [
             select_current_exclusion(
-                history, record.record_id, mode,
+                event_history, record.record_id, mode,
                 ledger_record=record_data, evidence_hashes=verified_evidence,
             )
             for mode in modes
@@ -163,13 +161,17 @@ def _attach_terminal_exclusions(
             continue
         event = selected[0]
         assert event is not None
+        selected_files = [item for item in claimed_history if item.event is event]
+        if len(selected_files) != 1:
+            attached.append(record)
+            continue
         attached.append(replace(
             record,
             disposition="OUT_OF_SCOPE_WITH_PROOF",
             blocker_codes=(),
             release_blocking=False,
             next_admissible_action=str(event["next_project_if_reopened"]),
-            terminal_exclusion=_terminal_exclusion_summary(event),
+            terminal_exclusion=_terminal_exclusion_summary(selected_files[0]),
         ))
     return tuple(attached)
 
@@ -276,8 +278,11 @@ def _ledger_payload(
     return _stable_evidence_references(payload, verified_inputs)
 
 
-def _manifest_payload(verified_inputs: list[VerifiedInput]) -> dict[str, object]:
-    return {
+def _manifest_payload(
+    verified_inputs: list[VerifiedInput],
+    discovered_events: Iterable[DiscoveredExclusionEvent] = (),
+) -> dict[str, object]:
+    payload: dict[str, object] = {
         "inputs": [
             {
                 "actual_sha256": input_.actual_sha256,
@@ -290,6 +295,13 @@ def _manifest_payload(verified_inputs: list[VerifiedInput]) -> dict[str, object]
             for input_ in sorted(verified_inputs, key=lambda item: item.input_id)
         ]
     }
+    events = tuple(discovered_events)
+    if events:
+        payload["exclusion_event_files"] = [
+            {"relative_path": item.relative_path, "sha256": item.sha256}
+            for item in events
+        ]
+    return payload
 
 
 def _markdown(ledger: Mapping[str, object], audit: Mapping[str, object]) -> str:
@@ -373,7 +385,7 @@ def generate(config: LocalConfiguration) -> GenerationResult:
     discovered_events = discover_exclusion_events(config.exclusion_events_dir)
     records = _attach_terminal_exclusions(
         reconciliation.records,
-        (item.event for item in discovered_events),
+        discovered_events,
         _local_verified_evidence_registry(config, verified_inputs),
     )
     supporting_input_ids = sorted(
@@ -399,7 +411,7 @@ def generate(config: LocalConfiguration) -> GenerationResult:
     ledger_errors = validate_generated_ledger(ledger)
     if ledger_errors:
         raise ValueError("GENERATED_LEDGER_INVALID:" + ",".join(ledger_errors))
-    manifest = _manifest_payload(verified_inputs)
+    manifest = _manifest_payload(verified_inputs, discovered_events)
 
     output_dir = config.output_path.parent
     ledger_path = output_dir / LEDGER_NAME

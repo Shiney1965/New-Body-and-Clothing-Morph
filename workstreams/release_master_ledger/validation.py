@@ -4,7 +4,8 @@ import re
 from collections.abc import Mapping, Sequence
 from typing import Any
 
-from .identity import build_identity
+from .exclusions import EXCLUSION_MODES, EXCLUSION_REASONS, validate_exclusion_event
+from .identity import build_identity, canonical_json, sha256_text
 from .models import CanonicalIdentityFields
 
 
@@ -304,7 +305,9 @@ def _contains_unknown_or_blocking(value: object) -> bool:
     return _is_unknown_code(value)
 
 
-def _validate_blocker_codes(record: Mapping[str, Any], errors: list[str]) -> None:
+def _validate_blocker_codes(
+    record: Mapping[str, Any], errors: list[str], terminal_exclusion_valid: bool
+) -> None:
     blocker_codes = record.get("blocker_codes")
     if not isinstance(blocker_codes, (list, tuple)):
         errors.append("INVALID_TYPE:blocker_codes")
@@ -315,17 +318,34 @@ def _validate_blocker_codes(record: Mapping[str, Any], errors: list[str]) -> Non
             errors.append(f"BLANK:{path}")
         elif not isinstance(code, str) or not BLOCKER_CODE_RE.fullmatch(code):
             errors.append(f"INVALID_BLOCKER_CODE:{path}")
-    if not blocker_codes and (
+    if not blocker_codes and not terminal_exclusion_valid and (
         bool(record.get("release_blocking")) or _contains_unknown_or_blocking(record)
     ):
         errors.append("BLOCKER_CODES_REQUIRED")
 
 
-def _validate_terminal_exclusion(record: Mapping[str, Any], errors: list[str]) -> None:
-    """Validate the bounded generated summary of a Task-1-validated event."""
+def _terminal_event_evidence_registry(event: Mapping[str, Any]) -> dict[str, str] | None:
+    evidence = event.get("evidence")
+    if not isinstance(evidence, (list, tuple)) or not evidence:
+        return None
+    registry: dict[str, str] = {}
+    for entry in evidence:
+        if not isinstance(entry, Mapping):
+            return None
+        path, digest = entry.get("path"), entry.get("sha256")
+        if not isinstance(path, str) or not isinstance(digest, str) or SHA256_RE.fullmatch(digest) is None:
+            return None
+        if path in registry and registry[path] != digest:
+            return None
+        registry[path] = digest
+    return registry
+
+
+def _validate_terminal_exclusion(record: Mapping[str, Any], errors: list[str]) -> bool:
+    """Validate a selected Task-1 event and the immutable event-file provenance."""
     if "terminal_exclusion" not in record:
         errors.append("MISSING:terminal_exclusion")
-        return
+        return False
     value = record.get("terminal_exclusion")
     requires_event = (
         record.get("disposition") == "OUT_OF_SCOPE_WITH_PROOF"
@@ -337,49 +357,54 @@ def _validate_terminal_exclusion(record: Mapping[str, Any], errors: list[str]) -
     if value is None:
         if requires_event:
             errors.append("MISSING_VALID_TERMINAL_EXCLUSION")
-        return
+        return False
     if not isinstance(value, Mapping):
         errors.append("INVALID:terminal_exclusion")
-        return
-    valid = True
-    required_text = (
-        "event_id", "record_id", "identity_sha256", "source_profile_id", "mode",
-        "reason", "scope_statement", "next_project_if_reopened", "approved_by",
-        "approved_reason", "created_utc",
-    )
-    for key in required_text:
-        item = value.get(key)
-        if not isinstance(item, str) or not item:
-            errors.append(f"INVALID_TERMINAL_EXCLUSION:{key}")
+        return False
+    event = value.get("event")
+    file_provenance = value.get("event_file")
+    valid = isinstance(event, Mapping) and isinstance(file_provenance, Mapping)
+    if not isinstance(event, Mapping):
+        errors.append("TERMINAL_EXCLUSION_EVENT_INVALID:INVALID:event")
+    if not isinstance(file_provenance, Mapping):
+        errors.append("TERMINAL_EXCLUSION_EVENT_FILE_INVALID")
+    if isinstance(event, Mapping):
+        registry = _terminal_event_evidence_registry(event)
+        if registry is None:
+            errors.append("TERMINAL_EXCLUSION_EVENT_INVALID:INVALID:evidence")
             valid = False
-    if isinstance(value.get("event_id"), str) and EXCLUSION_EVENT_ID_RE.fullmatch(value["event_id"]) is None:
-        errors.append("INVALID_TERMINAL_EXCLUSION:event_id")
-        valid = False
-    for key in ("record_id", "identity_sha256"):
-        if value.get(key) != record.get(key):
-            errors.append(f"TERMINAL_EXCLUSION_{key.upper()}_MISMATCH")
-            valid = False
-    evidence = value.get("evidence")
-    if not isinstance(evidence, (list, tuple)) or not evidence:
-        errors.append("INVALID_TERMINAL_EXCLUSION:evidence")
-        valid = False
-    else:
-        for entry in evidence:
-            if not isinstance(entry, Mapping) or not all(
-                isinstance(entry.get(key), str) and entry[key]
-                for key in ("path", "sha256", "claim")
-            ) or SHA256_RE.fullmatch(entry.get("sha256", "")) is None:
-                errors.append("INVALID_TERMINAL_EXCLUSION:evidence")
+        else:
+            for error in validate_exclusion_event(
+                event, ledger_record=record, evidence_hashes=registry
+            ):
+                errors.append(f"TERMINAL_EXCLUSION_EVENT_INVALID:{error}")
                 valid = False
-                break
-    impact = value.get("protected_impact")
-    if not isinstance(impact, Mapping) or impact.get("result") != "NO_PROTECTED_MUTATION":
-        errors.append("INVALID_TERMINAL_EXCLUSION:protected_impact")
+    if isinstance(file_provenance, Mapping):
+        relative_path = file_provenance.get("relative_path")
+        digest = file_provenance.get("sha256")
+        canonical_digest = file_provenance.get("canonical_event_sha256")
+        if (
+            not isinstance(relative_path, str) or not relative_path
+            or relative_path.startswith(("/", "\\")) or ".." in relative_path.replace("\\", "/").split("/")
+            or not isinstance(digest, str) or SHA256_RE.fullmatch(digest) is None
+            or not isinstance(canonical_digest, str) or SHA256_RE.fullmatch(canonical_digest) is None
+            or not isinstance(event, Mapping)
+            or canonical_digest != sha256_text(canonical_json(event))
+        ):
+            errors.append("TERMINAL_EXCLUSION_EVENT_FILE_INVALID")
+            valid = False
+    if isinstance(event, Mapping) and event.get("mode") not in EXCLUSION_MODES:
+        errors.append("TERMINAL_EXCLUSION_EVENT_INVALID:INVALID_MODE")
+        valid = False
+    if isinstance(event, Mapping) and event.get("reason") not in EXCLUSION_REASONS:
+        errors.append("TERMINAL_EXCLUSION_EVENT_INVALID:INVALID_EXCLUSION_REASON")
         valid = False
     if valid and (record.get("disposition") != "OUT_OF_SCOPE_WITH_PROOF" or record.get("release_blocking") is not False):
         errors.append("TERMINAL_EXCLUSION_STATE_MISMATCH")
+        valid = False
     elif not valid and requires_event:
         errors.append("MISSING_VALID_TERMINAL_EXCLUSION")
+    return valid
 
 
 def validate_record(record: dict[str, object]) -> list[str]:
@@ -418,8 +443,8 @@ def validate_record(record: dict[str, object]) -> list[str]:
     elif record["disposition"] not in DISPOSITIONS:
         errors.append(f"INVALID_DISPOSITION:{record['disposition']}")
 
-    _validate_blocker_codes(record, errors)
-    _validate_terminal_exclusion(record, errors)
+    terminal_exclusion_valid = _validate_terminal_exclusion(record, errors)
+    _validate_blocker_codes(record, errors, terminal_exclusion_valid)
 
     fields = _identity_fields_from_record(record)
     if fields is not None:

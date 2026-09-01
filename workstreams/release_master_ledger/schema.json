@@ -171,11 +171,14 @@
             {"type": "null"},
             {
               "type": "object",
-              "required": [
-                "event_id", "record_id", "identity_sha256", "source_profile_id", "mode",
-                "reason", "scope_statement", "evidence", "protected_impact",
-                "next_project_if_reopened", "approved_by", "approved_reason", "created_utc"
-              ]
+              "required": ["event", "event_file"],
+              "properties": {
+                "event": {"type": "object"},
+                "event_file": {
+                  "type": "object",
+                  "required": ["relative_path", "sha256", "canonical_event_sha256"]
+                }
+              }
             }
           ]
         }

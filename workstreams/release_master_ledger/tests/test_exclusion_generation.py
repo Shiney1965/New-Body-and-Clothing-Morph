@@ -1,6 +1,7 @@
 import hashlib
 import json
 from pathlib import Path
+from copy import deepcopy
 
 import pytest
 
@@ -13,9 +14,13 @@ from workstreams.release_master_ledger.configuration import (
 from workstreams.release_master_ledger.exclusions import exclusion_event_id
 from workstreams.release_master_ledger.generate import (
     _attach_terminal_exclusions,
+    _manifest_payload,
+    DiscoveredExclusionEvent,
     discover_exclusion_events,
 )
 from workstreams.release_master_ledger.models import LedgerRecord
+from workstreams.release_master_ledger.validation import validate_generated_ledger
+from workstreams.release_master_ledger.tests.test_validation import complete_record_fixture
 
 
 RECORD_ID = "LEDGER_" + "A" * 64
@@ -74,6 +79,32 @@ def _write_json(path: Path, payload: object) -> str:
     return hashlib.sha256(content).hexdigest().upper()
 
 
+def _full_record() -> LedgerRecord:
+    data = complete_record_fixture()
+    data["record_id"] = RECORD_ID
+    data["terminal_exclusion"] = None
+    return LedgerRecord(**data)
+
+
+def _discovered(event: dict[str, object], *, path="history/synthetic.json") -> DiscoveredExclusionEvent:
+    content = json.dumps(event, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return DiscoveredExclusionEvent(path, hashlib.sha256(content).hexdigest().upper(), event)
+
+
+def _event_for_record(record: LedgerRecord) -> dict[str, object]:
+    event = _event()
+    event["record_id"] = record.record_id
+    event["identity_sha256"] = record.identity_sha256
+    event["source_profile_id"] = record.source_module["folder"]
+    event["reason_proof"]["exact_profile"] = {
+        "id": record.source_module["folder"],
+        "version": record.source_module["version64"],
+        "sha256": record.source_module["profile_digest"],
+    }
+    event["event_id"] = exclusion_event_id(event)
+    return event
+
+
 def test_configuration_refuses_an_exclusion_directory_outside_the_local_boundary(tmp_path, monkeypatch):
     from workstreams.release_master_ledger import configuration
 
@@ -93,7 +124,7 @@ def test_configuration_refuses_an_exclusion_directory_outside_the_local_boundary
         load_local_configuration()
 
 
-def test_discovery_hashes_files_before_parsing_and_uses_normalized_path_order(tmp_path, monkeypatch):
+def test_discovery_hashes_files_before_parsing_and_uses_normalized_path_order(tmp_path):
     events = tmp_path / "local" / "exclusion_events"
     _write_json(events / "z.json", _event())
     _write_json(events / "nested" / "a.json", _event())
@@ -101,22 +132,24 @@ def test_discovery_hashes_files_before_parsing_and_uses_normalized_path_order(tm
         "nested/a.json": hashlib.sha256((events / "nested" / "a.json").read_bytes()).hexdigest().upper(),
         "z.json": hashlib.sha256((events / "z.json").read_bytes()).hexdigest().upper(),
     }
-    hashed: list[Path] = []
-
-    from workstreams.release_master_ledger import generate as generation
-    original_hash = generation._hash_event_file
-
-    def observing_hash(path: Path) -> str:
-        hashed.append(path)
-        return original_hash(path)
-
-    monkeypatch.setattr(generation, "_hash_event_file", observing_hash)
-
     discovered = discover_exclusion_events(events)
 
     assert [item.relative_path for item in discovered] == ["nested/a.json", "z.json"]
     assert {item.relative_path: item.sha256 for item in discovered} == expected_hashes
-    assert hashed == [events / "nested" / "a.json", events / "z.json"]
+
+
+def test_discovery_parses_the_same_immutable_bytes_that_it_hashes(tmp_path, monkeypatch):
+    events = tmp_path / "local" / "exclusion_events"
+    _write_json(events / "event.json", _event())
+
+    def forbidden_second_read(*args, **kwargs):
+        raise AssertionError("event discovery must not read text after hashing bytes")
+
+    monkeypatch.setattr(Path, "read_text", forbidden_second_read)
+
+    discovered = discover_exclusion_events(events)
+
+    assert discovered[0].event["event_id"] == _event()["event_id"]
 
 
 def test_invalid_event_is_not_attached_or_allowed_to_change_blocking_state():
@@ -125,7 +158,7 @@ def test_invalid_event_is_not_attached_or_allowed_to_change_blocking_state():
     invalid["event_id"] = exclusion_event_id(invalid)
 
     attached = _attach_terminal_exclusions(
-        (_record(),), (invalid,), {"evidence/source-audit.json": "D" * 64},
+        (_record(),), (_discovered(invalid),), {"evidence/source-audit.json": "D" * 64},
     )
 
     assert attached[0].terminal_exclusion is None
@@ -135,24 +168,79 @@ def test_invalid_event_is_not_attached_or_allowed_to_change_blocking_state():
 
 def test_selected_valid_event_attaches_a_summary_and_makes_only_that_route_nonblocking():
     event = _event()
+    discovered = _discovered(event)
 
     attached = _attach_terminal_exclusions(
-        (_record(),), (event,), {"evidence/source-audit.json": "D" * 64},
+        (_record(),), (discovered,), {"evidence/source-audit.json": "D" * 64},
     )
 
     record = attached[0]
     assert record.release_blocking is False
     assert record.disposition == "OUT_OF_SCOPE_WITH_PROOF"
     assert record.blocker_codes == ()
-    assert record.terminal_exclusion == {
-        "event_id": event["event_id"], "record_id": RECORD_ID,
-        "identity_sha256": IDENTITY_SHA256, "source_profile_id": "SYNTHETIC_PROFILE",
-        "mode": "sbbf", "reason": "SOURCE_ABSENT_EXACT_PROFILE",
-        "scope_statement": "Exclude only the synthetic SBBF route.",
-        "evidence": event["evidence"],
-        "protected_impact": {"result": "NO_PROTECTED_MUTATION"},
-        "next_project_if_reopened": "Recover the exact source profile.",
-        "approved_by": "Alan",
-        "approved_reason": "fix every outstanding element or declare it unfixable and excluded",
-        "created_utc": "2026-09-01T12:00:00Z",
+    assert record.terminal_exclusion["event"] == event
+    assert record.terminal_exclusion["event_file"]["relative_path"] == "history/synthetic.json"
+    assert record.terminal_exclusion["event_file"]["sha256"] == discovered.sha256
+    assert _manifest_payload([], (discovered,))["exclusion_event_files"] == [{
+        "relative_path": "history/synthetic.json", "sha256": discovered.sha256,
+    }]
+
+
+def test_malformed_mode_sibling_preflights_the_whole_claimed_record_history():
+    valid = _event()
+    malformed = deepcopy(valid)
+    malformed["mode"] = None
+
+    attached = _attach_terminal_exclusions(
+        (_record(),), (_discovered(valid), _discovered(malformed, path="history/malformed.json")), {"evidence/source-audit.json": "D" * 64},
+    )
+
+    assert attached[0].terminal_exclusion is None
+    assert attached[0].release_blocking is True
+
+
+def test_valid_exclusion_with_unresolved_markers_attaches_and_validates_end_to_end():
+    full_record = _full_record()
+    event = _event_for_record(full_record)
+    attached = _attach_terminal_exclusions(
+        (full_record,), (_discovered(event),),
+        {"evidence/source-audit.json": "D" * 64},
+    )
+
+    document = {
+        "schema_version": 1,
+        "summary": {"record_count": 1},
+        "blockers": [],
+        "records": [attached[0].to_dict()],
     }
+
+    assert attached[0].blocker_codes == ()
+    assert validate_generated_ledger(document) == []
+
+
+@pytest.mark.parametrize(
+    ("path", "value"),
+    [
+        (("event", "reason"), "NOT_A_REASON"),
+        (("event", "mode"), "not-a-mode"),
+        (("event", "source_profile_id"), "FORGED_PROFILE"),
+        (("event", "created_utc"), "not-a-timestamp"),
+        (("event_file", "canonical_event_sha256"), "E" * 64),
+        (("event", "evidence", 0, "sha256"), "E" * 64),
+    ],
+)
+def test_forged_attached_event_data_fails_generated_validation(path, value):
+    full_record = _full_record()
+    event = _event_for_record(full_record)
+    attached = _attach_terminal_exclusions(
+        (full_record,), (_discovered(event),),
+        {"evidence/source-audit.json": "D" * 64},
+    )
+    record = attached[0].to_dict()
+    cursor = record["terminal_exclusion"]
+    for key in path[:-1]:
+        cursor = cursor[key]
+    cursor[path[-1]] = value
+    document = {"schema_version": 1, "summary": {"record_count": 1}, "blockers": [], "records": [record]}
+
+    assert any(error.startswith("RECORD[0]:TERMINAL_EXCLUSION") for error in validate_generated_ledger(document))
