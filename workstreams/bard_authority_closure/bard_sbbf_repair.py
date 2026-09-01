@@ -6,6 +6,7 @@ from dataclasses import dataclass
 import hashlib
 import json
 from pathlib import Path
+import re
 from typing import Mapping
 
 import numpy as np
@@ -17,6 +18,7 @@ PASS_REPAIRED = "PASS_REPAIRED"
 PASS_UNCHANGED = "PASS_UNCHANGED"
 METHOD_EXHAUSTED = "METHOD_SPECIFIC_EXHAUSTION"
 PASS_PAIR = "PASS_OFFLINE_SBBF_PAIR"
+SEARCH_STEPS = 4096
 BASE_STREAMS = (
     "HUM_F_ARM_Bard_BodyTop_Mesh",
     "HUM_F_ARM_Bard_Footwear_Mesh",
@@ -24,6 +26,7 @@ BASE_STREAMS = (
     "HUM_F_ARM_Bard_Sleeves_Mesh",
 )
 THONG_STREAM = "HUM_F_ARM_Gortash_Body_Jacket_Mesh"
+SHA256_RE = re.compile(r"^[0-9A-F]{64}$")
 
 
 @dataclass(frozen=True)
@@ -60,7 +63,53 @@ class GateReport:
 
 
 @dataclass(frozen=True)
+class StreamIdentity:
+    stream_id: str
+    verified_source_path: str
+    verified_source_sha256: str
+    position_shape: tuple[int, int]
+    index_topology_sha256: str
+    non_position_semantic_sha256: str
+
+    def __post_init__(self) -> None:
+        if not self.stream_id:
+            raise ValueError("STREAM_ID_MISSING")
+        if not Path(self.verified_source_path).is_absolute():
+            raise ValueError("STREAM_SOURCE_PATH_NOT_ABSOLUTE")
+        for value in (
+            self.verified_source_sha256,
+            self.index_topology_sha256,
+            self.non_position_semantic_sha256,
+        ):
+            if SHA256_RE.fullmatch(value) is None:
+                raise ValueError("STREAM_DIGEST_INVALID")
+        if (
+            len(self.position_shape) != 2
+            or self.position_shape[0] <= 0
+            or self.position_shape[1] != 3
+        ):
+            raise ValueError("STREAM_POSITION_SHAPE_INVALID")
+
+
+@dataclass(frozen=True)
+class SBBFPairContract:
+    base_identities: tuple[StreamIdentity, ...]
+    thong_identity: StreamIdentity
+
+    def __post_init__(self) -> None:
+        if tuple(identity.stream_id for identity in self.base_identities) != BASE_STREAMS:
+            raise ValueError("SBBF_BASE_IDENTITY_SET_INVALID")
+        if self.thong_identity.stream_id != THONG_STREAM:
+            raise ValueError("SBBF_THONG_IDENTITY_INVALID")
+
+    @property
+    def base_by_id(self) -> dict[str, StreamIdentity]:
+        return {identity.stream_id: identity for identity in self.base_identities}
+
+
+@dataclass(frozen=True)
 class CandidateResult:
+    stream_identity: StreamIdentity
     status: str
     positions: np.ndarray | None
     pre_metrics: TopologyMetrics
@@ -80,6 +129,7 @@ class CompletePairResult:
     candidate_positions: dict[str, dict[str, np.ndarray]] | None
     position_digest: str | None
     exhaustion_reason: str | None
+    pair_contract: SBBFPairContract
     base_results: Mapping[str, CandidateResult]
     thong_result: CandidateResult
 
@@ -107,6 +157,23 @@ def _validated_arrays(
         candidate_array.astype(np.float64, copy=False),
         face_array.astype(np.int64, copy=False),
     )
+
+
+def index_topology_digest(faces: np.ndarray) -> str:
+    """Digest the ordered TRIANGLES topology in one canonical uint32 encoding."""
+    face_array = np.asarray(faces)
+    if face_array.ndim != 2 or face_array.shape[1] != 3:
+        raise ValueError("TRIANGLE_SHAPE_INVALID")
+    if not np.issubdtype(face_array.dtype, np.integer):
+        raise ValueError("TRIANGLE_DTYPE_INVALID")
+    if len(face_array) and int(face_array.min()) < 0:
+        raise ValueError("TRIANGLE_INDEX_OUT_OF_RANGE")
+    canonical = face_array.astype("<u4", copy=False)
+    digest = hashlib.sha256()
+    digest.update(b"TRIANGLES\x00")
+    digest.update(str(canonical.shape).encode("ascii"))
+    digest.update(canonical.tobytes(order="C"))
+    return digest.hexdigest().upper()
 
 
 def _metric_masks(
@@ -209,7 +276,9 @@ def verify_outside_region_exact(
         if int(indices.min()) < 0 or int(indices.max()) >= len(before_array):
             raise ValueError("REPAIR_VERTEX_OUT_OF_RANGE")
         movable[indices] = True
-    changed = np.flatnonzero((~movable) & np.any(before_array != after_array, axis=1))
+    before_bytes = before_array.view(np.uint8).reshape((len(before_array), -1))
+    after_bytes = after_array.view(np.uint8).reshape((len(after_array), -1))
+    changed = np.flatnonzero((~movable) & np.any(before_bytes != after_bytes, axis=1))
     return GateReport(
         passed=not len(changed),
         changed_outside_rows=tuple(map(int, changed)),
@@ -226,12 +295,14 @@ def solve_local_area_constrained_positions(
     faces: np.ndarray,
     threshold: float = 0.25,
     *,
-    blend_steps: int = 4096,
+    stream_identity: StreamIdentity,
 ) -> CandidateResult:
     """Search a fixed grid for the least one-ring relaxation that passes every face gate."""
-    if blend_steps <= 0:
-        raise ValueError("BLEND_STEPS_INVALID")
     source_array, candidate_array, face_array = _validated_arrays(source, candidate, faces)
+    if stream_identity.position_shape != tuple(map(int, source_array.shape)):
+        raise ValueError("STREAM_POSITION_SHAPE_MISMATCH")
+    if stream_identity.index_topology_sha256 != index_topology_digest(face_array):
+        raise ValueError("STREAM_INDEX_TOPOLOGY_DIGEST_MISMATCH")
     pre_metrics = topology_metrics(source_array, candidate_array, face_array, threshold)
     region = failing_face_neighborhood(source_array, candidate_array, face_array, threshold)
     baseline_f32 = np.asarray(candidate_array, dtype="<f4")
@@ -241,6 +312,7 @@ def solve_local_area_constrained_positions(
         outside = verify_outside_region_exact(baseline_f32, baseline_f32, ())
         if post_metrics.passed:
             return CandidateResult(
+                stream_identity=stream_identity,
                 status=PASS_UNCHANGED,
                 positions=baseline_f32,
                 pre_metrics=pre_metrics,
@@ -248,14 +320,15 @@ def solve_local_area_constrained_positions(
                 region=region,
                 outside_gate=outside,
                 blend_step=0,
-                blend_steps=blend_steps,
+                blend_steps=SEARCH_STEPS,
                 position_sha256=_position_sha256(baseline_f32),
                 exhaustion_reason=None,
             )
 
     movable = np.asarray(region.movable_vertex_indices, dtype=np.int64)
-    for step in range(1, blend_steps + 1):
-        weight = float(step) / float(blend_steps)
+    completion_floor_blocked = False
+    for step in range(1, SEARCH_STEPS + 1):
+        weight = float(step) / float(SEARCH_STEPS)
         trial = baseline_f32.copy()
         blended = candidate_array[movable] + weight * (source_array[movable] - candidate_array[movable])
         trial[movable] = blended.astype("<f4")
@@ -265,7 +338,11 @@ def solve_local_area_constrained_positions(
         outside = verify_outside_region_exact(baseline_f32, trial, region.movable_vertex_indices)
         if not outside.passed:
             continue
+        if (SEARCH_STEPS - step) * 2 < SEARCH_STEPS:
+            completion_floor_blocked = True
+            continue
         return CandidateResult(
+            stream_identity=stream_identity,
             status=PASS_REPAIRED,
             positions=trial,
             pre_metrics=pre_metrics,
@@ -273,12 +350,13 @@ def solve_local_area_constrained_positions(
             region=region,
             outside_gate=outside,
             blend_step=step,
-            blend_steps=blend_steps,
+            blend_steps=SEARCH_STEPS,
             position_sha256=_position_sha256(trial),
             exhaustion_reason=None,
         )
 
     return CandidateResult(
+        stream_identity=stream_identity,
         status=METHOD_EXHAUSTED,
         positions=None,
         pre_metrics=pre_metrics,
@@ -286,9 +364,13 @@ def solve_local_area_constrained_positions(
         region=region,
         outside_gate=None,
         blend_step=None,
-        blend_steps=blend_steps,
+        blend_steps=SEARCH_STEPS,
         position_sha256=None,
-        exhaustion_reason="ONE_RING_AREA_CONSTRAINED_BLEND_EXHAUSTED",
+        exhaustion_reason=(
+            "ONE_RING_COMPLETION_FLOOR_EXHAUSTED"
+            if completion_floor_blocked
+            else "ONE_RING_AREA_CONSTRAINED_BLEND_EXHAUSTED"
+        ),
     )
 
 
@@ -306,6 +388,7 @@ def _result_admitted(result: CandidateResult) -> bool:
 def _exhausted_pair(
     base_results: Mapping[str, CandidateResult],
     thong_result: CandidateResult,
+    pair_contract: SBBFPairContract,
     reason: str,
 ) -> CompletePairResult:
     return CompletePairResult(
@@ -314,6 +397,7 @@ def _exhausted_pair(
         candidate_positions=None,
         position_digest=None,
         exhaustion_reason=reason,
+        pair_contract=pair_contract,
         base_results=base_results,
         thong_result=thong_result,
     )
@@ -322,42 +406,89 @@ def _exhausted_pair(
 def complete_sbbf_pair(
     base_results: Mapping[str, CandidateResult],
     thong_result: CandidateResult,
-    *,
-    semantic_contract_exact: bool = True,
-    index_contract_exact: bool = True,
-    topology_contract_exact: bool = True,
+    pair_contract: SBBFPairContract,
 ) -> CompletePairResult:
     """Admit no output unless the exact four-stream base and thong pair both pass."""
     load_bard_contract().require_emittable_pair("sbbf", ("base", "thong"))
     if set(base_results) != set(BASE_STREAMS):
-        return _exhausted_pair(base_results, thong_result, "SBBF_BASE_STREAM_SET_INCOMPLETE")
-    if not semantic_contract_exact:
-        return _exhausted_pair(base_results, thong_result, "SBBF_NON_POSITION_SEMANTIC_CHANGE")
-    if not index_contract_exact:
-        return _exhausted_pair(base_results, thong_result, "SBBF_INDEX_CHANGE")
-    if not topology_contract_exact:
-        return _exhausted_pair(base_results, thong_result, "SBBF_TOPOLOGY_CHANGE")
-    if not all(_result_admitted(base_results[name]) for name in BASE_STREAMS):
-        return _exhausted_pair(base_results, thong_result, "SBBF_BASE_STREAM_GATE_FAILURE")
+        return _exhausted_pair(base_results, thong_result, pair_contract, "SBBF_BASE_STREAM_SET_INCOMPLETE")
+    expected_base = pair_contract.base_by_id
+    for name in BASE_STREAMS:
+        result = base_results[name]
+        if result.stream_identity != expected_base[name] or result.stream_identity.stream_id != name:
+            return _exhausted_pair(
+                base_results,
+                thong_result,
+                pair_contract,
+                f"SBBF_STREAM_IDENTITY_MISMATCH:{name}",
+            )
+        if result.blend_steps != SEARCH_STEPS:
+            return _exhausted_pair(
+                base_results,
+                thong_result,
+                pair_contract,
+                f"SBBF_SEARCH_INVARIANT_FAILURE:{name}",
+            )
+        if result.blend_step is None or (SEARCH_STEPS - result.blend_step) * 2 < SEARCH_STEPS:
+            return _exhausted_pair(
+                base_results,
+                thong_result,
+                pair_contract,
+                f"SBBF_COMPLETION_FLOOR_FAILURE:{name}",
+            )
+        if not _result_admitted(result):
+            return _exhausted_pair(
+                base_results,
+                thong_result,
+                pair_contract,
+                f"SBBF_BASE_STREAM_GATE_FAILURE:{name}",
+            )
+    if (
+        thong_result.stream_identity != pair_contract.thong_identity
+        or thong_result.stream_identity.stream_id != THONG_STREAM
+    ):
+        return _exhausted_pair(
+            base_results,
+            thong_result,
+            pair_contract,
+            "SBBF_STREAM_IDENTITY_MISMATCH:thong",
+        )
+    if thong_result.blend_steps != SEARCH_STEPS:
+        return _exhausted_pair(
+            base_results,
+            thong_result,
+            pair_contract,
+            "SBBF_SEARCH_INVARIANT_FAILURE:thong",
+        )
+    if (
+        thong_result.blend_step is None
+        or (SEARCH_STEPS - thong_result.blend_step) * 2 < SEARCH_STEPS
+    ):
+        return _exhausted_pair(
+            base_results,
+            thong_result,
+            pair_contract,
+            "SBBF_COMPLETION_FLOOR_FAILURE:thong",
+        )
     if not _result_admitted(thong_result):
-        return _exhausted_pair(base_results, thong_result, "SBBF_THONG_GATE_FAILURE")
+        return _exhausted_pair(
+            base_results,
+            thong_result,
+            pair_contract,
+            "SBBF_THONG_GATE_FAILURE",
+        )
 
     positions = {
         "base": {name: np.asarray(base_results[name].positions, dtype="<f4") for name in BASE_STREAMS},
         "thong": {THONG_STREAM: np.asarray(thong_result.positions, dtype="<f4")},
     }
-    digest = hashlib.sha256()
-    for component in ("base", "thong"):
-        for stream in sorted(positions[component]):
-            digest.update(component.encode("utf-8"))
-            digest.update(stream.encode("utf-8"))
-            digest.update(positions[component][stream].tobytes(order="C"))
     return CompletePairResult(
         status=PASS_PAIR,
         replacement_routes=2,
         candidate_positions=positions,
-        position_digest=digest.hexdigest().upper(),
+        position_digest=_position_digest(positions),
         exhaustion_reason=None,
+        pair_contract=pair_contract,
         base_results=base_results,
         thong_result=thong_result,
     )
@@ -376,8 +507,68 @@ def _metrics_payload(metrics: TopologyMetrics | None) -> dict[str, object] | Non
     }
 
 
+def _position_digest(positions: Mapping[str, Mapping[str, np.ndarray]]) -> str:
+    digest = hashlib.sha256()
+    for component in ("base", "thong"):
+        for stream in sorted(positions[component]):
+            digest.update(component.encode("utf-8"))
+            digest.update(stream.encode("utf-8"))
+            digest.update(np.asarray(positions[component][stream], dtype="<f4").tobytes(order="C"))
+    return digest.hexdigest().upper()
+
+
+def _validate_offline_result(result: CompletePairResult) -> None:
+    canonical = complete_sbbf_pair(
+        result.base_results,
+        result.thong_result,
+        result.pair_contract,
+    )
+    if result.status == METHOD_EXHAUSTED:
+        if (
+            canonical.status != METHOD_EXHAUSTED
+            or result.replacement_routes != 0
+            or result.candidate_positions is not None
+            or result.position_digest is not None
+            or result.exhaustion_reason != canonical.exhaustion_reason
+        ):
+            raise ValueError("OFFLINE_RESULT_NOT_EMITTABLE")
+        return
+    if (
+        result.status != PASS_PAIR
+        or canonical.status != PASS_PAIR
+        or result.replacement_routes != 2
+        or result.candidate_positions is None
+        or result.position_digest is None
+        or result.exhaustion_reason is not None
+    ):
+        raise ValueError("OFFLINE_RESULT_NOT_EMITTABLE")
+    if set(result.candidate_positions) != {"base", "thong"}:
+        raise ValueError("OFFLINE_RESULT_NOT_EMITTABLE")
+    if set(result.candidate_positions["base"]) != set(BASE_STREAMS):
+        raise ValueError("OFFLINE_RESULT_NOT_EMITTABLE")
+    if set(result.candidate_positions["thong"]) != {THONG_STREAM}:
+        raise ValueError("OFFLINE_RESULT_NOT_EMITTABLE")
+    for component in ("base", "thong"):
+        for stream, expected in canonical.candidate_positions[component].items():
+            actual = np.asarray(result.candidate_positions[component][stream], dtype="<f4")
+            if actual.shape != expected.shape or actual.tobytes(order="C") != expected.tobytes(order="C"):
+                raise ValueError("OFFLINE_RESULT_NOT_EMITTABLE")
+    if result.position_digest != canonical.position_digest:
+        raise ValueError("OFFLINE_RESULT_NOT_EMITTABLE")
+    if result.position_digest != _position_digest(result.candidate_positions):
+        raise ValueError("OFFLINE_RESULT_NOT_EMITTABLE")
+
+
 def _candidate_payload(result: CandidateResult) -> dict[str, object]:
     return {
+        "stream_identity": {
+            "stream_id": result.stream_identity.stream_id,
+            "verified_source_path": result.stream_identity.verified_source_path,
+            "verified_source_sha256": result.stream_identity.verified_source_sha256,
+            "position_shape": list(result.stream_identity.position_shape),
+            "index_topology_sha256": result.stream_identity.index_topology_sha256,
+            "non_position_semantic_sha256": result.stream_identity.non_position_semantic_sha256,
+        },
         "status": result.status,
         "pre_metrics": _metrics_payload(result.pre_metrics),
         "post_metrics": _metrics_payload(result.post_metrics),
@@ -387,6 +578,14 @@ def _candidate_payload(result: CandidateResult) -> dict[str, object]:
         "affected_face_indices": list(result.region.affected_face_indices),
         "blend_step": result.blend_step,
         "blend_steps": result.blend_steps,
+        "retained_completion": (
+            None
+            if result.blend_step is None
+            else {
+                "numerator": SEARCH_STEPS - result.blend_step,
+                "denominator": SEARCH_STEPS,
+            }
+        ),
         "position_sha256": result.position_sha256,
         "outside_rows_exact": None if result.outside_gate is None else result.outside_gate.passed,
         "exhaustion_reason": result.exhaustion_reason,
@@ -401,17 +600,21 @@ def write_offline_result(
 ) -> tuple[Path, Path | None]:
     """Write ignored evidence, and write position-only bytes only for an admitted full pair."""
     output_directory = Path(output_directory)
+    _validate_offline_result(result)
+    report_path = output_directory / "bard_sbbf_repair_report.json"
+    prior_candidate_path = output_directory / "bard_sbbf_candidate_positions.npz"
+    if report_path.exists() or prior_candidate_path.exists():
+        raise FileExistsError(f"OFFLINE_OUTPUT_ALREADY_EXISTS:{output_directory}")
     output_directory.mkdir(parents=True, exist_ok=True)
     candidate_path: Path | None = None
     if result.candidate_positions is not None:
-        candidate_path = output_directory / "bard_sbbf_candidate_positions.npz"
+        candidate_path = prior_candidate_path
         arrays = {
             f"{component}::{stream}": positions
             for component, streams in result.candidate_positions.items()
             for stream, positions in streams.items()
         }
         np.savez(candidate_path, **arrays)
-    report_path = output_directory / "bard_sbbf_repair_report.json"
     report = {
         "schema": "bard_sbbf_one_ring_repair_v1",
         "method": "failing-face one-ring fixed-grid relaxation toward source POSITION rows",
