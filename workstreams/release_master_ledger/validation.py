@@ -660,9 +660,22 @@ def _validate_terminal_exclusion(
     if verified_evidence is None or discovered_event_files is None:
         errors.append("MISSING_TERMINAL_EXCLUSION_VALIDATION_CONTEXT")
         return False
+    summary_shape_errors = _closed_mapping(
+        value,
+        allowed=frozenset({"event", "event_file"}),
+        required=frozenset(),
+        path="terminal_exclusion",
+    )
+    errors.extend(
+        f"TERMINAL_EXCLUSION_SCHEMA:{error}" for error in summary_shape_errors
+    )
     event = value.get("event")
     file_provenance = value.get("event_file")
-    valid = isinstance(event, Mapping) and isinstance(file_provenance, Mapping)
+    valid = (
+        isinstance(event, Mapping)
+        and isinstance(file_provenance, Mapping)
+        and not summary_shape_errors
+    )
     if not isinstance(event, Mapping):
         errors.append("TERMINAL_EXCLUSION_EVENT_INVALID:INVALID:event")
     if not isinstance(file_provenance, Mapping):
@@ -677,6 +690,19 @@ def _validate_terminal_exclusion(
             errors.append(f"TERMINAL_EXCLUSION_EVENT_INVALID:{error}")
             valid = False
     if isinstance(file_provenance, Mapping):
+        file_shape_errors = _closed_mapping(
+            file_provenance,
+            allowed=frozenset({
+                "relative_path", "sha256", "canonical_event_sha256",
+            }),
+            required=frozenset(),
+            path="terminal_exclusion.event_file",
+        )
+        errors.extend(
+            f"TERMINAL_EXCLUSION_SCHEMA:{error}" for error in file_shape_errors
+        )
+        if file_shape_errors:
+            valid = False
         relative_path = file_provenance.get("relative_path")
         digest = file_provenance.get("sha256")
         canonical_digest = file_provenance.get("canonical_event_sha256")

@@ -251,6 +251,51 @@ def test_valid_exclusion_with_unresolved_markers_attaches_and_validates_end_to_e
     ) == []
 
 
+@pytest.mark.parametrize(
+    ("target", "expected"),
+    [
+        pytest.param(
+            "summary",
+            "RECORD[0]:TERMINAL_EXCLUSION_SCHEMA:terminal_exclusion:UNEXPECTED:unexpected",
+            id="terminal-exclusion-summary",
+        ),
+        pytest.param(
+            "event_file",
+            "RECORD[0]:TERMINAL_EXCLUSION_SCHEMA:terminal_exclusion.event_file:UNEXPECTED:unexpected",
+            id="event-file-provenance",
+        ),
+    ],
+)
+def test_generated_validation_rejects_unexpected_enclosing_exclusion_keys(
+    target, expected,
+):
+    full_record = _full_record()
+    event = _event_for_record(full_record)
+    discovered = _discovered(event)
+    attached = _attach_terminal_exclusions(
+        (full_record,), (discovered,), {"evidence/source-audit.json": "D" * 64},
+    )
+    document = {
+        "schema_version": 1,
+        "summary": {"record_count": 1},
+        "blockers": [],
+        "records": [attached[0].to_dict()],
+    }
+    terminal_exclusion = document["records"][0]["terminal_exclusion"]
+    if target == "summary":
+        terminal_exclusion["unexpected"] = "forbidden"
+    else:
+        terminal_exclusion["event_file"]["unexpected"] = "forbidden"
+
+    errors = validate_generated_ledger(
+        document,
+        verified_evidence={"evidence/source-audit.json": "D" * 64},
+        discovered_event_files={discovered.relative_path: discovered.sha256},
+    )
+
+    assert expected in errors
+
+
 def test_coordinated_event_or_file_provenance_forgery_fails_against_independent_context():
     full_record = _full_record()
     event = _event_for_record(full_record)
