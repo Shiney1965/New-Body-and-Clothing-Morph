@@ -68,41 +68,51 @@ class Observation:
 
 @dataclass(frozen=True)
 class LedgerRecord:
-    """A deterministic, emitted ledger record with route and evidence details."""
+    """A deterministic emitted record containing every section-9.2 field family."""
 
-    identity: str
-    identity_fields: CanonicalIdentityFields
+    record_id: str
+    canonical_identity: str
+    identity_sha256: str
     source_module: Mapping[str, Any]
+    permission: Mapping[str, Any]
     creation_path: Mapping[str, Any]
     classification: Mapping[str, Any]
-    source_visual_resources: tuple[Mapping[str, Any], ...]
-    component_contract: Mapping[str, Any]
+    body_tuple: Mapping[str, Any]
+    source_route: Mapping[str, Any]
     mode_routes: Mapping[str, Any]
+    protected_relations: Mapping[str, Any]
+    transformation: Mapping[str, Any]
+    gates: Mapping[str, Any]
+    evidence_paths: tuple[str, ...]
+    evidence_hashes: tuple[str, ...]
     disposition: str
-    next_action: str
-    evidence_files: tuple[str, ...] = ()
-    gameplay_results: Mapping[str, Any] = field(default_factory=dict)
-    known_defect: Mapping[str, Any] = field(default_factory=dict)
-    protected_controls: tuple[str, ...] = ()
-    package_ownership: Mapping[str, Any] = field(default_factory=dict)
-    blocker_codes: tuple[str, ...] = ()
+    blocker_codes: tuple[str, ...]
+    release_blocking: bool
+    next_admissible_action: str
+    acceptance_event_id: str
+    shipped_package_id: str
 
     def to_dict(self) -> dict[str, object]:
         return {
-            "identity": self.identity,
-            "identity_fields": self.identity_fields.to_dict(),
+            "record_id": self.record_id,
+            "canonical_identity": self.canonical_identity,
+            "identity_sha256": self.identity_sha256,
             "source_module": _stable_value(self.source_module),
+            "permission": _stable_value(self.permission),
             "creation_path": _stable_value(self.creation_path),
             "classification": _stable_value(self.classification),
-            "source_visual_resources": _stable_value(self.source_visual_resources),
-            "component_contract": _stable_value(self.component_contract),
+            "body_tuple": _stable_value(self.body_tuple),
+            "source_route": _stable_value(self.source_route),
             "mode_routes": _stable_value(self.mode_routes),
+            "protected_relations": _stable_value(self.protected_relations),
+            "transformation": _stable_value(self.transformation),
+            "gates": _stable_value(self.gates),
+            "evidence_paths": list(self.evidence_paths),
+            "evidence_hashes": list(self.evidence_hashes),
             "disposition": self.disposition,
-            "next_action": self.next_action,
-            "evidence_files": list(self.evidence_files),
-            "gameplay_results": _stable_value(self.gameplay_results),
-            "known_defect": _stable_value(self.known_defect),
-            "protected_controls": list(self.protected_controls),
-            "package_ownership": _stable_value(self.package_ownership),
             "blocker_codes": list(self.blocker_codes),
+            "release_blocking": self.release_blocking,
+            "next_admissible_action": self.next_admissible_action,
+            "acceptance_event_id": self.acceptance_event_id,
+            "shipped_package_id": self.shipped_package_id,
         }

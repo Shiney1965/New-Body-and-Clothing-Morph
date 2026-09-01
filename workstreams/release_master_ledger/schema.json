@@ -5,54 +5,165 @@
   "required": ["schema_version", "records"],
   "properties": {
     "schema_version": {"const": "1"},
-    "records": {
-      "type": "array",
-      "items": {"$ref": "#/$defs/ledger_record"}
-    }
+    "records": {"type": "array", "items": {"$ref": "#/$defs/ledger_record"}}
   },
   "$defs": {
-    "sha256": {"type": "string", "pattern": "^[0-9A-F]{64}$"},
+    "text": {"type": "string", "minLength": 1},
+    "text_array": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/text"}},
+    "sha256_or_unknown": {
+      "type": "string",
+      "pattern": "^(?:[0-9A-F]{64}|UNKNOWN_[A-Z0-9_]+|[A-Z0-9_]+_UNASSESSED|[A-Z0-9_]+_UNRESOLVED)$"
+    },
+    "sha256_or_unknown_array": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/sha256_or_unknown"}
+    },
+    "blocker_code": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]*(?::[A-Z0-9_.-]+)*$"},
+    "blocker_codes": {"type": "array", "items": {"$ref": "#/$defs/blocker_code"}},
     "disposition": {
       "type": "string",
       "enum": [
-        "ACCEPTED / PROTECT",
-        "READY FOR TEST",
-        "CONFIRMED DEFECT / CORRECT",
-        "MISSING ROUTE / BUILD",
-        "DEFERRED WITH CAUSE",
-        "OUT OF SCOPE"
+        "ACCEPTED_PROTECTED",
+        "SOURCE_NATIVE_PROTECTED",
+        "PACKAGE_ONLY_PROTECTED",
+        "READY_FOR_OFFLINE_CORRECTION",
+        "OFFLINE_CANDIDATE_PASS",
+        "PACKAGE_READY_GAMEPLAY_UNASSESSED",
+        "CLASS_GAMEPLAY_ACCEPTED",
+        "ITEM_GAMEPLAY_ACCEPTED",
+        "SHIPPED_NATIVE_PASSTHROUGH",
+        "SHIPPED_REFIT",
+        "OUT_OF_SCOPE_WITH_PROOF",
+        "BLOCKED_WITH_CAUSE",
+        "DEFERRED_WITH_CAUSE"
       ]
+    },
+    "mode_route": {
+      "type": "object",
+      "required": [
+        "behavior", "target_vrs", "target_paths", "payload_hashes", "provider_id",
+        "provenance", "static_status", "gameplay_status", "save_reload_status"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "behavior": {"$ref": "#/$defs/text"},
+        "target_vrs": {"$ref": "#/$defs/text_array"},
+        "target_paths": {"$ref": "#/$defs/text_array"},
+        "payload_hashes": {"$ref": "#/$defs/sha256_or_unknown_array"},
+        "provider_id": {"$ref": "#/$defs/text"},
+        "provenance": {"$ref": "#/$defs/text"},
+        "static_status": {"$ref": "#/$defs/text"},
+        "gameplay_status": {"$ref": "#/$defs/text"},
+        "save_reload_status": {"$ref": "#/$defs/text"}
+      }
     },
     "ledger_record": {
       "type": "object",
       "required": [
-        "identity",
-        "identity_fields",
-        "source_module",
-        "creation_path",
-        "classification",
-        "source_visual_resources",
-        "component_contract",
-        "mode_routes",
-        "disposition",
-        "next_action",
-        "evidence_files"
+        "record_id", "canonical_identity", "identity_sha256", "source_module", "permission",
+        "creation_path", "classification", "body_tuple", "source_route", "mode_routes",
+        "protected_relations", "transformation", "gates", "evidence_paths", "evidence_hashes",
+        "disposition", "blocker_codes", "release_blocking", "next_admissible_action",
+        "acceptance_event_id", "shipped_package_id"
       ],
       "properties": {
-        "identity": {"$ref": "#/$defs/sha256"},
-        "identity_fields": {"type": "object"},
-        "source_module": {"type": "object"},
-        "creation_path": {"type": "object"},
-        "classification": {"type": "object"},
-        "source_visual_resources": {"type": "array"},
-        "component_contract": {"type": "object"},
-        "mode_routes": {
+        "record_id": {"$ref": "#/$defs/text"},
+        "canonical_identity": {"$ref": "#/$defs/text"},
+        "identity_sha256": {"type": "string", "pattern": "^[0-9A-F]{64}$"},
+        "source_module": {
           "type": "object",
-          "required": ["vanilla", "sbbf", "bcb", "external"]
+          "required": ["pak", "folder", "name", "uuid", "version64", "pak_sha256", "profile_digest"],
+          "properties": {
+            "pak": {"$ref": "#/$defs/text"}, "folder": {"$ref": "#/$defs/text"},
+            "name": {"$ref": "#/$defs/text"}, "uuid": {"$ref": "#/$defs/text"},
+            "version64": {"$ref": "#/$defs/text"}, "pak_sha256": {"$ref": "#/$defs/sha256_or_unknown"},
+            "profile_digest": {"$ref": "#/$defs/sha256_or_unknown"}
+          }
         },
+        "permission": {
+          "type": "object", "required": ["state", "evidence_path", "evidence_sha256", "credit", "distribution_limits"],
+          "properties": {
+            "state": {"$ref": "#/$defs/text"}, "evidence_path": {"$ref": "#/$defs/text"},
+            "evidence_sha256": {"$ref": "#/$defs/sha256_or_unknown"}, "credit": {"$ref": "#/$defs/text"},
+            "distribution_limits": {"$ref": "#/$defs/text"}
+          }
+        },
+        "creation_path": {
+          "type": "object", "required": ["kind", "root_uuid", "stats_entry", "inheritance_chain", "chain_digest"],
+          "properties": {
+            "kind": {"$ref": "#/$defs/text"}, "root_uuid": {"$ref": "#/$defs/text"},
+            "stats_entry": {"$ref": "#/$defs/text"}, "inheritance_chain": {"$ref": "#/$defs/text_array"},
+            "chain_digest": {"$ref": "#/$defs/sha256_or_unknown"}
+          }
+        },
+        "classification": {
+          "type": "object", "required": ["effective_slot", "body_content", "garment_family", "class_id", "class_contract_digest"],
+          "properties": {
+            "effective_slot": {"$ref": "#/$defs/text"}, "body_content": {"$ref": "#/$defs/text"},
+            "garment_family": {"$ref": "#/$defs/text"}, "class_id": {"$ref": "#/$defs/text"},
+            "class_contract_digest": {"$ref": "#/$defs/sha256_or_unknown"}
+          }
+        },
+        "body_tuple": {
+          "type": "object", "required": ["race", "sex", "body_type", "body_shape", "equipment_race"],
+          "properties": {
+            "race": {"$ref": "#/$defs/text"}, "sex": {"$ref": "#/$defs/text"},
+            "body_type": {"$ref": "#/$defs/text"}, "body_shape": {"$ref": "#/$defs/text"},
+            "equipment_race": {"$ref": "#/$defs/text"}
+          }
+        },
+        "source_route": {
+          "type": "object", "required": ["ordered_vrs", "ordered_paths", "ordered_file_hashes", "component_contract_digest"],
+          "properties": {
+            "ordered_vrs": {"$ref": "#/$defs/text_array"}, "ordered_paths": {"$ref": "#/$defs/text_array"},
+            "ordered_file_hashes": {"$ref": "#/$defs/sha256_or_unknown_array"},
+            "component_contract_digest": {"$ref": "#/$defs/sha256_or_unknown"}
+          }
+        },
+        "mode_routes": {
+          "type": "object", "required": ["vanilla", "sbbf", "bcb", "external"],
+          "additionalProperties": {
+            "allOf": [{"$ref": "#/$defs/mode_route"}],
+            "required": [
+              "behavior", "target_vrs", "target_paths", "payload_hashes", "provider_id",
+              "provenance", "static_status", "gameplay_status", "save_reload_status"
+            ]
+          }
+        },
+        "protected_relations": {
+          "type": "object", "required": ["registry_ids", "protected_consumers", "shared_assets", "forbidden_targets"],
+          "properties": {
+            "registry_ids": {"$ref": "#/$defs/text_array"}, "protected_consumers": {"$ref": "#/$defs/text_array"},
+            "shared_assets": {"$ref": "#/$defs/text_array"}, "forbidden_targets": {"$ref": "#/$defs/text_array"}
+          }
+        },
+        "transformation": {
+          "type": "object", "required": ["eligibility", "strategy", "allowed_components", "allowed_channels", "exception_id"],
+          "properties": {
+            "eligibility": {"$ref": "#/$defs/text"}, "strategy": {"$ref": "#/$defs/text"},
+            "allowed_components": {"$ref": "#/$defs/text_array"}, "allowed_channels": {"$ref": "#/$defs/text_array"},
+            "exception_id": {"$ref": "#/$defs/text"}
+          }
+        },
+        "gates": {
+          "type": "object", "required": ["topology", "component", "material", "skin", "clearance", "package", "fresh_extract", "route", "gameplay"],
+          "properties": {
+            "topology": {"$ref": "#/$defs/text"}, "component": {"$ref": "#/$defs/text"},
+            "material": {"$ref": "#/$defs/text"}, "skin": {"$ref": "#/$defs/text"},
+            "clearance": {"$ref": "#/$defs/text"}, "package": {"$ref": "#/$defs/text"},
+            "fresh_extract": {"$ref": "#/$defs/text"}, "route": {"$ref": "#/$defs/text"},
+            "gameplay": {"$ref": "#/$defs/text"}
+          }
+        },
+        "evidence_paths": {"$ref": "#/$defs/text_array"},
+        "evidence_hashes": {"$ref": "#/$defs/sha256_or_unknown_array"},
         "disposition": {"$ref": "#/$defs/disposition"},
-        "next_action": {"type": "string", "minLength": 1},
-        "evidence_files": {"type": "array", "items": {"type": "string"}}
+        "blocker_codes": {"$ref": "#/$defs/blocker_codes"},
+        "release_blocking": {"type": "boolean"},
+        "next_admissible_action": {"$ref": "#/$defs/text"},
+        "acceptance_event_id": {"$ref": "#/$defs/text"},
+        "shipped_package_id": {"$ref": "#/$defs/text"}
       }
     }
   }
