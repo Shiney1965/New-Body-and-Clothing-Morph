@@ -1,0 +1,21 @@
+{
+  "inputs": [
+    {"input_id": "protected_registry_v1", "kind": "JSON_EVIDENCE", "path": "evidence/protected_registry_v1.json", "expected_sha256": "0000000000000000000000000000000000000000000000000000000000000000"},
+    {"input_id": "protected_hash_manifest_v1", "kind": "JSON_EVIDENCE", "path": "evidence/protected_hash_manifest_v1.json", "expected_sha256": "0000000000000000000000000000000000000000000000000000000000000000"},
+    {"input_id": "coverage_master_registry_scoped", "kind": "JSON_EVIDENCE", "path": "evidence/coverage_master_registry_scoped.json", "expected_sha256": "0000000000000000000000000000000000000000000000000000000000000000"},
+    {"input_id": "coverage_raw_registry_scoped", "kind": "JSON_EVIDENCE", "path": "evidence/coverage_raw_registry_scoped.json", "expected_sha256": "0000000000000000000000000000000000000000000000000000000000000000"},
+    {"input_id": "true_underwear_ledger_v2", "kind": "JSON_EVIDENCE", "path": "evidence/true_underwear_ledger_v2.json", "expected_sha256": "0000000000000000000000000000000000000000000000000000000000000000"},
+    {"input_id": "true_underwear_route_audit", "kind": "JSON_EVIDENCE", "path": "evidence/true_underwear_route_audit.json", "expected_sha256": "0000000000000000000000000000000000000000000000000000000000000000"},
+    {"input_id": "vanitybody_ledger_bcbpak", "kind": "JSON_EVIDENCE", "path": "evidence/vanitybody_ledger_bcbpak.json", "expected_sha256": "0000000000000000000000000000000000000000000000000000000000000000"},
+    {"input_id": "vanitybody_route_protection", "kind": "JSON_EVIDENCE", "path": "evidence/vanitybody_route_protection.json", "expected_sha256": "0000000000000000000000000000000000000000000000000000000000000000"},
+    {"input_id": "bcbscantily_class_ledger", "kind": "JSON_EVIDENCE", "path": "evidence/bcbscantily_class_ledger.json", "expected_sha256": "0000000000000000000000000000000000000000000000000000000000000000"},
+    {"input_id": "bcbscantily_item_contracts", "kind": "JSON_EVIDENCE", "path": "evidence/bcbscantily_item_contracts.json", "expected_sha256": "0000000000000000000000000000000000000000000000000000000000000000"},
+    {"input_id": "external_permission_manifest_v1", "kind": "JSON_EVIDENCE", "path": "evidence/external_permission_manifest_v1.json", "expected_sha256": "0000000000000000000000000000000000000000000000000000000000000000"},
+    {"input_id": "recluse_provider_contract_v2", "kind": "JSON_EVIDENCE", "path": "evidence/recluse_provider_contract_v2.json", "expected_sha256": "0000000000000000000000000000000000000000000000000000000000000000"},
+    {"input_id": "soul_vest_alt_decision", "kind": "JSON_EVIDENCE", "path": "evidence/soul_vest_alt_decision.json", "expected_sha256": "0000000000000000000000000000000000000000000000000000000000000000"},
+    {"input_id": "padded_findings", "kind": "JSON_EVIDENCE", "path": "evidence/padded_findings.json", "expected_sha256": "0000000000000000000000000000000000000000000000000000000000000000"},
+    {"input_id": "bard_findings", "kind": "JSON_EVIDENCE", "path": "evidence/bard_findings.json", "expected_sha256": "0000000000000000000000000000000000000000000000000000000000000000"},
+    {"input_id": "source_profile_inventory", "kind": "JSON_EVIDENCE", "path": "evidence/source_profile_inventory.json", "expected_sha256": "0000000000000000000000000000000000000000000000000000000000000000"}
+  ],
+  "output_path": "generated/release_master_ledger.json"
+}
