@@ -512,3 +512,48 @@ def test_real_hash_locked_vanilla_build_is_terminal_and_byte_deterministic(tmp_p
             tmp_path / "forged-real-hash",
             replace(first, verified_input_sha256=forged_hashes),
         )
+
+
+def test_production_writer_rejects_deleted_required_input_id(tmp_path: Path):
+    result = build_complete_mode_candidate("vanilla")
+    forged_hashes = dict(result.verified_input_sha256)
+    forged_hashes.pop("legacy_common_frame_report")
+    forged = replace(result, verified_input_sha256=forged_hashes)
+    output = tmp_path / "deleted-production-id"
+
+    with pytest.raises(ValueError, match="OFFLINE_RESULT_INPUT_ID_SET_MISMATCH"):
+        write_offline_result(output, forged)
+
+    assert not output.exists()
+
+
+def test_production_writer_revalidates_canonical_landmark_digest(tmp_path: Path):
+    result = build_complete_mode_candidate("vanilla")
+    output = tmp_path / "forged-production-landmark-digest"
+
+    with pytest.raises(ValueError, match="OFFLINE_RESULT_LANDMARK_HASH_MISMATCH"):
+        write_offline_result(
+            output,
+            replace(result, landmark_contract_sha256=SHA_A),
+        )
+
+    assert not output.exists()
+
+
+def test_synthetic_writer_rejects_production_input_id(tmp_path: Path):
+    base_inputs, base_results, thong_input, thong_result = _passing_pair()
+    synthetic = _complete_mode_candidate(
+        "vanilla",
+        base_inputs,
+        base_results,
+        thong_input,
+        thong_result,
+        verified_input_sha256={"legacy_common_frame_report": SHA_A},
+        landmark_contract_sha256=SHA_B,
+    )
+    output = tmp_path / "synthetic-with-production-input"
+
+    with pytest.raises(ValueError, match="OFFLINE_RESULT_PROVENANCE_MISMATCH"):
+        write_offline_result(output, synthetic)
+
+    assert not output.exists()

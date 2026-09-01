@@ -35,6 +35,8 @@ STREAM_PASS = "PASS_STREAM_CAGE"
 STREAM_EXHAUSTED = "CAGE_SEARCH_EXHAUSTED"
 COMPLETE_PAIR_PASS = "PASS_OFFLINE_VANILLA_PAIR"
 UNFIXABLE = "UNFIXABLE_WITH_AVAILABLE_SAFE_TOOLING"
+PRODUCTION_PROVENANCE = "HASH_LOCKED_PRODUCTION"
+SYNTHETIC_PROVENANCE = "SYNTHETIC_TEST"
 SHA256_RE = re.compile(r"^[0-9A-F]{64}$")
 WORKSTREAM_ROOT = Path(__file__).resolve().parent
 LANDMARKS_PATH = WORKSTREAM_ROOT / "local" / "landmarks.json"
@@ -120,6 +122,7 @@ class StreamCageResult:
 
 @dataclass(frozen=True)
 class CompletePairResult:
+    provenance: str
     mode: str
     status: str
     replacement_routes: int
@@ -591,11 +594,14 @@ def _complete_mode_candidate(
     *,
     verified_input_sha256: Mapping[str, str],
     landmark_contract_sha256: str,
+    provenance: str = SYNTHETIC_PROVENANCE,
 ) -> CompletePairResult:
     """Admit only the canonical four-stream base plus thong, with zero BCB routes."""
     if mode == "bcb":
         raise ValueError("BARD_BCB_PROTECTED_NO_REPLACEMENT")
     load_bard_contract().require_emittable_pair(mode, ("base", "thong"))
+    if provenance not in {PRODUCTION_PROVENANCE, SYNTHETIC_PROVENANCE}:
+        raise ValueError("OFFLINE_RESULT_PROVENANCE_INVALID")
     if SHA256_RE.fullmatch(landmark_contract_sha256) is None:
         raise ValueError("LANDMARK_CONTRACT_DIGEST_INVALID")
     failures: list[str] = []
@@ -620,6 +626,7 @@ def _complete_mode_candidate(
             failures.append(THONG_STREAM)
     if failures:
         return CompletePairResult(
+            provenance=provenance,
             mode=mode,
             status=UNFIXABLE,
             replacement_routes=0,
@@ -642,6 +649,7 @@ def _complete_mode_candidate(
         "thong": {THONG_STREAM: np.asarray(thong_result.positions, dtype="<f4")},
     }
     return CompletePairResult(
+        provenance=provenance,
         mode=mode,
         status=COMPLETE_PAIR_PASS,
         replacement_routes=2,
@@ -667,13 +675,15 @@ def _canonical_complete(result: CompletePairResult) -> CompletePairResult:
         result.thong_result,
         verified_input_sha256=result.verified_input_sha256,
         landmark_contract_sha256=result.landmark_contract_sha256,
+        provenance=result.provenance,
     )
 
 
 def _validate_offline_result(result: CompletePairResult) -> None:
     canonical = _canonical_complete(result)
     if (
-        result.status != canonical.status
+        result.provenance != canonical.provenance
+        or result.status != canonical.status
         or result.replacement_routes != canonical.replacement_routes
         or result.protected_bcb_replacement_routes != 0
         or canonical.protected_bcb_replacement_routes != 0
@@ -683,17 +693,21 @@ def _validate_offline_result(result: CompletePairResult) -> None:
         or result.landmark_contract_sha256 != canonical.landmark_contract_sha256
     ):
         raise ValueError("OFFLINE_RESULT_NOT_EMITTABLE")
-    if _REAL_INPUT_IDS <= set(result.verified_input_sha256):
+    if result.provenance == PRODUCTION_PROVENANCE:
         current = {
             item.input_id: item.actual_sha256
             for item in verify_evidence_inputs(load_local_configuration())
         }
+        if set(result.verified_input_sha256) != set(current):
+            raise ValueError("OFFLINE_RESULT_INPUT_ID_SET_MISMATCH")
         if dict(result.verified_input_sha256) != dict(sorted(current.items())):
             raise ValueError("OFFLINE_RESULT_INPUT_HASH_MISMATCH")
         if hashlib.sha256(LANDMARKS_PATH.read_bytes()).hexdigest().upper() != (
             result.landmark_contract_sha256
         ):
             raise ValueError("OFFLINE_RESULT_LANDMARK_HASH_MISMATCH")
+    elif set(result.verified_input_sha256) & _REAL_INPUT_IDS:
+        raise ValueError("OFFLINE_RESULT_PROVENANCE_MISMATCH")
     if (result.candidate_positions is None) != (canonical.candidate_positions is None):
         raise ValueError("OFFLINE_RESULT_NOT_EMITTABLE")
     if result.candidate_positions is None:
@@ -800,6 +814,7 @@ def write_offline_result(
             "failing-face one-ring relaxation",
         ],
         "mode": result.mode,
+        "provenance": result.provenance,
         "status": result.status,
         "replacement_routes": result.replacement_routes,
         "protected_bcb_replacement_routes": result.protected_bcb_replacement_routes,
@@ -1107,4 +1122,5 @@ def build_complete_mode_candidate(mode: str) -> CompletePairResult:
             for input_id, item in sorted(verified_by_id.items())
         },
         landmark_contract_sha256=landmark_contract_sha256,
+        provenance=PRODUCTION_PROVENANCE,
     )
