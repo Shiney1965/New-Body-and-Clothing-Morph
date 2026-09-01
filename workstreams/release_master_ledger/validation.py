@@ -341,11 +341,16 @@ def validate_record(record: dict[str, object]) -> list[str]:
     elif not isinstance(record["release_blocking"], bool):
         errors.append("INVALID_TYPE:release_blocking")
 
-    disposition = record.get("disposition")
-    if disposition == "UNCLASSIFIED":
+    if "disposition" not in record:
+        errors.append("MISSING:disposition")
+    elif _is_blank(record["disposition"]):
+        errors.append("BLANK:disposition")
+    elif not isinstance(record["disposition"], str):
+        errors.append("INVALID_TYPE:disposition")
+    elif record["disposition"] == "UNCLASSIFIED":
         errors.append("FORBIDDEN_DISPOSITION:UNCLASSIFIED")
-    elif isinstance(disposition, str) and disposition and disposition not in DISPOSITIONS:
-        errors.append(f"INVALID_DISPOSITION:{disposition}")
+    elif record["disposition"] not in DISPOSITIONS:
+        errors.append(f"INVALID_DISPOSITION:{record['disposition']}")
 
     _validate_blocker_codes(record, errors)
 

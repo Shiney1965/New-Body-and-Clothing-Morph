@@ -265,6 +265,41 @@ def test_unclassified_cannot_be_emitted():
     assert "FORBIDDEN_DISPOSITION:UNCLASSIFIED" in validate_record(record)
 
 
+def test_missing_disposition_is_rejected():
+    record = complete_record_fixture()
+    del record["disposition"]
+
+    assert "MISSING:disposition" in validate_record(record)
+
+
+def test_blank_disposition_is_rejected():
+    record = complete_record_fixture()
+    record["disposition"] = ""
+
+    assert "BLANK:disposition" in validate_record(record)
+
+
+def test_none_disposition_is_rejected():
+    record = complete_record_fixture()
+    record["disposition"] = None
+
+    assert "BLANK:disposition" in validate_record(record)
+
+
+def test_nonstring_disposition_is_rejected():
+    record = complete_record_fixture()
+    record["disposition"] = 1
+
+    assert "INVALID_TYPE:disposition" in validate_record(record)
+
+
+def test_nonempty_unknown_disposition_is_rejected_with_its_value():
+    record = complete_record_fixture()
+    record["disposition"] = "NOT_ALLOWED"
+
+    assert "INVALID_DISPOSITION:NOT_ALLOWED" in validate_record(record)
+
+
 def test_schema_binds_every_section_9_2_family_and_exact_dispositions():
     schema = json.loads((ROOT / "schema.json").read_text(encoding="utf-8"))
     properties = schema["$defs"]["ledger_record"]["properties"]
