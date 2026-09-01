@@ -2,6 +2,8 @@ import hashlib
 import json
 from pathlib import Path
 
+import pytest
+
 from workstreams.release_master_ledger.adapters import (
     adapt_one_protected,
     adapt_protected_manifest,
@@ -95,3 +97,41 @@ def test_protected_records_without_explicit_ids_remain_distinct():
     assert [observation.observation_id for observation in observations] == [
         "fixture-protected_registry:0", "fixture-protected_registry:1"
     ]
+
+
+def test_reader_rejects_bytes_mutated_after_verification(tmp_path):
+    path = tmp_path / "protected.json"
+    original = json.dumps(load_fixture("protected_registry.json"))
+    path.write_text(original, encoding="utf-8")
+    original_bytes = path.read_bytes()
+    digest = hashlib.sha256(original_bytes).hexdigest().upper()
+    verified = VerifiedInput(
+        input_id="mutation-guard", kind="PROTECTED_REGISTRY", path=path,
+        bytes=len(original_bytes), expected_sha256=digest, actual_sha256=digest,
+    )
+    path.write_text(json.dumps([protected_fixture(status="PROTECTED_SOURCE_NATIVE")]), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="EVIDENCE_INPUT_HASH_MISMATCH:mutation-guard"):
+        read_observations(verified)
+
+
+def test_reader_rejects_forged_matching_declared_hashes(tmp_path):
+    path = tmp_path / "forged.json"
+    path.write_text(json.dumps(load_fixture("protected_registry.json")), encoding="utf-8")
+    forged = VerifiedInput(
+        input_id="forged-input", kind="PROTECTED_REGISTRY", path=path,
+        bytes=path.stat().st_size, expected_sha256="A" * 64, actual_sha256="A" * 64,
+    )
+
+    with pytest.raises(ValueError, match="EVIDENCE_INPUT_HASH_MISMATCH:forged-input"):
+        read_observations(forged)
+
+
+def test_malformed_list_member_fails_closed_with_its_index():
+    with pytest.raises(ValueError, match="EVIDENCE_RECORD_INVALID:1"):
+        adapt_protected_registry([protected_fixture(), "not a record"], VERIFIED_REGISTRY)
+
+
+def test_records_wrapper_requires_a_list():
+    with pytest.raises(ValueError, match="EVIDENCE_RECORDS_NOT_LIST"):
+        adapt_protected_registry({"records": {"not": "a list"}}, VERIFIED_REGISTRY)

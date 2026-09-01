@@ -4,12 +4,14 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from copy import deepcopy
+import hashlib
 import json
 from pathlib import Path
 from typing import Any, Callable
 
 from .configuration import VerifiedInput
 from .models import CanonicalIdentityFields, Observation
+from .validation import validate_record
 
 
 _UNKNOWN_IDENTITY = {
@@ -55,12 +57,19 @@ _SECTION_9_FAMILIES = {
 
 def _records(value: object) -> list[Mapping[str, Any]]:
     if isinstance(value, Mapping):
-        records = value.get("records")
-        if isinstance(records, list):
-            return [record for record in records if isinstance(record, Mapping)]
-        return [value]
+        if "records" not in value:
+            return [value]
+        records = value["records"]
+        if not isinstance(records, list):
+            raise ValueError("EVIDENCE_RECORDS_NOT_LIST")
+        value = records
     if isinstance(value, list):
-        return [record for record in value if isinstance(record, Mapping)]
+        normalized: list[Mapping[str, Any]] = []
+        for index, record in enumerate(value):
+            if not isinstance(record, Mapping):
+                raise ValueError(f"EVIDENCE_RECORD_INVALID:{index}")
+            normalized.append(record)
+        return normalized
     raise ValueError("EVIDENCE_RECORDS_INVALID")
 
 
@@ -102,7 +111,7 @@ def _observation(
     record: Mapping[str, Any],
     verified_input: VerifiedInput,
     *,
-    index: int,
+    index: int | str,
     kind: str,
     authority: str,
     evidence_status: str,
@@ -232,20 +241,28 @@ def adapt_coverage(records: object, verified_input: VerifiedInput) -> list[Obser
 
 
 def adapt_true_underwear(records: object, verified_input: VerifiedInput) -> list[Observation]:
-    return [
-        _observation(
+    observations: list[Observation] = []
+    for index, record in enumerate(_records(records)):
+        if _section_9_contract_complete(record):
+            disposition, status, blockers = (
+                "READY_FOR_OFFLINE_CORRECTION", "GAMEPLAY_UNASSESSED", ("GAMEPLAY_UNASSESSED",)
+            )
+        else:
+            disposition, status, blockers = (
+                "BLOCKED_WITH_CAUSE", "ROUTE_UNASSESSED",
+                ("TARGET_ROUTE_UNRESOLVED", "GAMEPLAY_UNASSESSED"),
+            )
+        observations.append(_observation(
             record, verified_input, index=index, kind="TRUE_UNDERWEAR_RECORD", authority="WORKSTREAM_EVIDENCE",
-            evidence_status="ROUTE_UNASSESSED", disposition="BLOCKED_WITH_CAUSE", release_blocking=True,
-            blocker_codes=("TARGET_ROUTE_UNRESOLVED", "GAMEPLAY_UNASSESSED"),
-            retain_raw_evidence=bool(record.get("audit_traceability")),
-        )
-        for index, record in enumerate(_records(records))
-    ]
+            evidence_status=status, disposition=disposition, release_blocking=True,
+            blocker_codes=blockers, retain_raw_evidence=bool(record.get("audit_traceability")),
+        ))
+    return observations
 
 
 def _section_9_contract_complete(record: Mapping[str, Any]) -> bool:
     contract = record.get("section_9_contract")
-    return isinstance(contract, Mapping) and _SECTION_9_FAMILIES <= set(contract)
+    return isinstance(contract, dict) and _SECTION_9_FAMILIES <= set(contract) and not validate_record(contract)
 
 
 def adapt_vanitybody(records: object, verified_input: VerifiedInput) -> list[Observation]:
@@ -292,14 +309,12 @@ def adapt_permission_manifest(records: object, verified_input: VerifiedInput) ->
         if not scopes:
             scopes = ("UNKNOWN_PERMISSION_SCOPE",)
         for scope_index, mesh_name in enumerate(scopes):
-            raw_record = dict(manifest)
-            raw_record["scope_mesh"] = mesh_name
             observations.append(_observation(
-                raw_record, verified_input, index=index + scope_index, kind="PERMISSION_SCOPE_MESH",
+                manifest, verified_input, index=f"{index}:{scope_index}", kind="PERMISSION_SCOPE_MESH",
                 authority="PERMISSION_EVIDENCE", evidence_status="PERMISSION_SCOPE_RECORDED",
                 disposition="DEFERRED_WITH_CAUSE", release_blocking=True,
                 blocker_codes=("ITEM_CONTRACT_UNRESOLVED", "CREATION_PATH_UNRESOLVED", "SOURCE_VR_UNRESOLVED"),
-                classification={"effective_slot": "AMBIGUOUS_SLOT"}, retain_raw_evidence=True,
+                classification={"effective_slot": "AMBIGUOUS_SLOT", "scope_mesh": mesh_name}, retain_raw_evidence=True,
             ))
     return observations
 
@@ -366,10 +381,19 @@ def _adapter_for(verified_input: VerifiedInput) -> Callable[[object, VerifiedInp
 
 def read_observations(verified_input: VerifiedInput) -> list[Observation]:
     """Read a previously hash-verified JSON input and route it by bounded kind."""
-    if verified_input.actual_sha256 != verified_input.expected_sha256:
-        raise ValueError(f"EVIDENCE_INPUT_NOT_VERIFIED:{verified_input.input_id}")
     try:
-        records = json.loads(Path(verified_input.path).read_text(encoding="utf-8"))
-    except json.JSONDecodeError as error:
+        content = Path(verified_input.path).read_bytes()
+    except OSError as error:
+        raise ValueError(f"EVIDENCE_INPUT_UNREADABLE:{verified_input.input_id}") from error
+    content_sha256 = hashlib.sha256(content).hexdigest().upper()
+    if (
+        len(content) != verified_input.bytes
+        or content_sha256 != verified_input.expected_sha256
+        or content_sha256 != verified_input.actual_sha256
+    ):
+        raise ValueError(f"EVIDENCE_INPUT_HASH_MISMATCH:{verified_input.input_id}")
+    try:
+        records = json.loads(content.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
         raise ValueError(f"EVIDENCE_JSON_INVALID:{verified_input.input_id}") from error
     return _adapter_for(verified_input)(records, verified_input)
