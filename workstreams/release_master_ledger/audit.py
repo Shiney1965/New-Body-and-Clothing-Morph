@@ -36,14 +36,14 @@ def _sorted(values: set[str]) -> list[str]:
 
 
 def _duplicate_observations(result: ReconciliationResult) -> set[str]:
-    by_record: dict[str, list[str]] = {}
-    for observation_id, record_id in result.observation_to_record.items():
-        by_record.setdefault(record_id, []).append(observation_id)
+    by_identity: dict[tuple[str, str], list[str]] = {}
+    for record in result.records:
+        by_identity.setdefault((record.canonical_identity, record.identity_sha256), []).append(record.record_id)
     return {
-        observation_id
-        for observation_ids in by_record.values()
-        if len(observation_ids) > 1
-        for observation_id in observation_ids
+        record_id
+        for record_ids in by_identity.values()
+        if len(record_ids) > 1
+        for record_id in record_ids
     }
 
 

@@ -1,5 +1,6 @@
 from workstreams.release_master_ledger.models import CanonicalIdentityFields, Observation
 from workstreams.release_master_ledger.reconcile import reconcile_observations
+import pytest
 
 
 def identity(**overrides):
@@ -62,7 +63,8 @@ def test_protected_fields_cannot_be_overwritten_by_nonprotected_evidence():
     assert result.records[0].mode_routes["bcb"]["target_paths"] == ["protected.gr2"]
     assert result.records[0].transformation["payload_hash"] == "A" * 64
     assert "PROTECTED_ROUTE_CONFLICT" in result.records[0].blocker_codes
-    assert result.conflicts == ("PROTECTED_ROUTE_CONFLICT",)
+    assert "PROTECTED_PAYLOAD_HASH_CONFLICT" in result.records[0].blocker_codes
+    assert result.conflicts == ("PROTECTED_PAYLOAD_HASH_CONFLICT", "PROTECTED_ROUTE_CONFLICT")
     assert result.records[0].evidence_paths == ("protected.json", "proposed.json")
 
 
@@ -93,3 +95,29 @@ def test_conflicting_nonprotected_route_is_retained_as_a_blocker():
     assert "ROUTE_CONFLICT" in result.records[0].blocker_codes
     assert result.records[0].mode_routes["bcb"]["target_paths"] == ["first.gr2"]
     assert result.records[0].evidence_paths == ("first.json", "second.json")
+
+
+def test_unresolved_placeholder_identity_is_provisional_per_observation_without_display_name_join():
+    unresolved = identity(
+        source_module_uuid="UNKNOWN_SOURCE_MODULE_UUID",
+        root_template_uuid="UNKNOWN_ROOT_TEMPLATE_UUID",
+        effective_slot="AMBIGUOUS_SLOT",
+    )
+    first = observation("first-unresolved", fields=unresolved, display_name="Same Name")
+    second = observation("second-unresolved", fields=unresolved, display_name="Different Name")
+
+    result = reconcile_observations([first, second])
+
+    assert len(result.records) == 2
+    assert all("IDENTITY_FIELDS_UNRESOLVED" in record.blocker_codes for record in result.records)
+    assert result.observation_to_record["first-unresolved"] != result.observation_to_record["second-unresolved"]
+
+
+def test_duplicate_observation_id_is_rejected_before_reconciliation():
+    duplicate_id = "duplicate-observation"
+
+    with pytest.raises(ValueError, match="^DUPLICATE_OBSERVATION_ID:duplicate-observation$"):
+        reconcile_observations([
+            observation(duplicate_id),
+            observation(duplicate_id, fields=identity(root_template_uuid="different-root")),
+        ])

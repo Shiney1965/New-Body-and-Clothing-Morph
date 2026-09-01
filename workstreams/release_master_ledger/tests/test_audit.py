@@ -75,7 +75,7 @@ def test_exact_audit_sets_are_sorted_and_fail_closed():
     assert audit["required_source_profiles_complete"] is False
 
 
-def test_duplicate_identity_is_a_sorted_observation_set():
+def test_corroborating_exact_join_is_not_a_duplicate_identity():
     result = reconcile_observations([observation("obs-z"), observation("obs-a")])
 
     audit = build_completeness_audit(
@@ -83,7 +83,8 @@ def test_duplicate_identity_is_a_sorted_observation_set():
         inventories(source_observations=frozenset({"obs-z", "obs-a"})),
     )
 
-    assert audit["duplicate_identity"] == ["obs-a", "obs-z"]
+    assert len(result.records) == 1
+    assert audit["duplicate_identity"] == []
 
 
 def test_in_scope_nonterminal_is_not_hidden_by_zero_unclassified():
