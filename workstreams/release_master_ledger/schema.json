@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ClothMorph Release Master Ledger",
+  "type": "object",
+  "required": ["schema_version", "records"],
+  "properties": {
+    "schema_version": {"const": "1"},
+    "records": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/ledger_record"}
+    }
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9A-F]{64}$"},
+    "disposition": {
+      "type": "string",
+      "enum": [
+        "ACCEPTED / PROTECT",
+        "READY FOR TEST",
+        "CONFIRMED DEFECT / CORRECT",
+        "MISSING ROUTE / BUILD",
+        "DEFERRED WITH CAUSE",
+        "OUT OF SCOPE"
+      ]
+    },
+    "ledger_record": {
+      "type": "object",
+      "required": [
+        "identity",
+        "identity_fields",
+        "source_module",
+        "creation_path",
+        "classification",
+        "source_visual_resources",
+        "component_contract",
+        "mode_routes",
+        "disposition",
+        "next_action",
+        "evidence_files"
+      ],
+      "properties": {
+        "identity": {"$ref": "#/$defs/sha256"},
+        "identity_fields": {"type": "object"},
+        "source_module": {"type": "object"},
+        "creation_path": {"type": "object"},
+        "classification": {"type": "object"},
+        "source_visual_resources": {"type": "array"},
+        "component_contract": {"type": "object"},
+        "mode_routes": {
+          "type": "object",
+          "required": ["vanilla", "sbbf", "bcb", "external"]
+        },
+        "disposition": {"$ref": "#/$defs/disposition"},
+        "next_action": {"type": "string", "minLength": 1},
+        "evidence_files": {"type": "array", "items": {"type": "string"}}
+      }
+    }
+  }
+}
