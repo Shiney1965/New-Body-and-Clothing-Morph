@@ -27,6 +27,7 @@ VERIFIED_EVIDENCE = {
     "evidence/geometry.json": GEOMETRY_SHA256,
     "evidence/permission.txt": PERMISSION_SHA256,
     "evidence/source-audit.json": SOURCE_SHA256,
+    "Public/Synthetic/Protected.GR2": SOURCE_SHA256,
 }
 
 
@@ -41,6 +42,10 @@ def ledger_record(**overrides):
         },
         "classification": {"effective_slot": "Underwear"},
         "body_tuple": {"race": "Human", "sex": "Female", "body_type": "BT1"},
+        "source_route": {
+            "ordered_paths": ["Public/Synthetic/Protected.GR2"],
+            "ordered_file_hashes": [SOURCE_SHA256],
+        },
         "protected_relations": {"registry_ids": [], "protected_consumers": [], "forbidden_targets": []},
         "disposition": "DEFERRED_WITH_CAUSE", "acceptance_event_id": "UNKNOWN_ACCEPTANCE_EVENT",
     }
@@ -60,6 +65,21 @@ def evidence_link(path):
     return {"evidence_path": path, "evidence_sha256": VERIFIED_EVIDENCE[path]}
 
 
+def protected_relationship():
+    return {
+        "object_id": "PROTECTED_OBJECT", "registry_id": "REGISTRY_PROTECTED", "consumer": "PROTECTED_CONSUMER",
+        "route": "native-route", "path": "Public/Synthetic/Protected.GR2",
+        "sha256": SOURCE_SHA256, "forbidden_target": "protected-target",
+        "new_target": "new-unaccepted-target",
+    }
+
+
+def protected_consumer_record(**overrides):
+    record = ledger_record(protected_relations={"relationships": [protected_relationship()]})
+    record.update(overrides)
+    return record
+
+
 def proof_for(reason):
     if reason == "SOURCE_ABSENT_EXACT_PROFILE":
         return {
@@ -71,6 +91,7 @@ def proof_for(reason):
     if reason == "NO_RELEASE_PERMISSION":
         return {
             "permission_text": {"path": "evidence/permission.txt", "sha256": PERMISSION_SHA256},
+            "permission_result": "PROHIBITED",
             "date": "2026-09-01", "credit": "Synthetic Author", "derivative_scope": "NO_DERIVATIVES",
             "redistribution_scope": "NO_REDISTRIBUTION", "exact_source_version": "1",
         }
@@ -83,17 +104,19 @@ def proof_for(reason):
         return {
             "protected_registry_id": "REGISTRY_PROTECTED", "protected_consumer": "PROTECTED_CONSUMER",
             "protected_route": "native-route", "protected_path": "Public/Synthetic/Protected.GR2",
-            "protected_sha256": SOURCE_SHA256,
+            "protected_sha256": SOURCE_SHA256, "forbidden_target": "protected-target",
+            "new_target": "new-unaccepted-target",
         }
     if reason == "UNRESOLVED_SOURCE_CONTRACT_AFTER_EXHAUSTIVE_AUDIT":
         return {
             "exact_profile": profile_proof(),
-            "searches": {
-                "root_templates": "COMPLETE", "stats": "COMPLETE", "inheritance": "COMPLETE",
-                "visual_banks": "COMPLETE", "provider_maps": "COMPLETE",
+            "searched_contracts": {
+                category: {"result": "COMPLETE", **evidence_link("evidence/source-audit.json")}
+                for category in ("root_templates", "named_stats", "inheritance", "visual_banks", "ordered_components", "provider_maps", "uuid_path_hash_aliases")
             },
-            "result": "CONTRADICTORY_RESULT",
+            "search_result": "ZERO_ROUTE",
             "anti_omission": {"result": "PASS", **evidence_link("evidence/source-audit.json")},
+            "anti_omission_pass": True,
         }
     if reason == "INCOMPATIBLE_MUTUALLY_EXCLUSIVE_PROFILE":
         return {
@@ -103,16 +126,17 @@ def proof_for(reason):
         }
     if reason == "NO_SAFE_GEOMETRY_AVAILABLE":
         component = [{"component_id": "garment-a", "status": "FAIL", **evidence_link("evidence/geometry.json")}]
+        architectures = [
+            {"method_id": "projection-v1", "method_family": "surface-projection", "implementation_sha256": "1" * 64, "candidate_count": 1, "status": "FAILED_FIXED_GATES", "components": component},
+            {"method_id": "cage-v1", "method_family": "cage-deformation", "implementation_sha256": "2" * 64, "candidate_count": 1, "status": "FAILED_FIXED_GATES", "components": component},
+            {"method_id": "skinning-v1", "method_family": "skinning-transfer", "implementation_sha256": "3" * 64, "candidate_count": 1, "status": "FAILED_FIXED_GATES", "components": component},
+        ]
+        gates = {
+            gate: {"result": "FAIL", **evidence_link("evidence/geometry.json")}
+            for gate in ("topology", "component", "material", "skin", "clearance", "silhouette", "deterministic_readback", "nontriviality")
+        }
         return {
-            "architecture_results": [
-                {"family_name": "surface-projection", "material_distinction": "surface correspondence", "components": component},
-                {"family_name": "cage-deformation", "material_distinction": "cage lattice", "components": component},
-                {"family_name": "skinning-transfer", "material_distinction": "bone-weight transfer", "components": component},
-            ],
-            "fixed_gates": {
-                gate: {"result": "FAIL", **evidence_link("evidence/geometry.json")}
-                for gate in ("topology", "component", "material", "skin", "clearance", "silhouette", "deterministic_readback", "nontriviality")
-            },
+            "architecture_results": architectures, "fixed_gates": gates,
             "final_available_safe_tooling_failure": {
                 "result": "UNFIXABLE_WITH_AVAILABLE_SAFE_TOOLING", **evidence_link("evidence/geometry.json")
             },
@@ -142,6 +166,18 @@ def signed_event(**overrides):
     event = exclusion_fixture(**overrides)
     event["event_id"] = exclusion_event_id(event)
     return event
+
+
+def geometry_event(proof=None, **overrides):
+    proof = proof or proof_for("NO_SAFE_GEOMETRY_AVAILABLE")
+    values = {
+        "reason": "NO_SAFE_GEOMETRY_AVAILABLE", "reason_proof": proof,
+        "attempted_architectures": proof.get("architecture_results", []),
+        "fixed_acceptance_gates": proof.get("fixed_gates", {}),
+        "evidence": evidence("evidence/geometry.json"),
+    }
+    values.update(overrides)
+    return signed_event(**values)
 
 
 def validate(event, record=None, verified_evidence=None):
@@ -177,9 +213,10 @@ def test_event_id_changes_when_a_bound_payload_field_changes():
     "INCOMPATIBLE_MUTUALLY_EXCLUSIVE_PROFILE",
 ])
 def test_each_non_geometry_reason_requires_a_complete_structured_proof(reason):
-    path = "evidence/permission.txt" if reason == "NO_RELEASE_PERMISSION" else "evidence/alternate-artifact.json" if reason == "INCOMPATIBLE_MUTUALLY_EXCLUSIVE_PROFILE" else "evidence/source-audit.json"
+    path = "evidence/permission.txt" if reason == "NO_RELEASE_PERMISSION" else "evidence/alternate-artifact.json" if reason == "INCOMPATIBLE_MUTUALLY_EXCLUSIVE_PROFILE" else "Public/Synthetic/Protected.GR2" if reason == "PROTECTED_NATIVE_ONLY" else "evidence/source-audit.json"
+    record = protected_consumer_record() if reason == "PROTECTED_NATIVE_ONLY" else None
 
-    assert validate(signed_event(reason=reason, reason_proof=proof_for(reason), evidence=evidence(path))) == []
+    assert validate(signed_event(reason=reason, reason_proof=proof_for(reason), evidence=evidence(path)), record) == []
 
 
 def test_reason_token_in_an_arbitrary_claim_cannot_replace_a_structured_proof():
@@ -211,17 +248,14 @@ def test_permission_and_unsupported_tuple_proofs_bind_the_exact_record_values():
 
 
 def test_geometry_requires_distinct_architecture_component_results_all_fixed_gates_and_final_failure():
-    event = signed_event(
-        reason="NO_SAFE_GEOMETRY_AVAILABLE", reason_proof=proof_for("NO_SAFE_GEOMETRY_AVAILABLE"),
-        evidence=evidence("evidence/geometry.json"),
-    )
+    event = geometry_event()
 
     assert validate(event) == []
 
 
 @pytest.mark.parametrize("mutation,expected", [
     (lambda proof: proof.update({"architecture_results": []}), "INSUFFICIENT_ARCHITECTURE_RESULTS"),
-    (lambda proof: proof["architecture_results"][1].update({"family_name": "surface-projection"}), "NON_DISTINCT_ARCHITECTURE_FAMILIES"),
+    (lambda proof: proof["architecture_results"][1].update({"method_family": "surface-projection"}), "NON_DISTINCT_ARCHITECTURE_FAMILIES"),
     (lambda proof: proof["architecture_results"][0].update({"components": [{"component_id": "garment-a", "status": "FAIL"}]}), "INVALID_ARCHITECTURE_COMPONENT_EVIDENCE"),
     (lambda proof: proof["fixed_gates"].pop("silhouette"), "MISSING_FIXED_GATE:silhouette"),
     (lambda proof: proof.update({"final_available_safe_tooling_failure": {}}), "MISSING_FINAL_SAFE_TOOLING_FAILURE"),
@@ -229,7 +263,7 @@ def test_geometry_requires_distinct_architecture_component_results_all_fixed_gat
 def test_geometry_rejects_generic_or_incomplete_structured_proof(mutation, expected):
     proof = proof_for("NO_SAFE_GEOMETRY_AVAILABLE")
     mutation(proof)
-    event = signed_event(reason="NO_SAFE_GEOMETRY_AVAILABLE", reason_proof=proof, evidence=evidence("evidence/geometry.json"))
+    event = geometry_event(proof)
 
     assert expected in validate(event)
 
@@ -238,10 +272,13 @@ def test_geometry_accepts_only_a_structured_hard_contract_impossibility_alternat
     proof = {"hard_contract_impossibility": {
         "result": "HARD_CONTRACT_IMPOSSIBILITY", "protected_object_id": "PROTECTED_OBJECT",
         "protected_object_path": "Public/Synthetic/Protected.GR2", "protected_object_sha256": SOURCE_SHA256,
-        "forbidden_boundary": "GARMENT_ONLY", **evidence_link("evidence/source-audit.json"),
+        "forbidden_boundary": "GARMENT_ONLY", **evidence_link("Public/Synthetic/Protected.GR2"),
     }}
 
-    assert validate(signed_event(reason="NO_SAFE_GEOMETRY_AVAILABLE", reason_proof=proof, evidence=evidence("evidence/source-audit.json"))) == []
+    assert validate(
+        signed_event(reason="NO_SAFE_GEOMETRY_AVAILABLE", reason_proof=proof, evidence=evidence("Public/Synthetic/Protected.GR2")),
+        protected_consumer_record(),
+    ) == []
 
 
 @pytest.mark.parametrize("disposition", [
@@ -251,18 +288,69 @@ def test_protected_or_accepted_dispositions_cannot_receive_exclusions(dispositio
     assert "EXCLUSION_FORBIDDEN_PROTECTED_OR_ACCEPTED_RECORD" in validate(signed_event(), ledger_record(disposition=disposition))
 
 
-def test_protected_relations_or_acceptance_event_cannot_receive_exclusions():
-    protected = ledger_record(protected_relations={"registry_ids": ["R"], "protected_consumers": [], "forbidden_targets": []})
+def test_accepted_relation_or_acceptance_event_cannot_receive_exclusions():
+    protected = ledger_record(protected_relations={"accepted_route_ids": ["R"]})
 
     assert "EXCLUSION_FORBIDDEN_PROTECTED_OR_ACCEPTED_RECORD" in validate(signed_event(), protected)
     assert "EXCLUSION_FORBIDDEN_PROTECTED_OR_ACCEPTED_RECORD" in validate(signed_event(), ledger_record(acceptance_event_id="ACCEPTANCE_EVENT"))
 
 
 def test_protected_native_only_requires_an_unaccepted_consumer_record():
-    event = signed_event(reason="PROTECTED_NATIVE_ONLY", reason_proof=proof_for("PROTECTED_NATIVE_ONLY"), evidence=evidence("evidence/source-audit.json"))
+    event = signed_event(reason="PROTECTED_NATIVE_ONLY", reason_proof=proof_for("PROTECTED_NATIVE_ONLY"), evidence=evidence("Public/Synthetic/Protected.GR2"))
 
-    assert validate(event) == []
-    assert "EXCLUSION_FORBIDDEN_PROTECTED_OR_ACCEPTED_RECORD" in validate(event, ledger_record(disposition="SOURCE_NATIVE_PROTECTED"))
+    assert validate(event, protected_consumer_record()) == []
+    assert "EXCLUSION_FORBIDDEN_PROTECTED_OR_ACCEPTED_RECORD" in validate(event, protected_consumer_record(disposition="SOURCE_NATIVE_PROTECTED"))
+
+
+def test_permission_proof_must_prohibit_the_requested_release_operation():
+    proof = proof_for("NO_RELEASE_PERMISSION")
+    proof["permission_result"] = "PERMITTED"
+    proof["derivative_scope"] = "ALLOWED"
+    event = signed_event(reason="NO_RELEASE_PERMISSION", reason_proof=proof, evidence=evidence("evidence/permission.txt"))
+
+    assert "PERMISSION_NOT_PROHIBITED" in validate(event)
+    assert "DERIVATIVE_SCOPE_NOT_PROHIBITED" in validate(event)
+
+
+def test_protected_native_proof_must_match_the_record_relationship_and_verified_pair():
+    proof = proof_for("PROTECTED_NATIVE_ONLY")
+    proof["protected_registry_id"] = "UNRELATED"
+    event = signed_event(reason="PROTECTED_NATIVE_ONLY", reason_proof=proof, evidence=evidence("Public/Synthetic/Protected.GR2"))
+
+    assert "PROTECTED_RELATION_MISMATCH" in validate(event, protected_consumer_record())
+
+
+def test_hard_contract_geometry_rejects_an_unrelated_object_pair():
+    proof = {"hard_contract_impossibility": {
+        "result": "HARD_CONTRACT_IMPOSSIBILITY", "protected_object_id": "PROTECTED_OBJECT",
+        "protected_object_path": "evidence/source-audit.json", "protected_object_sha256": SOURCE_SHA256,
+        "forbidden_boundary": "GARMENT_ONLY", **evidence_link("evidence/source-audit.json"),
+    }}
+    event = signed_event(reason="NO_SAFE_GEOMETRY_AVAILABLE", reason_proof=proof, evidence=evidence("evidence/source-audit.json"))
+
+    assert "HARD_CONTRACT_OBJECT_MISMATCH" in validate(event, protected_consumer_record())
+
+
+def test_source_exhaustion_requires_every_enumerated_contract_category_and_anti_omission_true():
+    proof = proof_for("UNRESOLVED_SOURCE_CONTRACT_AFTER_EXHAUSTIVE_AUDIT")
+    del proof["searched_contracts"]["named_stats"]
+    proof["anti_omission_pass"] = False
+    event = signed_event(reason="UNRESOLVED_SOURCE_CONTRACT_AFTER_EXHAUSTIVE_AUDIT", reason_proof=proof, evidence=evidence("evidence/source-audit.json"))
+
+    errors = validate(event)
+
+    assert "MISSING_SEARCHED_CONTRACT:named_stats" in errors
+    assert "ANTI_OMISSION_NOT_TRUE" in errors
+
+
+def test_geometry_summary_must_exactly_match_the_structured_architectures_and_gates():
+    proof = proof_for("NO_SAFE_GEOMETRY_AVAILABLE")
+    event = geometry_event(proof, attempted_architectures=[], fixed_acceptance_gates={})
+
+    errors = validate(event)
+
+    assert "ATTEMPTED_ARCHITECTURES_MISMATCH" in errors
+    assert "FIXED_ACCEPTANCE_GATES_MISMATCH" in errors
 
 
 def test_evidence_path_and_hash_must_match_the_same_verified_registry_entry():
