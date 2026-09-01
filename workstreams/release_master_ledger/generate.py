@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any, Iterable, Mapping
 
 from .adapters import read_observations
-from .audit import InventorySets, build_completeness_audit
+from .audit import build_completeness_audit
 from .configuration import (
     LocalConfiguration,
     VerifiedInput,
@@ -18,7 +18,13 @@ from .configuration import (
     verify_evidence_inputs,
 )
 from .models import LedgerRecord, Observation
+from .inventory import (
+    IndependentInventories,
+    InventoryIntegrityError,
+    extract_independent_inventories,
+)
 from .reconcile import reconcile_observations
+from .validation import validate_generated_ledger
 
 
 LEDGER_NAME = "REMAINING_TARGET_MASTER_LEDGER.json"
@@ -127,6 +133,10 @@ def _ledger_payload(
     observations: list[Observation],
     verified_inputs: list[VerifiedInput],
 ) -> dict[str, object]:
+    input_observation_counts = {input_.input_id: 0 for input_ in verified_inputs}
+    input_observation_counts.update(_count(
+        observation.input_id for observation in observations
+    ))
     payload = {
         "schema_version": 1,
         "summary": {
@@ -137,9 +147,8 @@ def _ledger_payload(
                 record.release_blocking for record in records
             ),
             "disposition_counts": _count(record.disposition for record in records),
-            "input_observation_counts": _count(
-                observation.input_id for observation in observations
-            ),
+            "input_observation_counts": dict(sorted(input_observation_counts.items())),
+            "input_kind_counts": _count(input_.kind for input_ in verified_inputs),
             "observation_kind_counts": _count(
                 observation.observation_kind for observation in observations
             ),
@@ -196,53 +205,75 @@ def _markdown(ledger: Mapping[str, object], audit: Mapping[str, object]) -> str:
     return "\n".join(lines)
 
 
+def _attach_protected_manifest(
+    observation: Observation, inventories: IndependentInventories
+) -> Observation:
+    registry_ids = observation.protected_relations.get("registry_ids")
+    if not isinstance(registry_ids, list) or len(registry_ids) != 1:
+        raise InventoryIntegrityError("PROTECTED_OBSERVATION_REGISTRY_ID_INVALID")
+    registry_id = registry_ids[0]
+    if not isinstance(registry_id, str) or registry_id not in inventories.protected_manifest_relations:
+        raise InventoryIntegrityError(f"PROTECTED_OBSERVATION_MANIFEST_RELATION_MISSING:{registry_id}")
+    relation = inventories.protected_manifest_relations[registry_id]
+    payload = dict(observation.payload)
+    protected_relations = dict(observation.protected_relations)
+    protected_relations["hash_manifest_entries"] = [{
+        "bytes": relation.bytes,
+        "input_id": relation.manifest_input_id,
+        "input_sha256": relation.manifest_input_sha256,
+        "protected_path": relation.protected_path,
+        "registry_id": relation.registry_id,
+        "sha256": relation.sha256,
+    }]
+    evidence_pointers = tuple(dict.fromkeys((
+        *observation.evidence_pointers,
+        relation.manifest_evidence_path,
+    )))
+    payload["protected_relations"] = protected_relations
+    payload["evidence_pointers"] = evidence_pointers
+    return replace(
+        observation,
+        evidence_files=evidence_pointers,
+        payload=payload,
+    )
+
+
 def generate(config: LocalConfiguration) -> GenerationResult:
     """Hash inputs, adapt observations, reconcile, audit, and write all artifacts."""
     verified_inputs = verify_evidence_inputs(config)
-    observations = [
-        replace(
-            observation,
-            observation_id=f"{input_.input_id}:{observation.observation_id}",
-        )
-        for input_ in verified_inputs
-        for observation in read_observations(input_)
-    ]
+    inventories = extract_independent_inventories(verified_inputs)
+    observations: list[Observation] = []
+    for input_ in verified_inputs:
+        for observation in read_observations(input_):
+            namespaced = replace(
+                observation,
+                observation_id=f"{input_.input_id}:{observation.observation_id}",
+            )
+            if namespaced.observation_kind == "PROTECTED_CONTROL":
+                namespaced = _attach_protected_manifest(namespaced, inventories)
+            observations.append(namespaced)
     reconciliation = reconcile_observations(observations)
     supporting_input_ids = sorted(
         input_.input_id
         for input_ in verified_inputs
         if input_.kind.upper() == "SUPPORTING_EVIDENCE"
     )
-    prior_evidence = frozenset(
-        str(input_.path)
-        for input_ in verified_inputs
-        if input_.kind.upper() == "SUPPORTING_EVIDENCE"
-    )
-    packaged_records = frozenset(
-        package_id
-        for observation in observations
-        if observation.observation_kind == "PACKAGE_EVIDENCE"
-        for package_id in (observation.payload.get("shipped_package_id"),)
-        if isinstance(package_id, str) and package_id != "UNKNOWN_SHIPPED_PACKAGE"
-    )
-    inventories = InventorySets(
-        source_observations=frozenset(
-            observation.observation_id for observation in observations
-        ),
-        prior_evidence=prior_evidence,
-        packaged_records=packaged_records,
-        required_source_profiles=frozenset(
-            input_.input_id for input_ in verified_inputs
-        ),
-        complete_source_profiles=frozenset(),
-    )
-    audit = build_completeness_audit(reconciliation, inventories)
+    audit = build_completeness_audit(reconciliation, inventories.to_audit_sets())
     audit["registered_inventories"] = {
-        "packaged_records": sorted(packaged_records),
+        "packaged_records": sorted(inventories.packaged_records),
         "prior_evidence": [f"input:{input_id}" for input_id in supporting_input_ids],
+        "source_observations": sorted(inventories.source_observations),
     }
     audit = _stable_evidence_references(audit, verified_inputs)
+    for name in (
+        "missing_from_ledger", "duplicate_identity", "unreferenced_prior_evidence",
+        "packaged_without_ledger", "ledger_without_source", "in_scope_nonterminal",
+    ):
+        audit[name] = sorted(audit[name])
     ledger = _ledger_payload(reconciliation.records, observations, verified_inputs)
+    ledger_errors = validate_generated_ledger(ledger)
+    if ledger_errors:
+        raise ValueError("GENERATED_LEDGER_INVALID:" + ",".join(ledger_errors))
     manifest = _manifest_payload(verified_inputs)
 
     output_dir = config.output_path.parent

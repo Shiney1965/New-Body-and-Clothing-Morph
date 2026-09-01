@@ -152,16 +152,13 @@ def test_hash_verified_named_target_markdown_is_one_blocking_observation(tmp_pat
     assert "NAMED_TARGET_UNRESOLVED" in observations[0].blocker_codes
 
 
-def test_supporting_evidence_is_hash_checked_and_emitted_only_as_reference(tmp_path):
+def test_supporting_evidence_is_hash_checked_without_emitting_a_ledger_observation(tmp_path):
     evidence_file = tmp_path / "support.json"
     evidence_file.write_text('{"files": [{"sha256": "A"}]}\n', encoding="utf-8")
 
     observations = read_observations(verified(evidence_file, kind="SUPPORTING_EVIDENCE"))
 
-    assert len(observations) == 1
-    assert observations[0].observation_kind == "SUPPORTING_EVIDENCE_REFERENCE"
-    assert observations[0].disposition == "DEFERRED_WITH_CAUSE"
-    assert observations[0].release_blocking is True
+    assert observations == []
 
 
 def test_current_recluse_package_contract_preserves_exact_package_and_module_facts(tmp_path):

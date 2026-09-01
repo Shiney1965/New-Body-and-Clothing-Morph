@@ -364,3 +364,30 @@ def validate_record(record: dict[str, object]) -> list[str]:
             errors.append("IDENTITY_MISMATCH")
 
     return errors
+
+
+def validate_generated_ledger(document: object) -> list[str]:
+    """Validate a complete generated ledger envelope and every record."""
+    if not isinstance(document, Mapping):
+        return ["INVALID:document"]
+    errors: list[str] = []
+    if document.get("schema_version") != 1 or isinstance(document.get("schema_version"), bool):
+        errors.append("INVALID:schema_version")
+    for key, expected in (("summary", Mapping), ("blockers", list), ("records", list)):
+        if key not in document:
+            errors.append(f"MISSING:{key}")
+        elif not isinstance(document[key], expected):
+            errors.append(f"INVALID:{key}")
+    records = document.get("records")
+    if isinstance(records, list):
+        for index, record in enumerate(records):
+            if not isinstance(record, Mapping):
+                errors.append(f"RECORD[{index}]:INVALID:record")
+                continue
+            errors.extend(
+                f"RECORD[{index}]:{error}" for error in validate_record(dict(record))
+            )
+        summary = document.get("summary")
+        if isinstance(summary, Mapping) and summary.get("record_count") != len(records):
+            errors.append("SUMMARY_MISMATCH:record_count")
+    return errors

@@ -480,24 +480,6 @@ def adapt_permission_manifest(records: object, verified_input: VerifiedInput) ->
     return observations
 
 
-def adapt_supporting_evidence(verified_input: VerifiedInput) -> list[Observation]:
-    """Represent one hash-verified supporting input without treating it as a garment."""
-    return [_observation(
-        {"observation_id": f"supporting:{verified_input.input_id}"},
-        verified_input,
-        index=0,
-        kind="SUPPORTING_EVIDENCE_REFERENCE",
-        authority="STATIC_EVIDENCE",
-        evidence_status="HASH_VERIFIED_SUPPORTING_EVIDENCE",
-        disposition="DEFERRED_WITH_CAUSE",
-        release_blocking=True,
-        blocker_codes=("SUPPORTING_EVIDENCE_REFERENCE_ONLY",),
-        normalized_payload={
-            "next_admissible_action": "Join this hash-locked supporting input to a concrete source identity.",
-        },
-    )]
-
-
 def adapt_package_evidence(records: object, verified_input: VerifiedInput) -> list[Observation]:
     observations: list[Observation] = []
     for index, record in enumerate(_records(records)):
@@ -603,7 +585,7 @@ def read_observations(verified_input: VerifiedInput) -> list[Observation]:
     ):
         raise ValueError(f"EVIDENCE_INPUT_HASH_MISMATCH:{verified_input.input_id}")
     if verified_input.kind.upper() == "SUPPORTING_EVIDENCE":
-        return adapt_supporting_evidence(verified_input)
+        return []
     if verified_input.kind.upper() == "NAMED_TARGET" and verified_input.path.suffix.lower() == ".md":
         try:
             content.decode("utf-8")

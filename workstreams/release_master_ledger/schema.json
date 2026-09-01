@@ -2,9 +2,11 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "ClothMorph Release Master Ledger",
   "type": "object",
-  "required": ["schema_version", "records"],
+  "required": ["schema_version", "summary", "blockers", "records"],
   "properties": {
-    "schema_version": {"const": "1"},
+    "schema_version": {"type": "integer", "const": 1},
+    "summary": {"type": "object"},
+    "blockers": {"type": "array"},
     "records": {"type": "array", "items": {"$ref": "#/$defs/ledger_record"}}
   },
   "$defs": {

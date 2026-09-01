@@ -67,15 +67,17 @@ def build_completeness_audit(
         if record.disposition not in _TERMINAL_DISPOSITIONS or record.release_blocking
     }
     duplicate_identity = _duplicate_observations(result)
+    sourced_record_ids = {
+        result.observation_to_record[observation_id]
+        for observation_id in inventories.source_observations
+        if observation_id in result.observation_to_record
+    }
     audit_sets = {
         "missing_from_ledger": set(inventories.source_observations) - represented,
         "duplicate_identity": duplicate_identity,
         "unreferenced_prior_evidence": set(inventories.prior_evidence) - evidence_paths,
         "packaged_without_ledger": set(inventories.packaged_records) - package_ids,
-        "ledger_without_source": {
-            record_id for observation_id, record_id in result.observation_to_record.items()
-            if observation_id not in inventories.source_observations
-        },
+        "ledger_without_source": record_ids - sourced_record_ids,
         "in_scope_nonterminal": nonterminal,
     }
     profile_complete = set(inventories.required_source_profiles) <= set(inventories.complete_source_profiles)
@@ -90,6 +92,11 @@ def build_completeness_audit(
     release_complete = source_complete and not audit_sets["in_scope_nonterminal"] and all(section_19_gates.values())
     return {
         **{name: _sorted(values) for name, values in audit_sets.items()},
+        "required_source_profiles": sorted(inventories.required_source_profiles),
+        "complete_source_profiles": sorted(inventories.complete_source_profiles),
+        "missing_source_profiles": sorted(
+            set(inventories.required_source_profiles) - set(inventories.complete_source_profiles)
+        ),
         "unclassified_count": sum(record.disposition == "UNCLASSIFIED" for record in result.records),
         "required_source_profiles_complete": profile_complete,
         "section_19_gates": section_19_gates,

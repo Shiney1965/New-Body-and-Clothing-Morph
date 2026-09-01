@@ -9,6 +9,8 @@ from workstreams.release_master_ledger.configuration import (
     verify_evidence_inputs,
 )
 from workstreams.release_master_ledger.generate import generate
+from workstreams.release_master_ledger.inventory import BASE_GAME_SOURCE_PROFILE_UNRESOLVED
+from workstreams.release_master_ledger.validation import validate_generated_ledger
 
 
 CONFIG_PATH = WORKSTREAM_ROOT / "local" / "config.json"
@@ -71,7 +73,9 @@ def test_current_hash_locked_evidence_generates_truthful_master_ledger():
 
     protected_records = [
         record for record in ledger["records"]
-        if record["evidence_paths"] == ["input:protected_registry_v1"]
+        if set(record["evidence_paths"]) == {
+            "input:protected_registry_v1", "input:protected_hash_manifest_v1",
+        }
     ]
     assert len(protected_records) == 32
     assert Counter(record["disposition"] for record in protected_records) == {
@@ -85,25 +89,40 @@ def test_current_hash_locked_evidence_generates_truthful_master_ledger():
         for record in protected_records
         if record["disposition"] == "PACKAGE_ONLY_PROTECTED"
     )
+    registry_by_id = {entry["id"]: entry for entry in registry["entries"]}
+    for record in protected_records:
+        registry_id = record["protected_relations"]["registry_ids"][0]
+        relation = record["protected_relations"]["hash_manifest_entries"]
+        assert len(relation) == 1
+        assert relation[0]["registry_id"] == registry_id
+        assert relation[0]["input_id"] == "protected_hash_manifest_v1"
+        assert relation[0]["input_sha256"] == by_id["protected_hash_manifest_v1"].actual_sha256
+        assert relation[0]["protected_path"] == registry_by_id[registry_id]["protected_file"]["path"]
+        assert relation[0]["bytes"] == registry_by_id[registry_id]["protected_file"]["bytes"]
+        assert relation[0]["sha256"] == registry_by_id[registry_id]["protected_file"]["sha256"]
 
     assert set(ledger["summary"]["input_observation_counts"]) == set(by_id)
     assert all(
-        ledger["summary"]["input_observation_counts"][input_id] == 1
+        ledger["summary"]["input_observation_counts"][input_id] == 0
         for input_id in SUPPORTING_INPUT_IDS
     )
-    assert ledger["summary"]["observation_kind_counts"]["SUPPORTING_EVIDENCE_REFERENCE"] == 6
-    assert ledger["summary"]["observation_count"] == len(ledger["records"]) == 3179
+    assert "SUPPORTING_EVIDENCE_REFERENCE" not in ledger["summary"]["observation_kind_counts"]
+    assert ledger["summary"]["input_kind_counts"]["SUPPORTING_EVIDENCE"] == 6
+    assert ledger["summary"]["observation_count"] == len(ledger["records"]) == 3173
 
     supporting_records = [
         record for record in ledger["records"]
-        if record["evidence_paths"]
+        if len(record["evidence_paths"]) == 1
         and record["evidence_paths"][0].removeprefix("input:") in SUPPORTING_INPUT_IDS
     ]
-    assert len(supporting_records) == 6
+    assert supporting_records == []
     assert audit["registered_inventories"]["prior_evidence"] == [
         f"input:{input_id}" for input_id in sorted(SUPPORTING_INPUT_IDS)
     ]
-    assert audit["unreferenced_prior_evidence"] == []
+    assert audit["unreferenced_prior_evidence"] == [
+        f"input:{input_id}"
+        for input_id in sorted(SUPPORTING_INPUT_IDS - {"protected_hash_manifest_v1"})
+    ]
 
     recluse_records = [
         record for record in ledger["records"]
@@ -123,7 +142,26 @@ def test_current_hash_locked_evidence_generates_truthful_master_ledger():
     assert audit["registered_inventories"]["packaged_records"] == [RECLUSE_PACKAGE_ID]
     assert audit["packaged_without_ledger"] == []
 
+    source_profile_inventory = _json(by_id["source_profile_inventory"].path)
+    required_profiles = {
+        BASE_GAME_SOURCE_PROFILE_UNRESOLVED,
+        *(
+            f"SOURCE_PROFILE:{module['uuid']}:{module['version64']}"
+            for module in source_profile_inventory["modules"]
+        ),
+    }
+    assert audit["required_source_profiles"] == sorted(required_profiles)
+    assert audit["complete_source_profiles"] == []
+    assert audit["missing_source_profiles"] == sorted(required_profiles)
+    assert audit["required_source_profiles_complete"] is False
+    assert len(audit["registered_inventories"]["source_observations"]) == 2965
+    assert audit["missing_from_ledger"] == []
+    assert audit["duplicate_identity"] == []
+    assert len(audit["ledger_without_source"]) == 208
+    assert len(audit["in_scope_nonterminal"]) == 3173
+
     assert manifest["inputs"] and len(manifest["inputs"]) == 16
+    assert validate_generated_ledger(ledger) == []
     assert audit["unclassified_count"] == 0
     assert AUDIT_SET_NAMES <= audit.keys()
     assert all(isinstance(audit[name], list) for name in AUDIT_SET_NAMES)

@@ -12,7 +12,7 @@ from .configuration import (
     validate_output_path,
     verify_evidence_inputs,
 )
-from .validation import validate_record
+from .validation import validate_generated_ledger, validate_record
 from .adapters import (
     adapt_bcbscantily,
     adapt_coverage,
@@ -29,6 +29,13 @@ from .adapters import (
 )
 from .reconcile import ReconciliationResult, reconcile_observations
 from .audit import InventorySets, build_completeness_audit
+from .inventory import (
+    BASE_GAME_SOURCE_PROFILE_UNRESOLVED,
+    IndependentInventories,
+    InventoryIntegrityError,
+    ProtectedManifestRelation,
+    extract_independent_inventories,
+)
 
 __all__ = [
     "CanonicalIdentityFields",
@@ -39,11 +46,16 @@ __all__ = [
     "LocalConfiguration",
     "Observation",
     "VerifiedInput",
+    "BASE_GAME_SOURCE_PROFILE_UNRESOLVED",
+    "IndependentInventories",
+    "InventoryIntegrityError",
+    "ProtectedManifestRelation",
     "build_identity",
     "canonical_json",
     "load_local_configuration",
     "sha256_text",
     "validate_output_path",
+    "validate_generated_ledger",
     "validate_record",
     "verify_evidence_inputs",
     "adapt_bcbscantily",
@@ -62,4 +74,5 @@ __all__ = [
     "ReconciliationResult",
     "build_completeness_audit",
     "reconcile_observations",
+    "extract_independent_inventories",
 ]

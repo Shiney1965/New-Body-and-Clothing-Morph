@@ -128,7 +128,7 @@ def test_evidence_reference_normalization_precomputes_paths_once(tmp_path):
     assert elapsed < 1.0
 
 
-def test_supporting_evidence_inventory_is_nonempty_and_referenced(tmp_path):
+def test_supporting_evidence_inventory_is_nonempty_without_fake_ledger_record(tmp_path):
     primary = tmp_path / "evidence" / "primary.json"
     support = tmp_path / "evidence" / "support.json"
     primary_sha = _write_json(primary, {"records": [{
@@ -149,10 +149,11 @@ def test_supporting_evidence_inventory_is_nonempty_and_referenced(tmp_path):
     ledger = json.loads(result.ledger_path.read_text(encoding="utf-8"))
     audit = json.loads(result.audit_path.read_text(encoding="utf-8"))
 
-    assert ledger["summary"]["input_observation_counts"] == {"primary": 1, "support": 1}
-    assert ledger["summary"]["observation_kind_counts"]["SUPPORTING_EVIDENCE_REFERENCE"] == 1
+    assert ledger["summary"]["input_observation_counts"] == {"primary": 1, "support": 0}
+    assert "SUPPORTING_EVIDENCE_REFERENCE" not in ledger["summary"]["observation_kind_counts"]
+    assert ledger["summary"]["record_count"] == 1
     assert audit["registered_inventories"]["prior_evidence"] == ["input:support"]
-    assert audit["unreferenced_prior_evidence"] == []
+    assert audit["unreferenced_prior_evidence"] == ["input:support"]
 
 
 def test_package_inventory_uses_exact_normalized_package_id(tmp_path):
@@ -193,6 +194,10 @@ def test_registered_supporting_inventory_is_sorted_by_normalized_input_id(tmp_pa
     audit = json.loads(result.audit_path.read_text(encoding="utf-8"))
 
     assert audit["registered_inventories"]["prior_evidence"] == [
+        "input:a-input",
+        "input:z-input",
+    ]
+    assert audit["unreferenced_prior_evidence"] == [
         "input:a-input",
         "input:z-input",
     ]

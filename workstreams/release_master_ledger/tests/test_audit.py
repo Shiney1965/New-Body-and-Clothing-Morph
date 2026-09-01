@@ -87,6 +87,25 @@ def test_corroborating_exact_join_is_not_a_duplicate_identity():
     assert audit["duplicate_identity"] == []
 
 
+def test_corroborating_non_source_join_does_not_make_sourced_record_ledger_without_source():
+    result = reconcile_observations([observation("source"), observation("corroborating")])
+
+    audit = build_completeness_audit(
+        result, inventories(source_observations=frozenset({"source"}))
+    )
+
+    assert len(result.records) == 1
+    assert audit["ledger_without_source"] == []
+
+
+def test_standalone_corroborating_record_is_ledger_without_source():
+    result = reconcile_observations([observation("corroborating")])
+
+    audit = build_completeness_audit(result, inventories())
+
+    assert audit["ledger_without_source"] == [result.records[0].record_id]
+
+
 def test_in_scope_nonterminal_is_not_hidden_by_zero_unclassified():
     result = reconcile_observations([observation("obs-1", disposition="DEFERRED_WITH_CAUSE")])
 
@@ -110,3 +129,17 @@ def test_later_gates_cannot_be_assumed_true_without_explicit_true_values():
 
     assert audit["source_complete"] is True
     assert audit["release_complete"] is False
+
+
+def test_profile_ids_are_emitted_for_traceability():
+    audit = build_completeness_audit(
+        reconcile_observations([]),
+        inventories(
+            required_source_profiles=frozenset({"profile-a", "profile-b"}),
+            complete_source_profiles=frozenset({"profile-a"}),
+        ),
+    )
+
+    assert audit["required_source_profiles"] == ["profile-a", "profile-b"]
+    assert audit["complete_source_profiles"] == ["profile-a"]
+    assert audit["missing_source_profiles"] == ["profile-b"]
