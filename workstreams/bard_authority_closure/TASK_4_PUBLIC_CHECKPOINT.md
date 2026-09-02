@@ -61,6 +61,26 @@ Ignored output directory: `workstreams/bard_authority_closure/local/task-4-fresh
 
 The packet names 11 unresolved retained evidence files. They include the four newly available GR2 files lacking semantic/defect-region readback; legacy provider geometry inventory; retained class findings and additional old source aliases; and separator/add-on/SBBF dependency archives with listing-only coverage in this task. Exact absolute paths are retained in `unresolved_retained_evidence_files`; none is silently dismissed because an older alias report asserted an empty unreviewed list.
 
+### Sanitized retained-gap appendix
+
+Task 4 remains **incomplete/blocked**. The full local report is `.superpowers/sdd/2026-09-01-bard-authority-geometry-closure/task-4-report.md`; it records every exact absolute gap path, the observed RED/GREEN history, and the limitations of that history. The table below uses source-relative labels only and does not copy source assets or license text.
+
+| Gap | Retained evidence label | Unresolved reason | Next admissible offline action |
+|---|---|---|---|
+| 01 | `BCBScantily_BardClassGeneralization_20260826/BCBSCANTILY_CLASS_FINDINGS.md` | Relevant legacy findings were not semantically reconciled to the newly available full source. | Read completely, hash-bind claims and cited inputs, and document which conclusions are supported or superseded. |
+| 02 | `BCBScantily_BardClassGeneralization_20260826/evidence/GEOMETRY_INVENTORY.json` | Historical inventory lacks the four newly found SCO paths. | Create a separate old-versus-fresh inventory comparison; preserve the original and reject its use as exhaustive absence proof. |
+| 03 | `_sco_unpack/Public/SCO/Stats/Generated/Data/Armor.txt` | Legacy Stats/inheritance alias remains semantically unbound to the current source. | Trace exact item/inheritance/RootTemplate relationships and reconcile source versions. |
+| 04 | `_sco_unpack/sco_visualbank_merged.lsx` | Additional legacy VisualBank alias is not reconciled with the packed readback. | Parse and compare UUID, ordered-object, material, and path bindings; retain conflicts. |
+| 05 | `task-4-source-audit/sco-addon-archive/SCO-Addon.pak` | Hash and listing coverage do not exhaust packed resource contents. | Fresh isolated extraction, complete inventory, and exact metadata/alias audit. |
+| 06 | `Scantily/Generated/Public/SCO/Assets/HFL_F_ARM_Authority_Robe.GR2` | Bytes/metadata present; GR2 semantics and defect region unassessed. | Read-only semantic decode and exact defect evidence; retain the nine-object/no-Netherstone gate. |
+| 07 | `Scantily/Generated/Public/SCO/Assets/HFL_F_ARM_Authority_Robe_Alt.GR2` | Alt geometry semantics/defect evidence not admitted. | Independently audit the exact Alt bytes and route; do not substitute normal geometry. |
+| 08 | `Scantily/Generated/Public/SCO/Assets/TIF_FS_ARM_Authority_Robe.GR2` | Race/body-specific semantic and defect readback incomplete. | Decode into separate evidence and compare exact component/body boundaries without substitution. |
+| 09 | `Scantily/Generated/Public/SCO/Assets/TIF_FS_ARM_Authority_Robe_Alt.GR2` | Exact Alt component/defect contract unestablished. | Audit this exact Alt/race binding; do not infer defect regions or replace protected components. |
+| 10 | `SBBF(L) SCO patch Main-4899-1-0-1701827114.zip` | Alternative patch has listing-only coverage, not exact-contract admission. | Fresh isolated expansion, full entry accounting, and source/version-bound resource audit. |
+| 11 | `Scantily Outfit Separator-6643-1-8-0-1743296556/Scantily_Separator.pak` | Separator names/components do not prove the required combined garment contract. | Fresh isolated extraction and ordered-component/provider audit; reject merely similar object sets. |
+
+These are proposed audit steps, not work performed in the documentation follow-up. They do not authorize source/live mutation, topology changes, protected-object substitution, geometry admission, or terminal-event attachment. No tests were rerun solely to add this prose; the recorded implementation results below retain their original provenance.
+
 Independent anti-omission review has not occurred in this resumed worker. No canonical release-ledger profile, record, identity digest, or event ID is supplied or invented. The exact module UUID is reported as module metadata only. The writer has no approval/attachment authority.
 
 Consequently:
