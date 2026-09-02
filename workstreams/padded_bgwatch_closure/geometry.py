@@ -829,6 +829,85 @@ def _closest_points(points: np.ndarray, mesh: TriangleMesh) -> tuple[np.ndarray,
     return closest, normals, face_ids, barycentric, np.sqrt(distances), ambiguous
 
 
+def _refine_surface_targets(
+    targets: np.ndarray,
+    body: ParsedGlbSurface,
+    active_ids: tuple[int, ...],
+) -> np.ndarray:
+    """Correct only under-clearance rounded points, with at most sixteen steps each.
+
+    An offset can change the closest face. Recompute its direction and remaining
+    deficit from that actual face, never from the original source association.
+    This is bounded setup construction, not geometry acceptance or exhaustion.
+    """
+    refined = targets.copy()
+    pending = np.arange(len(active_ids))
+    seen = [{tuple(point)} for point in refined]
+    margin = 2 * 10**-TARGET_SERIALIZATION_DECIMALS
+    for correction_count in range(17):
+        pending_ids = tuple(active_ids[index] for index in pending)
+        query = _setup_clearance_query(refined[pending], body, pending_ids)
+        nonfinite = (
+            ~np.isfinite(query.signed_clearances)
+            | ~np.all(np.isfinite(query.interpolated_normals), axis=1)
+        )
+        for reason, failed in (
+            ("TARGET_SETUP_SURFACE_AMBIGUITY", query.ambiguous),
+            ("TARGET_SETUP_REFINEMENT_NONFINITE", nonfinite),
+        ):
+            if np.any(failed):
+                raise SurfaceConstraintSetupError(
+                    reason, tuple(np.asarray(pending_ids)[failed].tolist()),
+                )
+        failed = query.signed_clearances < TARGET_CLEARANCE_M
+        if not np.any(failed):
+            return refined
+        pending = pending[failed]
+        failed_ids = tuple(active_ids[index] for index in pending)
+        if correction_count == 16:
+            raise SurfaceConstraintSetupError("TARGET_SETUP_REFINEMENT_LIMIT", failed_ids)
+
+        triangles = body.positions[body.faces[query.face_ids[failed]]]
+        with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
+            geometric = np.cross(
+                triangles[:, 1] - triangles[:, 0], triangles[:, 2] - triangles[:, 0],
+            )
+            geometric /= np.linalg.norm(geometric, axis=1)[:, None]
+            projection = np.einsum("ij,ij->i", geometric, query.interpolated_normals[failed])
+        geometric[projection < 0.0] *= -1.0
+        projection = np.abs(projection)
+        degenerate = ~np.isfinite(projection) | (projection <= TARGET_PROJECTION_EPSILON)
+        if np.any(degenerate):
+            raise SurfaceConstraintSetupError(
+                "TARGET_SETUP_PROJECTION_DEGENERATE", tuple(np.asarray(failed_ids)[degenerate].tolist()),
+            )
+        with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
+            offsets = (TARGET_CLEARANCE_M + margin - query.signed_clearances[failed]) / projection
+            corrected = np.round(
+                refined[pending] + offsets[:, None] * geometric,
+                decimals=TARGET_SERIALIZATION_DECIMALS,
+            )
+        nonfinite = ~np.all(np.isfinite(corrected), axis=1)
+        if np.any(nonfinite):
+            raise SurfaceConstraintSetupError(
+                "TARGET_SETUP_REFINEMENT_NONFINITE", tuple(np.asarray(failed_ids)[nonfinite].tolist()),
+            )
+        stalled = np.all(corrected == refined[pending], axis=1)
+        if np.any(stalled):
+            raise SurfaceConstraintSetupError(
+                "TARGET_SETUP_REFINEMENT_STALLED", tuple(np.asarray(failed_ids)[stalled].tolist()),
+            )
+        cyclic = np.array([tuple(point) in seen[index] for index, point in zip(pending, corrected)])
+        if np.any(cyclic):
+            raise SurfaceConstraintSetupError(
+                "TARGET_SETUP_REFINEMENT_CYCLE", tuple(np.asarray(failed_ids)[cyclic].tolist()),
+            )
+        for index, point in zip(pending, corrected):
+            seen[index].add(tuple(point))
+        refined[pending] = corrected
+    raise AssertionError("unreachable refinement bound")
+
+
 def build_surface_constraints(
     base_positions: object,
     body_mesh: TriangleMesh,
@@ -871,6 +950,7 @@ def build_surface_constraints(
         targets = np.round(
             closest + offsets[:, None] * geometric, decimals=TARGET_SERIALIZATION_DECIMALS,
         )
+        targets = _refine_surface_targets(targets, body_mesh, active)
         certification = certify_surface_targets(targets, body_mesh, active)
     else:
         closest, normals, face_ids, barycentric, _distances, ambiguous = _closest_points(points, body_mesh)

@@ -122,7 +122,6 @@ def _two_planes(separation):
 
 
 @pytest.mark.parametrize("separation,reason", [
-    (0.0015, "TARGET_SETUP_CLEARANCE_NOT_MET"),
     (0.002004, "TARGET_SETUP_SURFACE_AMBIGUITY"),
 ])
 def test_target_requery_rejects_changed_nearest_or_ambiguous_surface(separation, reason):
