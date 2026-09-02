@@ -114,10 +114,25 @@ class TargetCertification:
     active_ids: tuple[int, ...]
     target_positions: np.ndarray
     body_mesh: ParsedGlbSurface
-    query: SignedClearanceQuery
+    query: SignedClearanceQuery | None = None
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, "target_positions", _readonly(self.target_positions, np.float64))
+        active = tuple(int(value) for value in self.active_ids)
+        targets = _readonly(self.target_positions, np.float64)
+        actual_query = _certified_target_query(targets, self.body_mesh, active)
+        # A copied certificate must not rebind an old passing query to new data.
+        # Recompute from the actual body/targets instead of trusting caller hashes.
+        if self.query is not None and (
+            not isinstance(self.query, SignedClearanceQuery)
+            or not all(
+                np.array_equal(getattr(self.query, name), getattr(actual_query, name))
+                for name in SignedClearanceQuery.__dataclass_fields__
+            )
+        ):
+            raise SurfaceConstraintSetupError("TARGET_SETUP_CERTIFICATION_MISMATCH", active)
+        object.__setattr__(self, "active_ids", active)
+        object.__setattr__(self, "target_positions", targets)
+        object.__setattr__(self, "query", actual_query)
 
 
 def _float64_digest(values: object) -> str:
@@ -164,12 +179,12 @@ def _setup_clearance_query(
         raise SurfaceConstraintSetupError("TARGET_SETUP_ORACLE_FAILED", active_ids) from error
 
 
-def certify_surface_targets(
+def _certified_target_query(
     target_positions: object,
     body_mesh: ParsedGlbSurface,
     active_ids: object,
-) -> TargetCertification:
-    """Certify serialized targets against a fresh closest-point/stored-normal query."""
+) -> SignedClearanceQuery:
+    """Validate targets and return their freshly recomputed passing oracle result."""
     active = tuple(int(value) for value in active_ids)
     if not isinstance(body_mesh, ParsedGlbSurface):
         raise SurfaceConstraintSetupError("TARGET_SETUP_STORED_NORMAL_BODY_REQUIRED", active)
@@ -198,7 +213,16 @@ def certify_surface_targets(
     ):
         if np.any(failed):
             raise SurfaceConstraintSetupError(reason, tuple(np.asarray(active)[failed].tolist()))
-    return TargetCertification(active, targets, body_mesh, query)
+    return query
+
+
+def certify_surface_targets(
+    target_positions: object,
+    body_mesh: ParsedGlbSurface,
+    active_ids: object,
+) -> TargetCertification:
+    """Certify serialized targets against a fresh closest-point/stored-normal query."""
+    return TargetCertification(tuple(active_ids), target_positions, body_mesh)
 
 
 @dataclass(frozen=True)

@@ -231,11 +231,11 @@ def test_production_rejects_failed_or_nonfinite_certificate_result(query_field, 
     """Catches production admission trusting a certificate with failing oracle metrics."""
     _verified_source, _source, contract = _feasible_shell()
     certificate = contract.constraints.target_certification
-    invalid = replace(contract.constraints, target_certification=replace(
-        certificate, query=replace(certificate.query, **{query_field: np.array(values)}),
-    ))
 
     with pytest.raises(geometry.SurfaceConstraintSetupError, match="TARGET_SETUP_CERTIFICATION_MISMATCH"):
+        invalid = replace(contract.constraints, target_certification=replace(
+            certificate, query=replace(certificate.query, **{query_field: np.array(values)}),
+        ))
         CandidateContract(contract.roi, invalid, contract.fixed_cohort)
 
 
@@ -248,3 +248,57 @@ def test_direct_certification_identifies_only_the_failed_active_vertex():
         )
     assert error.value.reason == "TARGET_SETUP_CLEARANCE_NOT_MET"
     assert error.value.vertex_ids == (4,)
+
+
+@pytest.mark.parametrize("entry_point", ["contract", "search"])
+def test_simultaneous_certificate_target_rebinding_cannot_authorize_negative_clearance(entry_point):
+    """Catches stale passing query evidence rebound to matching but penetrating targets."""
+    _verified_source, source, valid_contract = _feasible_shell()
+    constraints = valid_contract.constraints
+    bad_targets = constraints.target_positions.copy()
+    bad_targets[:, 2] = -0.0001
+    assert np.all(query_signed_clearance(bad_targets, constraints.body_mesh).signed_clearances < 0.0)
+
+    with pytest.raises(geometry.SurfaceConstraintSetupError, match="TARGET_SETUP_CLEARANCE_NOT_MET") as error:
+        rebound_certificate = replace(constraints.target_certification, target_positions=bad_targets)
+        rebound_constraints = replace(
+            constraints, target_positions=bad_targets, target_certification=rebound_certificate,
+        )
+        if entry_point == "contract":
+            CandidateContract(valid_contract.roi, rebound_constraints, valid_contract.fixed_cohort)
+        else:
+            malformed = object.__new__(CandidateContract)
+            object.__setattr__(malformed, "roi", valid_contract.roi)
+            object.__setattr__(malformed, "constraints", rebound_constraints)
+            object.__setattr__(malformed, "fixed_cohort", valid_contract.fixed_cohort)
+            run_position_only_search(source, malformed)
+    assert error.value.vertex_ids == (0, 1, 2)
+
+
+@pytest.mark.parametrize("changed_field", ["target_positions", "body_mesh"])
+def test_copied_certificate_rejects_stale_query_even_if_changed_geometry_is_clear(changed_field):
+    """Catches validating only pass/fail instead of the actual body/target/query association."""
+    _verified_source, _source, contract = _feasible_shell()
+    certificate = contract.constraints.target_certification
+    changes = (
+        {"target_positions": np.round(certificate.target_positions + [0.0, 0.0, 0.0001], 6)}
+        if changed_field == "target_positions" else {"body_mesh": _plane(height=-0.0001)}
+    )
+    with pytest.raises(geometry.SurfaceConstraintSetupError, match="TARGET_SETUP_CERTIFICATION_MISMATCH"):
+        replace(certificate, **changes)
+
+
+def test_copying_unchanged_certificate_recomputes_identical_valid_oracle_evidence():
+    """Catches stale-proof rejection also rejecting a legitimate unchanged certificate."""
+    _verified_source, _source, contract = _feasible_shell()
+    certificate = contract.constraints.target_certification
+
+    copied = replace(certificate)
+    copied_contract = CandidateContract(
+        contract.roi, replace(contract.constraints, target_certification=copied), contract.fixed_cohort,
+    )
+
+    assert copied_contract.constraints.target_certification is copied
+    assert copied.query is not certificate.query
+    np.testing.assert_array_equal(copied.query.signed_clearances, certificate.query.signed_clearances)
+    assert copied.target_positions.flags.writeable is False
