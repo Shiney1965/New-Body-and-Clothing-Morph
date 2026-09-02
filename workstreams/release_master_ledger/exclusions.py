@@ -447,6 +447,27 @@ def _validate_geometry_proof(
         transformation.get("allowed_components")
         if isinstance(transformation, Mapping) else None
     )
+    results = proof.get("architecture_results")
+    component_identifiers = [
+        *(
+            expected_components
+            if isinstance(expected_components, (list, tuple)) else ()
+        ),
+        *(
+            record_components
+            if isinstance(record_components, (list, tuple)) else ()
+        ),
+    ]
+    if isinstance(results, (list, tuple)):
+        for result in results:
+            components = result.get("components") if isinstance(result, Mapping) else None
+            if isinstance(components, (list, tuple)):
+                component_identifiers.extend(
+                    component.get("component_id")
+                    for component in components if isinstance(component, Mapping)
+                )
+    if _contains_unresolved_marker(component_identifiers):
+        errors.append("EXCLUSION_GEOMETRY_COMPONENT_UNRESOLVED")
     if not isinstance(record_components, (list, tuple)) or list(expected_components) != list(record_components):
         errors.append("EXPECTED_COMPONENT_SET_MISMATCH")
     contract_digest = proof.get("component_contract_digest")
@@ -461,7 +482,6 @@ def _validate_geometry_proof(
         or contract_digest != record_contract_digest
     ):
         errors.append("EXPECTED_COMPONENT_CONTRACT_MISMATCH")
-    results = proof.get("architecture_results")
     if not isinstance(results, (list, tuple)) or len(results) < 3:
         errors.append("INSUFFICIENT_ARCHITECTURE_RESULTS")
     else:
@@ -548,7 +568,7 @@ def _contains_unresolved_marker(value: object) -> bool:
         return False
     upper = value.upper()
     return (
-        upper.startswith(("UNKNOWN_", "UNASSESSED_", "MISSING_", "BLOCKED_"))
+        upper.startswith(("UNKNOWN_", "UNRESOLVED_", "UNASSESSED_", "MISSING_", "BLOCKED_"))
         or upper.endswith(("_UNKNOWN", "_UNRESOLVED", "_UNASSESSED", "_MISSING"))
     )
 

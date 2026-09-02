@@ -444,6 +444,28 @@ def test_geometry_requires_distinct_architecture_component_results_all_fixed_gat
 
 
 @pytest.mark.parametrize(
+    "marker",
+    [
+        "UNKNOWN_ALLOWED_COMPONENT",
+        "UNRESOLVED_COMPONENT",
+        "UNASSESSED_COMPONENT",
+    ],
+)
+def test_geometry_rejects_consistent_unresolved_component_markers(marker):
+    proof = proof_for("NO_SAFE_GEOMETRY_AVAILABLE")
+    proof["expected_components"] = [marker]
+    for architecture in proof["architecture_results"]:
+        architecture["components"][0]["component_id"] = marker
+    record = ledger_record(transformation={
+        "allowed_components": [marker], "allowed_channels": ["GEOMETRY"],
+    })
+
+    assert "EXCLUSION_GEOMETRY_COMPONENT_UNRESOLVED" in validate(
+        geometry_event(proof), record,
+    )
+
+
+@pytest.mark.parametrize(
     ("mutation", "expected"),
     [
         (

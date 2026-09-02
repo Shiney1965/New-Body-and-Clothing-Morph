@@ -1,8 +1,8 @@
-# ClothMorph Release Master Ledger Public Checkpoint — 2026-09-01
+# ClothMorph Release Master Ledger Public Checkpoint — 2026-09-02
 
 ## TL/DR
 
-The current hash-locked offline evidence generates deterministically into `3,173` observations and `3,173` master-ledger records. The generated audit reports `source_complete=false` and `release_complete=false`: all `14` required source profiles are missing, five prior-evidence inputs are not yet joined to concrete records, `208` emitted records have no independently inventoried source observation, and all `3,173` records remain release-blocking/nonterminal. There are currently no approved exclusion events: `excluded_modes_with_proof=0`, `excluded_with_proof=0`, `exclusion_validation_failures=0`, `exclusion_history_failures=0`, and `excluded_but_packaged=0`. Every record's four-mode scope remains advertised/nonterminal and every per-mode exclusion attachment is `null`.
+The current hash-locked offline evidence generates deterministically into `3,173` observations and `3,173` master-ledger records. The generated audit reports `source_complete=false` and `release_complete=false`: all `14` required source profiles are missing, five prior-evidence inputs are not yet joined to concrete records, `208` emitted records have no independently inventoried source observation, and all `3,173` records remain release-blocking/nonterminal. There are currently no approved exclusion events: `excluded_modes_with_proof=0`, `excluded_with_proof=0`, `exclusion_validation_failures=0`, `exclusion_history_failures=0`, and `excluded_but_packaged=0`. Every record's four-mode scope remains advertised/nonterminal and every per-mode exclusion attachment is `null`. The `2026-09-02` zero-event verification repeated the real generator twice and reproduced the exact artifact hashes and counts below.
 
 The protected registry reconciles exactly `32` immutable controls: `25` `GAMEPLAY_PASS`, `1` `USER_ACCEPTED_RESIDUAL`, `2` `PROTECTED_SOURCE_NATIVE`, and `4` `PROTECTED_SOURCE_NATIVE_PACKAGE_ONLY`. The four package-only Recluse controls remain gameplay-unproven and were not promoted.
 
@@ -17,7 +17,7 @@ These artifacts are local evidence outputs under ignored `workstreams/release_ma
 | `RELEASE_LEDGER_COMPLETENESS_AUDIT.json` | `790,206` | `AF4C156B6DF3DB6A4BC1B98451785277861AEAC4F7FA3E1FCBCC6717AB21BC5C` |
 | `EVIDENCE_INPUT_MANIFEST.json` | `7,057` | `E3E65616A94D4B9AB961CA4AF3013721878232548F3571CE018F97F67DF68631` |
 
-Two consecutive CLI generations produced these same four hashes.
+Two consecutive `2026-09-02` CLI generations produced these same four hashes.
 
 ## Current ledger and audit facts
 
