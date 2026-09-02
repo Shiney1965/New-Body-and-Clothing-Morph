@@ -1,0 +1,48 @@
+{
+  "schema": 1,
+  "provenance": "EXACT_ACCEPTED_PROVIDER_METADATA_READBACK_NOT_GAMEPLAY",
+  "packageSha256": "01E96CF236607F5A4B9E4DD2D7A6BE2CA8A9013456706000DC3248543390F141",
+  "bootstrapPath": "Mods/ClothMorphTieflingBT1Test/ScriptExtender/Lua/BootstrapServer.lua",
+  "bootstrapSha256": "1BFF821977E5BF71B79ADE5AD01B91D17CEBB979BFFAE4B0DB882AF7620975BE",
+  "files": [
+    {
+      "path": "Generated/Public/ClothMorphTieflingBT1Test/Assets/Bodies/SBBF/TIF_F_NKD_Body_A.GR2",
+      "bytes": 468000,
+      "sha256": "A6799CB961E3EAA4CA88AB29E1AFA5127DBA7EBE729ABB4318B63874BFE62332"
+    },
+    {
+      "path": "Generated/Public/ClothMorphTieflingBT1Test/Assets/Bodies/Vanilla/TIF_F_NKD_Body_A.GR2",
+      "bytes": 479548,
+      "sha256": "693623D6C62CB14AE4A81AA165DB83147F81AEAA3BEE8E10510342AD8BE46D56"
+    },
+    {
+      "path": "Mods/ClothMorphTieflingBT1Test/meta.lsx",
+      "bytes": 3119,
+      "sha256": "180C3C1907A87F7836BCDD59C0C345CCF8DC7676785DD87E87B01ACB1F1CC835"
+    },
+    {
+      "path": "Mods/ClothMorphTieflingBT1Test/ScriptExtender/Config.json",
+      "bytes": 104,
+      "sha256": "95CC0568175EF0525F5AFC2E343C241BC54140779881599FCE53862AA217F4AE"
+    },
+    {
+      "path": "Mods/ClothMorphTieflingBT1Test/ScriptExtender/Lua/BootstrapServer.lua",
+      "bytes": 3048,
+      "sha256": "1BFF821977E5BF71B79ADE5AD01B91D17CEBB979BFFAE4B0DB882AF7620975BE"
+    },
+    {
+      "path": "Public/ClothMorphTieflingBT1Test/CharacterCreation/CharacterCreationSharedVisuals.lsx",
+      "bytes": 1788,
+      "sha256": "75B71816C99818A6572AE8C4F5BB30FE7C2BCB6F726373E685B2B0B6EBDB0FD2"
+    },
+    {
+      "path": "Public/ClothMorphTieflingBT1Test/Content/[PAK]_TieflingBT1_VisualBank/_merged.lsf",
+      "bytes": 5976,
+      "sha256": "E3D14FF497DDBD2EA2ACEC189521763B1827366698D7300E795791B4CBE0D691"
+    }
+  ],
+  "visualBankReadbackSha256": "4155663170F99A397FB9AE3B03DB0D62D9374A9D71C76474B067285975C354CC",
+  "bcbVisualUuid": "eab8e30e-0207-58d8-8764-e3b4477133fa",
+  "bcbSourceFile": "Generated/Public/BCBPak/Assets/Characters/_Models/Tieflings/_Female/Resources/TIF_F_NKD_Body_A.GR2",
+  "requiredModuleUuid": "1d24059d-ff23-4a79-8892-57c85d512416"
+}

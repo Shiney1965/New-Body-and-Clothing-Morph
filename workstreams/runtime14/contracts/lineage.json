@@ -1,0 +1,3802 @@
+{
+  "schema": 1,
+  "lineage": "R0_CURRENT_BASELINE_PLUS_PURE_R1_REFERENCE",
+  "package": {
+    "bytes": 289198942,
+    "sha256": "6610090CEE01091F802273D70FAEE071DCBA891900D77479ABBD828FCDDC60C6"
+  },
+  "divineSha256": "65C47A5050E55F686B55484A901A01D0F1A1D5BA0E776F65FEC71D3E1B2A16B7",
+  "evidence": {
+    "r0FreezeManifestSha256": "B5C7EC104C308882CC5F33CC0907F13043CC2DEB7E9F9B8666F8825BB8DE0860",
+    "r1CopyManifestSha256": "98E833E63CF9D8274D21E9F9C986FFC34F004499C013BF7322C2F9603A0CA722",
+    "r1ManifestSha256": "DEAFCB8734AB3558D490253BD00F99226179BEB758F6277BAC62A27A2B70DD0A",
+    "allowedDeltaSha256": "A989386BE8ADCCA6E92CF195963EAE12C13BCD04CDDBE85C7CFA08BEE8DC67A7",
+    "sharedMatrixSha256": "5134237A6AD8F6F5BDB1721EE279A07A336727F9E88119CCB3B4B320D9D19A67"
+  },
+  "r0": [
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/BCB/GTY_F_NKD_Body_A.GR2",
+      "bytes": 469164,
+      "sha256": "8A3BB44C33717B29669FAC1401041BF7A72CAD60654A0B5FA7DD4EDF51585B42"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Adventurer_A_Body.GR2",
+      "bytes": 367764,
+      "sha256": "16081547CA3CF5FEC561B8FCA762DAE664733F4B5689E4A7FE6AEF0DF90C89C7"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Astarion_Body.GR2",
+      "bytes": 628264,
+      "sha256": "F5E2383EEA90B9FA7E80045E76E07E179B6810E87233799DD006985EEB094313"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Astarion_Pants.GR2",
+      "bytes": 190544,
+      "sha256": "8FF4BB8BFFD2CB039854C7AA2053C8183222CE0D651BFEDC5E6F4F98E6E9CC77"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Bandit_A_Body.GR2",
+      "bytes": 520900,
+      "sha256": "52BCE8CECC281AF8AD85941B07134320C829742C02B0AB639AA26EFA31F73F7B"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Bandit_A_Long_Body.GR2",
+      "bytes": 635432,
+      "sha256": "897E6FFE1FF121EF69D34224FA38BAD32182566EEB3814BBE87EA6923E67D459"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Bandit_A_Pants.GR2",
+      "bytes": 183196,
+      "sha256": "1F9A4C4D683E2733931675CB5EA38D713E359A20409652E3D9F8B6766B2DA313"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Bandit_B_Body.GR2",
+      "bytes": 645272,
+      "sha256": "577C27C01400AE80C424C7D70B0F73CF78E9CBB7E12D0FCB5C9C6DA805A602DE"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Bandit_C_Body_Accessories.GR2",
+      "bytes": 395912,
+      "sha256": "D64946116F98BF2F0E130C6D2E4DE12C9A2F3BFAA3D9DAC4444C5BC5942C527B"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Bandit_C_Body.GR2",
+      "bytes": 804968,
+      "sha256": "6D9A064C49343B2D5657C7C21EC7B7E5937B69598E24CAC206CCDB9A6B64EC36"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Bandit_D_Body_Belt_A.GR2",
+      "bytes": 104868,
+      "sha256": "AF22A8AB0656BF3364B1E64EC21C19339FDDDF29DBBE88281DFF925547CC2711"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Bandit_D_Body_Belt_B.GR2",
+      "bytes": 156248,
+      "sha256": "D819A08DA7B6859A747CB620AF4874FC19CFE43034F3F4C40DEEAF8DCFC19011"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Bandit_D_Body.GR2",
+      "bytes": 293336,
+      "sha256": "A37D143B76245DD3D6EA4497A3C49B04E056CA698F0080A348BB09AF8CCCE029"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Bane_Light_Body_A.GR2",
+      "bytes": 1408020,
+      "sha256": "EEE0094F04B937BD7CA5025215C5EF8458F6F44C876C32065D939DD68FFE7C35"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Bane_Light_Body_B.GR2",
+      "bytes": 1517188,
+      "sha256": "A7EABF70F5E682BDF1E1A2AC1CF88CC9FC9C8804675D76C536CA59FE6004B6AE"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Bane_Light_Pants_A.GR2",
+      "bytes": 167812,
+      "sha256": "55E891DCA8C8445B7E631468BEB4CC8833CF353545A955B1CB785E2867F4050F"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Bane_Plate_Body_A.GR2",
+      "bytes": 1855140,
+      "sha256": "C9FE99900318E57EBC13CD92C6ED275D0E94986209091B0E9CECBD002A0615D2"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Bane_Robe_Body_A_Sleeve.GR2",
+      "bytes": 309500,
+      "sha256": "D51551951EAD8A277C60C7C446D50769E94788158FA7535D29F9E6BF9DCC249F"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Bane_Robe_Body_A_Sleeves.GR2",
+      "bytes": 181536,
+      "sha256": "024AE41525CCEFF7C1EF356A557AB537020081B7DC2EFF6D6DA79D283EBE11D7"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Bane_Robe_Body_A.GR2",
+      "bytes": 1647068,
+      "sha256": "EF5D2C6D964302F33FE46ACD12583BEDD3D864ECCD6DF1C8117FE6BA0F6E8066"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Barbarian_A_Body.GR2",
+      "bytes": 1365704,
+      "sha256": "D214863CD7236923DDF456A97B51F25179C52312BE68CABFF82289EF63445859"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Barbarian_A_Pants.GR2",
+      "bytes": 167308,
+      "sha256": "C3C8375E053E558C24B6523EF38E08140536E7EA4E926F6609F3DBCF9649C755"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Barbarian_Karlach_A_Body.GR2",
+      "bytes": 1089156,
+      "sha256": "FB6C71284F7AFEA305D08F734664C2981E68158B880A2D3620169CECAAF9A38A"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Barbarian_Karlach_A_Pants.GR2",
+      "bytes": 203028,
+      "sha256": "B399834835C5F376ABD83D6BBA47F929D412AE76D9BE8AA00D0749E011B9133C"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_BarbarianMagical_A_Body.GR2",
+      "bytes": 972764,
+      "sha256": "49C180C1A2D3E72ADD7C5981CBDA23D9764F8928F3FDB3279D87A192F413CEB5"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_BarbarianMagical_A_Chest.GR2",
+      "bytes": 198212,
+      "sha256": "50028A1E6F581632C4154CD5F110762FDDEC303C27C12914F10C4AF792616585"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_BarbarianMagical_A_Pants.GR2",
+      "bytes": 195276,
+      "sha256": "A83371047F1D75082E7E2A24CEAD62FF744D0AE45DD5B4C076E614532CFD782F"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_BarbarianMagical_B_Body.GR2",
+      "bytes": 991972,
+      "sha256": "699A1C0755C44BE1109894BC1048908084AF40FA4289F298BFF6E2F7EC4CDF09"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_BarbarianMagical_B_Chest.GR2",
+      "bytes": 189676,
+      "sha256": "9664B59EE2AEA635A11435642298906D75735BE8A0DA6C4B6BE94D6CC28CF0AB"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_BarbarianMagical_B_Pants.GR2",
+      "bytes": 693108,
+      "sha256": "AB96B748063B2632DD9D19BE365E065493AA5AC9ABB8ECD26C3228E9C887B00C"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Bard_BodyBot.GR2",
+      "bytes": 425340,
+      "sha256": "C8C7FA82C8D43A9568DD271C731B69E12BD41B5D1F07A88A9ABE9A4A6A6AF482"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Bard_BodyTop.GR2",
+      "bytes": 551996,
+      "sha256": "199D446D9D0307C4A5DB9DDA6500C2198A443D69DDCF262E21A2A8A9CCB30A0D"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Bard_Pants.GR2",
+      "bytes": 307396,
+      "sha256": "C985E8BBDADEFE845959339C434940D07601C37DFEBA353C1B620CA594ECBEA2"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_BG_Watch_A_Pants.GR2",
+      "bytes": 348704,
+      "sha256": "96227D21628A7D1FAE8580777C898A65DD5A5E2ED4D59C32DCCD66053A62C91C"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_BG_Watch_B_Pants.GR2",
+      "bytes": 330824,
+      "sha256": "1476248EAC5ECB7BA6ED51EDF7410F83D4CBF1CAC8F307180A2634BF672AA820"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_BG_Watch_C_Pants.GR2",
+      "bytes": 199572,
+      "sha256": "9722DB68CFA29AB0FB71C5948F6113DBC23E574448DF088B6CA34C6A55AEDE3B"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_BG_Watch_Leather_A_Body.GR2",
+      "bytes": 407000,
+      "sha256": "1BBA1CCFBEC6DDFE4AEB23855461D9CB761B58906ED6122E39C61369D42EDC2D"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_BG_Watch_Leather_B_Body.GR2",
+      "bytes": 704568,
+      "sha256": "DFC1BAFE2782D25ACE904136F782D49DE4B13C2C886144C23D937A4E19BCBAA5"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_BG_Watch_Metal_A_Body.GR2",
+      "bytes": 1113416,
+      "sha256": "7B212D01EBEA4CC5B31C118297B0EAEE21E51F49A1B62E13615765D582AFC4CD"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Bhaal_A_Body.GR2",
+      "bytes": 1185600,
+      "sha256": "9D67F0DFACE07008A628CB14DB9DB8063ACDD1B2216D7A7BF1A13D8A5BCAED45"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Bhaal_A_Pants.GR2",
+      "bytes": 172268,
+      "sha256": "B574649149A2E9B949A9ED8B5DC8D28ECF83596C2581CABAB5E3091B44CF48C0"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Bhaal_Rags_Body.GR2",
+      "bytes": 264212,
+      "sha256": "AE7C1233E7D7D4DA46E17C1117C16DF9EDCB5BB4CC42BAAF8FA97574023D024A"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Bhaal_Rags_Pants.GR2",
+      "bytes": 129228,
+      "sha256": "BACB255D115848B9585135F7C27D1BCC3427140FF3C48302BFD1158C89A49E27"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Breastplate_A_0_Body.GR2",
+      "bytes": 1146276,
+      "sha256": "9BF4D93BA0C9C5CF3B41108AC1A37AD4FBCB1EB558D0923DEBB4974F975856A8"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Breastplate_A_1_Body.GR2",
+      "bytes": 1436720,
+      "sha256": "87AD1AEDD7440BB6874F569F1CAE20F8534031574D547E3A52DCEC8F5577C0C7"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Breastplate_A_2_Body.GR2",
+      "bytes": 1723484,
+      "sha256": "9E62B337CC188FD1B4E9D6CA1A2713827C2333324A096C4C4DB790512FB45A74"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Breastplate_A_Pants.GR2",
+      "bytes": 391860,
+      "sha256": "CA7E240F2401E5F08C0B8649D740927BAC26672D4B96D22EC89CE7A1B5E071A9"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_ChainMail_A_0_Body.GR2",
+      "bytes": 844384,
+      "sha256": "B1FF2031663203085FEB25A559C5E51EDE93F58B2B69B6B7D7A0F53231819309"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_ChainMail_A_1_Body.GR2",
+      "bytes": 1524696,
+      "sha256": "2E33433D36C9C5B8036A014FAB72310D967F782737FB244A708340B94C7549CD"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_ChainMail_A_2_Body.GR2",
+      "bytes": 2111004,
+      "sha256": "492CE1401562898876A706A35B8BFDCE7720EDBE738B1A5A221ED7FDB94A1854"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_ChainMail_A_Pants.GR2",
+      "bytes": 178888,
+      "sha256": "65B93608E1480DE8EE6500B6D6AAC15B93552D1E895533DF33FE465F22F93DBF"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_ChainShirt_A_0_Body.GR2",
+      "bytes": 574560,
+      "sha256": "4BE167C120A3BB15FBC35BC4A25A058B1D5B28C044582D64707971E1DE8E7224"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_ChainShirt_A_1_Body.GR2",
+      "bytes": 647816,
+      "sha256": "0466BB71DFB335CD32FBF742C42FD564BCBA00C4A04526F6DCAA6FA9C8096C68"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_ChainShirt_A_2_Body.GR2",
+      "bytes": 882108,
+      "sha256": "26CE604736FD79B6DA0599D2E330E9143695A81248EF2CAFF815F27556E0F286"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_ChainShirt_B_0_Body.GR2",
+      "bytes": 544344,
+      "sha256": "829359F294AFA3D32EE82D46926E4C713CBC15AB20FE2201635C7EDC64501C26"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_ChainShirt_B_0_Broken_Body.GR2",
+      "bytes": 387268,
+      "sha256": "B4DD249BB05917DEFCA63E9959E092A2E8C54F57D0256AC4458C1799FFA04873"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_ChainShirt_B_1_Body.GR2",
+      "bytes": 594944,
+      "sha256": "24E7977405A7378F066D5D38FB23E264227B19D10B06892CB1D66E24E1B64FB6"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_ChainShirt_B_2_Body.GR2",
+      "bytes": 1105860,
+      "sha256": "F1752133C8620523018DEABF6FFE09E2319F0CEB50DD156FE1E69653ED1D9BC1"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_ChainShirt_B_2_Pants.GR2",
+      "bytes": 72864,
+      "sha256": "1FE26C86053624F2D48E2C760A415DB8105CBE87D2D7A8EA6F899784D263DB7C"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_ChainShirt_B_Broken_Pants.GR2",
+      "bytes": 92276,
+      "sha256": "8C8E14891F98616C26C0002650B891F6779C2A8F53EDA05F0D24DA9909271DBA"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_ChainShirt_B_Pants.GR2",
+      "bytes": 118648,
+      "sha256": "4C27E74E885CF948679DB105834DBB5C8CAB2CF6F17A2C545AC780B843098A6A"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_ChainShirt_Shadowheart_A_Body.GR2",
+      "bytes": 1168796,
+      "sha256": "92476BDA9F602A2B0AF662DDE35040320206241F90974167FABF10A69621D4C1"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Cloth_Magic_A_Chest.GR2",
+      "bytes": 586700,
+      "sha256": "3180E94B1176F09CEA7F4BA68F620722E87E44079DFCFDB8F665ECE42FF8DE92"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Cloth_Magic_A_Pants.GR2",
+      "bytes": 712664,
+      "sha256": "922CC19E0F40C778B6AEC72924D6040E4C568CC000A606C6F6761CB95881241A"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Cloth_Magic_B_Chest.GR2",
+      "bytes": 497660,
+      "sha256": "CDBBE069C7352651008800CF92D7196DA85CB881568C1C091CDCC740833C227F"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Cloth_Magic_B_Pants.GR2",
+      "bytes": 139616,
+      "sha256": "47409EA2D1BF424A56F04796C152669008554C6D7FBE0813A839DEB180C79EDE"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Cult_Absolute_Body_A.GR2",
+      "bytes": 533948,
+      "sha256": "718B6641EEAF6164E7F048B93C352E0479CCD4408C17C15E482EE66C4509FA83"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Cult_Absolute_Body_B.GR2",
+      "bytes": 423636,
+      "sha256": "B9DB8074560589F393B65609F613B29EEDA85C73C1A1BBAB7FBCE02BC91C913D"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Cult_Absolute_Body_C.GR2",
+      "bytes": 672444,
+      "sha256": "50974B5D950CFBE4FF18292C4181FC4D82502B4974D4A1D56EBF2136CE5632EA"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Cult_Absolute_Pants_A.GR2",
+      "bytes": 407688,
+      "sha256": "F10EC8B45D11DE86266B981F33985224C3DF8F5258EC6D96F7E7E7B22CA48928"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Cult_Absolute_Pants_B.GR2",
+      "bytes": 311000,
+      "sha256": "627203E6563FBB1D8BE2D6F9BB94BC07111E746CBE43D71507189258757AF08C"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Cult_Absolute_Robe_Body_A_Belt_A.GR2",
+      "bytes": 112904,
+      "sha256": "70CD1BDEFB09F4D7DCF7878EB7E06CD49F7C44290DBF9C21A238AF89EF4AF75A"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Cult_Absolute_Robe_Body_A.GR2",
+      "bytes": 708736,
+      "sha256": "A9E0018DEE38B4B484A5B8968537094C1DD9319FD3E29C976AB187FC27507A98"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Cult_Absolute_Robe_Body_B.GR2",
+      "bytes": 703456,
+      "sha256": "95615B87982B8FC8728238049C15821EB8FB78000F4980CF385976A57E2FEAF6"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Cult_Absolute_Robe_Body_C.GR2",
+      "bytes": 831096,
+      "sha256": "52C692203287990CA835C819FB20FD4A397E919E82CE804DE187AA4515CFDFDB"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Cult_Absolute_Skirt_A.GR2",
+      "bytes": 135828,
+      "sha256": "C7C34E0088960AF4A7F656AB79CBD6BF403B756C4DA1ACE659C4BA7BF6F9BB83"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Cult_Absolute_Skirt_B.GR2",
+      "bytes": 224352,
+      "sha256": "AA9B20D1FF5E4254D48BEA0D575150328B824073C6452ECDEC2C7950B488F7FA"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Daisy_Body.GR2",
+      "bytes": 527232,
+      "sha256": "2A2BECB03FDC7F1BA7A2625809ADDB8E7DE5EB71EA45356CF3261DA035AAD6E8"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Daisy_Pants.GR2",
+      "bytes": 236328,
+      "sha256": "BFC633FA8B70DA9ADAB17F2BB7356BA59C0A19160BF1826485F8BDC46A4584A8"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Dark_Justiciar_A_0_Body.GR2",
+      "bytes": 1076264,
+      "sha256": "C7EE421B671EAD7A1143E3A6C662E30314184AC13ECE52E4068134C90610E473"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Dark_Justiciar_A_1_Body.GR2",
+      "bytes": 840340,
+      "sha256": "D3915EC43641E8C8D20FC59354428370507676B8F2E16A8A4E1AFB72E807D1EF"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Dark_Justiciar_A_Pants.GR2",
+      "bytes": 409316,
+      "sha256": "117E5F32AD4AECA62774BC0CFBD0C4A1F49A76A3A2782F560628E5970EDD8A8C"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Dark_Justiciar_Damaged_A_0_Body.GR2",
+      "bytes": 947336,
+      "sha256": "109DA4D494E88C19CF94C19827DD21C3451EFE2727F631B19FEE1052E867A2C4"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Demon_A_Body.GR2",
+      "bytes": 1344992,
+      "sha256": "4F4BCC7C35487098EE931DF907C1009224E29AB767E2DDEE80D0059FF70E4814"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Demon_A_Pants.GR2",
+      "bytes": 521356,
+      "sha256": "B609D9B7F478EDBE1F8E21AAB6AA88C9E3C66DAE065908BC8A0A95539C44D483"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Desire_Dress.GR2",
+      "bytes": 1139636,
+      "sha256": "B8432A7D49C6DCC2A4E506C5094BF2C2096F6211A62CFBD3848EDFB64EC38A93"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Desire_Pants.GR2",
+      "bytes": 120516,
+      "sha256": "B7CA56AFE7350B64D6CC456DCA54E92060A28C91ABA9A3B691C8080E786EF496"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Devils_Blacksmith_Body.GR2",
+      "bytes": 2667668,
+      "sha256": "C6642E9FB6570285431931616E7E8A612779B6597F9F1B023442287B606E9DED"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Devils_Blacksmith_Pants_B.GR2",
+      "bytes": 133152,
+      "sha256": "18A1454C366BDA7F680BD9A9EBE3FDB3E7D39C7042749385284932EB1363218F"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Devils_Blacksmith_Pants.GR2",
+      "bytes": 278976,
+      "sha256": "86AFD802442BC8CD78C7E7ACCB988C411107B25B7971D89AE08EAF3417FB5603"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_DrowLeather_A_Body.GR2",
+      "bytes": 688240,
+      "sha256": "8D46C24FCDFF205C7166C2FDEF50275603714B4D99846E08420F1B610775DA93"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_DrowLeather_A_Pants.GR2",
+      "bytes": 221092,
+      "sha256": "54A774ABDED6635DC9CDB4F281073A5DC89F23CC0F36070ABE93DEC06444F65D"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_DrowLeather_B_Body.GR2",
+      "bytes": 453000,
+      "sha256": "5D51DC441A2901CF7D90B9CE6692CA7900B00433CCCDB9C7B0593FDEE3FC6CA3"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_DrowLeather_B_Pants.GR2",
+      "bytes": 153484,
+      "sha256": "D9F42F2047D998FC176AD0D8EC6DFD5399BB493145713D176B05E89CE4B76A87"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_DrowLeather_C_Body.GR2",
+      "bytes": 687624,
+      "sha256": "23F7DEC7F6D3E236D7566D903CAA56481ECFA0D952D7E5262F6BD6969761B1DC"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Druid_A_Body_Leaves.GR2",
+      "bytes": 274148,
+      "sha256": "99E1C9259C4E96182BB4E1691CE48CC8096C9AD4B4800F9740F8964E74AEB06E"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Druid_A_Body.GR2",
+      "bytes": 1180468,
+      "sha256": "1F2747D018E1B3D5CBDE755AC99C8864569FC06B3A25304D6022AC242944FC6D"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Druid_B_1_Pants.GR2",
+      "bytes": 122604,
+      "sha256": "EE0F5880E309ECB60622F58C1AEEE1B5A45E75585FA3728EDD192B90A3D7ABAC"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Druid_B_2_Pants.GR2",
+      "bytes": 285756,
+      "sha256": "5A442B711BCB1867D7B42ECC911EAE6E0D3B553AC2B81DB8C232DFD5AD0A32C5"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Druid_B_Body.GR2",
+      "bytes": 1201344,
+      "sha256": "5CFB5FBF4AD94270C266B54A32B08667DECC990364C5A2B038DDBC03287C4040"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Druid_C_2_Body.GR2",
+      "bytes": 1030388,
+      "sha256": "5E8E80B18D564BD50B3D4E6E339E021FB5779309E48358F2EFB1A95A57685983"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Druid_C_Body.GR2",
+      "bytes": 641936,
+      "sha256": "6C8E4281A35962FA3686D95EA5DAEE564DDC62D1F949E10381B24AD287DCA5A1"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_DwarvenPlate_A_Body.GR2",
+      "bytes": 2368520,
+      "sha256": "80DEDED7455793317392E22D04BDA54418385704E0E79D9DEB44399F2BA8244F"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_DwarvenPlate_A_Pants.GR2",
+      "bytes": 401476,
+      "sha256": "EEBBDCE83C3226A91613FAFBDAEC117D2C0ABCCC8DB13D8B704A5CEB043D4FD5"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Elven_ChainShirt_Body.GR2",
+      "bytes": 899968,
+      "sha256": "6792A8A5E67C4BE2AB3F1EB7F3D2B74E0D92D068A802BF889FD5C28B3DCF7CE7"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Elven_Umberlee_Chainshirt_Body.GR2",
+      "bytes": 583200,
+      "sha256": "2B6951D9E51A62B6064E15D95C89F95C1DB1B122B988A1871C02FCD6D3BB9F06"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_EPI_Robe_Shar_Body_A.GR2",
+      "bytes": 1054680,
+      "sha256": "8D1A7362100E940839872CD8F993D07F94F0C21D328175D6F47B779D55D4F93B"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_FlamingFist_Bandit_A_0_Body_Pin.GR2",
+      "bytes": 41652,
+      "sha256": "A68AC6BBAD9DABDD4E2265BF8C0C8BF31B8BBC43E221BAF80F2540DB2C08AD18"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_FlamingFist_Halfplate_A_0_Body.GR2",
+      "bytes": 784056,
+      "sha256": "EA25ABF278368E72876FF1E17B059683714F741E66A8995F31284D502651434F"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_FlamingFist_HalfPlate_A_1_Body.GR2",
+      "bytes": 546580,
+      "sha256": "24862D5791A42635EEEBBB7B9B13C34A35DB8B1C3B799BAE11905752A1E6375E"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_FlamingFist_Leather_Body.GR2",
+      "bytes": 816160,
+      "sha256": "C366F877D1D43BF2B731D4BCE0D5FBAD58805788BD57AC1D2ACB5E6964912197"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_FlamingFist_Robe_Body.GR2",
+      "bytes": 369092,
+      "sha256": "7D8BCE171D5DB542DBE660054BAF3CD3A9C23B508D6A868E41F2DCC5A655BE8F"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_FlamingFist_Scalemail_Body.GR2",
+      "bytes": 1543056,
+      "sha256": "DA92108B39AEA6989F0A238619BB5801848F3882AA1932DE2DA995A9C7D44519"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Githyanki_HalfPlate_A_Body.GR2",
+      "bytes": 1308768,
+      "sha256": "C495E00B7F2BCDE7753C03C96D6F3A299807B096896AA91B349C21E804DA9F90"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Githyanki_HalfPlate_A_Pants.GR2",
+      "bytes": 185572,
+      "sha256": "197EE9843287682FA1351E4C0B1F134CEFB55B441085DAC2B70A62F47A4B19C9"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Githyanki_HalfPlate_B_Body.GR2",
+      "bytes": 913344,
+      "sha256": "25397AEB139977063F69D0D8DF45F3E60B13F42A447D262F23D2B454B1E096AD"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Githyanki_HalfPlate_B_Pants.GR2",
+      "bytes": 205432,
+      "sha256": "8A48D436DAE8480369D6C5EB46D785700DA02281B47E2C6C24A6A8B8058D21F3"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Gortash_Body_Jacket.GR2",
+      "bytes": 1053428,
+      "sha256": "F336D38F2902C5C34D952C00B26ACB1FBE35C777744E8C34D4CF6804B7EECC8E"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Gortash_Body_Skirt.GR2",
+      "bytes": 1177944,
+      "sha256": "D63B668DF4F59DA1BF0D66C59905772B2EBF3D1304111CCFE39A074EA6FF37CA"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_HalfPlate_A_1_Body.GR2",
+      "bytes": 807788,
+      "sha256": "4F261CB0293DE1418BC7F39EF93CD77DADE0760A23506C6D3D5FF8A638DDEC22"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_HalfPlate_A_2_Body_Shoulderpads.GR2",
+      "bytes": 154188,
+      "sha256": "12A9547A34B58146BB62FC3ABC0B1A71930881053999DACDEE0B5B98022B152A"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_HalfPlate_A_2_Body.GR2",
+      "bytes": 1118724,
+      "sha256": "2ABDF0B98D078CEC1F4C5E8037C3769FBEC0456CDEE8D54E1AF082B84B8C4027"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_HalfPlate_A_Pants.GR2",
+      "bytes": 451420,
+      "sha256": "CF5290C889BD3F56D5B66C3CED3FAFF5B9DA5995961E026340C849C89D908929"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_HalfPlate_B_0_Body.GR2",
+      "bytes": 540412,
+      "sha256": "6F6075973F0BD9DF9D441B4A21C29C85442E136178FA05DB2832F1B737D4B1A2"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_HalfPlate_B_0_Skirt.GR2",
+      "bytes": 223140,
+      "sha256": "5A7B605C8F854B5914E3DD3BCEC007A5F34966E85AEB9B04883C3BFDDB5D0154"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_HalfPlate_B_1_Body.GR2",
+      "bytes": 656156,
+      "sha256": "DA7EC3C86AF36482252E13ECC69363C455FBC4DA81B1FB47C6AD0B81F6B947F6"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_HalfPlate_B_1_Pants.GR2",
+      "bytes": 326208,
+      "sha256": "900AAD948EAB96B5810E914C10BD39507F193C54FAAB5D9E539B95D4FDA4C167"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_HalfPlate_B_1_Skirt.GR2",
+      "bytes": 129760,
+      "sha256": "3CF782C176D959776B278478BB8557F2E4289DFAC51A9655A88141EA09463825"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_HalfPlate_B_2_Body.GR2",
+      "bytes": 687576,
+      "sha256": "2748E52D89B46357BF344AE0C078E4B2AE90950A591FE359F1BDFA67E966451D"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_HalfPlate_B_2_Skirt.GR2",
+      "bytes": 371264,
+      "sha256": "A2858EA9092D3BC9DE61C003F0DBBB43D9067D1B06913F38AA85332FBFAB5AC1"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_HalfPlate_EndGame_Body.GR2",
+      "bytes": 461048,
+      "sha256": "1D37E277ED73857BF778AE0B03DDFEE246423EDECDC6E3A9A16002DA22ECF636"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_HalfPlate_EndGame_Pants.GR2",
+      "bytes": 138348,
+      "sha256": "EC75FBABBF53921DCB6971AAACCA128741B77526D01FCCEA111DE52C024BD54D"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Hide_A_0_Body.GR2",
+      "bytes": 991588,
+      "sha256": "B5ECF4B1A1A817692EFD962A56DE6A9902493FD1A6051D15C759134BFBF32E96"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Hide_A_1_Body.GR2",
+      "bytes": 796576,
+      "sha256": "4BC424C6563340B7243179636E3D9C2793F417160BAE7BC4459757A0D8A4AA5D"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Hide_A_2_Body.GR2",
+      "bytes": 1192208,
+      "sha256": "2EE1E095867DB46142DD70E0B759EE0FAA2DE263D4B9E132A4F4D2EC603B52A8"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Hide_A_Pants_A.GR2",
+      "bytes": 143652,
+      "sha256": "8EDB693D6C2AD46341129013BC73D966FC07BA55B10B3C9BB1C8C8CCFF533432"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Hide_A_Pants_B.GR2",
+      "bytes": 279584,
+      "sha256": "BC31FBDF98AE1C9CD10CE131DD9C6171E8D7C33229824975B55EFE992DE99DA7"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Infernal_Robe_Pants.GR2",
+      "bytes": 293692,
+      "sha256": "4FB6162711F1180B38BE428FD2BCA755E55798354F4947C242C80BCAC3C6BC12"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Isobel_A_Body.GR2",
+      "bytes": 1087868,
+      "sha256": "5F022FFFF27E53A9B05119CEFFB43E9F1E6FE63BB1F704266CA1E19B177C99E5"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Isobel_A_Robe_Body.GR2",
+      "bytes": 805768,
+      "sha256": "F354202B58C21C67899B4A4B447EAD6F4F3E720B6C669D5FF7FBB98E2DFA016D"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Isobel_A_Robe_Skirt_B.GR2",
+      "bytes": 53472,
+      "sha256": "8CD854D71067A3A7CD66CC5760D83C5037E9CF793C2B278AC9B53881F765D47F"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Jaheira_Pants.GR2",
+      "bytes": 130780,
+      "sha256": "5778EED240865A285D26DCD8340E9AD3EB3A2AA1B9A1E4136BF285A9A985C2BF"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Jaheira_Skirt.GR2",
+      "bytes": 190528,
+      "sha256": "3603C938A8117F9D4FD007639EAD3D5EB9B555C886377ECDE6CB412C2C3413B3"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Karlach_Epilogue_Player_Body.GR2",
+      "bytes": 1051444,
+      "sha256": "58F27C5E7E3BE7B564FEE378B2C9F52698AE1F75DCF3DBAFDE784D49F739C599"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Ketheric_Body_A.GR2",
+      "bytes": 2269648,
+      "sha256": "92F3E744C23356259AD78D79A1ED7DB717FE70E45F7B9E5A01D9E42BE6F91AA9"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Ketheric_Pants_A.GR2",
+      "bytes": 508156,
+      "sha256": "503DA2E71FE6D02FDFAD7B300469BA7E3EE96B98448935313B25031AB8EBC4D3"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Laezel_Githyanki_HalfPlate_A_Body.GR2",
+      "bytes": 411280,
+      "sha256": "AB06C9E74F39E091771205E12B434D0DCDA497B0C433BA3D8A712A8A48053D18"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Laezel_Githyanki_HalfPlate_Broken_A_Body.GR2",
+      "bytes": 428484,
+      "sha256": "4F15C4B8A488BCBD9B79030D6321ACB7406339C210E967A5DCC91D746FA8AE51"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Leather_A_1_Body.GR2",
+      "bytes": 552068,
+      "sha256": "C1AA53DF3A70C0ED5B15C0E39952635DEAE0E9D069AF412AB72812CEE3B6C32F"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Leather_A_1_Pants.GR2",
+      "bytes": 352684,
+      "sha256": "ACFABF593AEA65129453828A348C08907AA0C34248C329CB05BD716FDA2CDD16"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Leather_A_2_Body.GR2",
+      "bytes": 519132,
+      "sha256": "59454E26CB0BAFDBB2862A17A06B5C55F2566707199D8FF2D6B32CF278B3E34C"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Leather_A_2_Pants.GR2",
+      "bytes": 189708,
+      "sha256": "669CFEFA0CDF31551B46E1112E27143CC5A061231B8DCDD04D0438D9DEBBBB2B"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Leather_A_Body.GR2",
+      "bytes": 764584,
+      "sha256": "13A75F2D786A908EAA8336D7EC2937C4B2A96E5B38E13B79542D82C5C98F0B17"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Leather_A_Pants.GR2",
+      "bytes": 186000,
+      "sha256": "CFF8DA1D11A678D24C0118762B0BFC8F57E90A3DE5D75AF8077A1BC31B88627C"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Leather_Old_A_Body.GR2",
+      "bytes": 1196060,
+      "sha256": "25248B47A29A39E941808558D349BF91B08032A6AA0A4F60BE099C4402699E66"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Leather_Old_A_Pants_B_Kneepads.GR2",
+      "bytes": 112124,
+      "sha256": "51221C4A69250BECD34E718B0D620604341832F1D5659E659FE5ADE81CE9B93A"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Leather_Old_A_Pants_B.GR2",
+      "bytes": 117568,
+      "sha256": "D78DE937E2DADC307CC08B1F74D0D69B41A4F91BC5CC5B1326ED55947E1D4D5C"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Leather_Old_A_Pants.GR2",
+      "bytes": 351244,
+      "sha256": "0A0101FB565C82088273D812379231300C0308A3DD9F3AD548F33056C77BB52B"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Magic_Monk_B_Body.GR2",
+      "bytes": 958596,
+      "sha256": "469A8FD9F0C918D9E39C54F232C50FA9865AEB75F0E790912B0DF57A7BA7F02D"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Magic_Monk_Body.GR2",
+      "bytes": 668796,
+      "sha256": "BE927A53C6B80DF57D2B6FFD1B4D1B513F322916325DDAA3840888CDBFDEE874"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Magic_Monk_Pants_Scarf.GR2",
+      "bytes": 136208,
+      "sha256": "0E5076F83229FDB3A2CFE51FF4F1A63D5C89B4BCE795C61512BC100F531C2286"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Magic_Monk_Pants.GR2",
+      "bytes": 139320,
+      "sha256": "331587D19AB51A97D82A6208C90131EC12BFCB734D3C754A7C64C5837CB2591F"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Mindflayer_Body_A.GR2",
+      "bytes": 666864,
+      "sha256": "755B427D03409F48BCD91587AFEC02C9BB6EDE9C3DE57994BB26610E58B0D3FF"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Mindflayer_Pants_A.GR2",
+      "bytes": 70764,
+      "sha256": "B6B04676CB94C983EF31F2D672AB4A5B63B05DC2D21D6B7268EFCBE8DDD52668"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Mindflayer_Skirt_A.GR2",
+      "bytes": 429608,
+      "sha256": "CBBC7E73054920CF2342355AD857C9DD9B3664A80FDD97530F7A8029BFC92081"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Monk_A_Body.GR2",
+      "bytes": 745728,
+      "sha256": "894919571C4B5EBFD52688FD58B328FD26F0BAF2950200E51D45E668602467A8"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Monk_A_Pants.GR2",
+      "bytes": 256736,
+      "sha256": "280B43413477D41D5E7806E336F6F237A0D2C7FF62097F60CCE843E820D2CCFA"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Myrkul_A_Body.GR2",
+      "bytes": 1806804,
+      "sha256": "B9EEA2B923E5324328918E87192BA87F8FEF034A517BF16D3A43FCE629FE7C52"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Myrkul_A_Pants.GR2",
+      "bytes": 179292,
+      "sha256": "0FE89FEF9D4996202BAED049DBE58C725D8588260CB135D2398C3C31DD909295"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Myrkul_B_Body.GR2",
+      "bytes": 1302004,
+      "sha256": "1AAAA2C8D3B11110B173451C0317C2882CE4F5D399D0B666F06393EB12D8C3F8"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Myrkul_Plate_Body_A.GR2",
+      "bytes": 805364,
+      "sha256": "C2A5F11124442F339BB5C10CB6B9D74F543998A2E4B3BF93D6722272EE974DF4"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Myrkul_Plate_Body_C.GR2",
+      "bytes": 1019088,
+      "sha256": "7AF780C0BDFE84DEEE89462FB667D3F265BD237B354F5824D45B5127394A93DA"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Myrkul_Plate_Body_D.GR2",
+      "bytes": 814344,
+      "sha256": "542DFB81A3884D21B90B99B06C01A40A74CF028294BE9BF6F59BB23A7C1B353A"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Myrkul_Plate_Pants_A.GR2",
+      "bytes": 343968,
+      "sha256": "0A29C9D9A75909D144DDBDE45032A41DD989E9EC1BBD06E261F19BBA9702F65E"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Nightsong_Body.GR2",
+      "bytes": 1003192,
+      "sha256": "DED6BC8C0CDE29459AEF5183124CA4803925DD15CB3F85AFCE5D2CA9C1926755"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_NightsongPrison_Body.GR2",
+      "bytes": 127520,
+      "sha256": "B73984C5F0332E3067ED5512F4AB9CA57E67F517B8A4B0AD958FABE6CBE50DEA"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_NightsongPrison_Pants.GR2",
+      "bytes": 55236,
+      "sha256": "3F57A34F8CB2EDC94A0C3AEC12D38532FA09EE0A0ADB6EB5B70107A831CB7E51"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Orin_Body_Player.GR2",
+      "bytes": 774872,
+      "sha256": "4D2530A3CF0E03B9E49C853403A610A5E06FF33A181D00CD3DA5B504D5AF10D6"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Orin_Body.GR2",
+      "bytes": 470808,
+      "sha256": "8EA3084F3AB3FC5A4198A963BDB91B0991FC9C551B9C3E924B3166354AD94A7E"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Orin_Pants_Player.GR2",
+      "bytes": 574364,
+      "sha256": "41924F8523B6B039EBBAB00F92A4400EFBEFE84BE4E7DB9D0D0785884C236792"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Orin_Pants.GR2",
+      "bytes": 352568,
+      "sha256": "B7BDABCC37107464D88DC2DEC39B07B1A7101A60532073D75E8DFCCEECEDFD78"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Padded_A_0_Body_Broken.GR2",
+      "bytes": 448256,
+      "sha256": "275B77FDD87E891C8E456E2D1EF5464A0BB8F583C6199295E96E936A17357A3F"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Padded_A_0_Body.GR2",
+      "bytes": 788300,
+      "sha256": "0A2C506996717D197401AED6A37BB2E04E5232E43A0612B0C78AFFC14CE43FFA"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Padded_A_0_Pants_Broken.GR2",
+      "bytes": 209036,
+      "sha256": "A42483E7A0711022164514EAF6B04FCF603A74399655FA3548F2FD4089362499"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Padded_A_1_Body_Spring.GR2",
+      "bytes": 1124916,
+      "sha256": "31DF533CEC92016576F7201CF46DF89ED2010DFACD935991AB0605B785C3BF5D"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Padded_A_1_Body.GR2",
+      "bytes": 941756,
+      "sha256": "84EC0094E9F03F881608589A0F4B242D8CC43078ED4559DD7A0E1E0EABB7A1E8"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Padded_A_2_Body_B.GR2",
+      "bytes": 1313856,
+      "sha256": "8C15F93C5515F6ED5171E7FE8C72D7A8B7B4C4653323979F6CCE85CB34A82D25"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Padded_A_2_Body.GR2",
+      "bytes": 1324976,
+      "sha256": "A9B7A12C9834FA06E485C7B3E813D98C32A4B1F5BF5F1C041A832ACAE85CF428"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Padded_A_Pants.GR2",
+      "bytes": 262412,
+      "sha256": "4BE9B231AFF8BB9E2711899F110B20D33009AA2085AA8C01D36E12F79EEDC837"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_PlateMail_A_0_Body.GR2",
+      "bytes": 885412,
+      "sha256": "4B63B4E4AD5CFC82D3E0748CB7A5A9A29AA8151945CB0160EAD54075D811C22D"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_PlateMail_A_0_Skirt.GR2",
+      "bytes": 219356,
+      "sha256": "8EDD59F3378064B5638DC340184F83B09A6D06673487D7475C512E3450FF09F3"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_PlateMail_A_1_Body.GR2",
+      "bytes": 830916,
+      "sha256": "A8746881747DF591BA6D2DA6C95E8B6E27A89ECCA9B77377CDDB862FDCD0AB31"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_PlateMail_A_1_Skirt.GR2",
+      "bytes": 305072,
+      "sha256": "78B03802EC79116F9058C989BB5B3CD77A2A15A25F6A2CB3ED7FD28B1F4DF91A"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_PlateMail_A_2_Body.GR2",
+      "bytes": 1052560,
+      "sha256": "C529EDEA23C0472089B61CFE0758E291BDD7731F3A8A2A469E3C2D61E5EB662E"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_PlateMail_A_2_Skirt.GR2",
+      "bytes": 257196,
+      "sha256": "BB5CECAFF9EB16C6041889D11DFA40CF891EABAD507B1D341FE876F07C14E5B4"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_PlateMail_A_Pants.GR2",
+      "bytes": 503192,
+      "sha256": "D86E78DE125C8F75CA0B7982AD8BB214CA7BBC35416A559B43C99B617F5A0B66"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Platemail_B_Body.GR2",
+      "bytes": 1568744,
+      "sha256": "BD3258C16B359680E2B22ACBC986356C8519ED0C56B8EF84543E1E39834572B6"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Ravengard_A_Body.GR2",
+      "bytes": 1137468,
+      "sha256": "1343AD043C8D16ACB59AEB294DAAB57CF6446021EF5DE3895F3B1B83F2C6494B"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_RingMail_A_0_Body.GR2",
+      "bytes": 300344,
+      "sha256": "4FE952CCA222EA01B42B67B09DC243878A44461F210ED692573CEB637E767694"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_RingMail_A_0_Skirt.GR2",
+      "bytes": 164892,
+      "sha256": "F1C93793DF12C6C427A400A3E126ACDAEEEC8AFD47EA511EB7BD3D50C8C39780"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_RingMail_A_1_Body.GR2",
+      "bytes": 1011108,
+      "sha256": "20C8A7AE2D0209F1E8AF4ABCABDA649F87BA44D67DDF7D611112535BCE14D03D"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_RingMail_A_1_Skirt.GR2",
+      "bytes": 519784,
+      "sha256": "3E04D2B89EA35B080ADA4663705C38053087E4072638AB3D74D0B098738576D0"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_RingMail_A_2_Body.GR2",
+      "bytes": 601920,
+      "sha256": "CD4CD0952A151AA89BA023C51EA24B928C8D575CA3FBCFA0EBB07E7B0B2EFADB"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_RingMail_A_2_Skirt.GR2",
+      "bytes": 645664,
+      "sha256": "85D4034AAD58A6FB643049D7A00FA07A9CD77E52E31DFCB4532CE4DAEAC425AD"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_RingMail_A_Pants.GR2",
+      "bytes": 183028,
+      "sha256": "03938B625B5AE29A5B6B338ECDAE551F8880F237F3524D799132CFA4A4055F0C"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_RingMail_B_Body.GR2",
+      "bytes": 550132,
+      "sha256": "F80E5C25E24037CA958C2114FB28A19D583D5CB2FE0056F28DC8C4E09819D8DE"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_RingMail_B_Pants.GR2",
+      "bytes": 427468,
+      "sha256": "C2E51AD1E62C6877826FC81ABEEBBA253D3ABF4F2D12B61F29D6857B0B8A5200"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_RingMail_B_Skirt.GR2",
+      "bytes": 647604,
+      "sha256": "DFB94C695DF9FD0E8992D9C0A48B7F611CD8873C995E78E14738D768425C872B"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_RingMail_C_Skirt.GR2",
+      "bytes": 111068,
+      "sha256": "591784388DB768A9018473E3B8A1221E08188530DFA6C281683B09E85643902E"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Robe_A_1_Body.GR2",
+      "bytes": 345324,
+      "sha256": "22C8BD28B82BAF2E29617CBF8AEF289085C9F6ADACC87C3CD00EBFC78D55FAC6"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Robe_A_2_Body.GR2",
+      "bytes": 246964,
+      "sha256": "4E1280A685250897AD14721A3AAE9D5846F0D91178E363DE823AB6B2B3D72FF0"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Robe_A_Body.GR2",
+      "bytes": 434508,
+      "sha256": "9460D3158665233E751DAC380C99E05C0AE136E0E16175CE1C9954ACF4D21BB8"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Robe_B_2_Body.GR2",
+      "bytes": 611132,
+      "sha256": "1AAB245F6B455437DF5693315E0ADF3D9F2B8A7D57EE50D55135F7E58D4EA878"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Robe_B_Body.GR2",
+      "bytes": 389212,
+      "sha256": "EF47F5061AB6E5A8437D6D5CD8248B021D196BA231195BED6B8B7DBFE1543CED"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Robe_B_Wizard_Body.GR2",
+      "bytes": 423052,
+      "sha256": "2A07A7D11F58BDE094E2614FF8076EA6599587126384059407A2E4DB6CF33FD7"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Robe_C_0_Body.GR2",
+      "bytes": 808020,
+      "sha256": "D14594EA96DC38FA6626294B1AFE43B550C8CA3EB4863663E5ECCB70013AB606"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Robe_C_1_Body.GR2",
+      "bytes": 1009656,
+      "sha256": "F8152104F63A7E69AF85CBA97C265E46EBFF771A746729F28F8ADB73806EC0ED"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Robe_C_2_Body.GR2",
+      "bytes": 1722888,
+      "sha256": "A420227B6EDE56B0490FA3E7F2EF79B7D865E730AEFD32CD40DD8E43DBE686E9"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Robe_C_3_Body.GR2",
+      "bytes": 1282464,
+      "sha256": "D2C38FDCB394E46205E77302384A44BF842D9A31382ACE6AFB18CC05C08C25BF"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Robe_D_Body.GR2",
+      "bytes": 546200,
+      "sha256": "FB6B92C086AE27C7C102887DFCEBD660DEBEE87BD4A3E81A20FC7ECE1D15AC08"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Robe_E_Body.GR2",
+      "bytes": 1015152,
+      "sha256": "8B9B07A62FDAD2A9CDC087FA02DCF0120A89822AFDF0ABA85236A38F7FC6F178"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Robe_EndGame_A_Body.GR2",
+      "bytes": 1709408,
+      "sha256": "CC7466A288FAC9FEAF2D7B1E61AD76706A01ED044793CC9FF302D309047888B7"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Robe_Lorroakan_A_Body.GR2",
+      "bytes": 591928,
+      "sha256": "974DA4BB60753D59DC72A572C613AE3DA03E28C0E7C6A2902A3AD4F16A9011FA"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Robe_Lorroakan_Body.GR2",
+      "bytes": 752248,
+      "sha256": "E9330ADC60821C5B30588F1E97C973C7CD5F4128B60765F1F541369A04590356"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Robe_Shar_Body_A.GR2",
+      "bytes": 1161136,
+      "sha256": "7829EFD760173FFDB74977F368A9E1AA969862AE3527002FE4B7ABE0FBA3D677"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Robe_Shar_Body_B.GR2",
+      "bytes": 841292,
+      "sha256": "63C2E886CD8C5CA07D6C7AA9396DF4905ACE6F89F1BAAADB607C64C383AA0DF9"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Robe_Shar_Pants_A.GR2",
+      "bytes": 104172,
+      "sha256": "5645311CE07551FC992E2E0BB4800514E702F32CD85203E0BAAC15164E790178"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Robe_Shar_Pants_B.GR2",
+      "bytes": 230812,
+      "sha256": "D9FB909C1F58F084BAF6FAEE92640D769C968C898D9A1352FDFBEEB10137CA26"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Robe_Shar_Skirt.GR2",
+      "bytes": 143880,
+      "sha256": "6AA1D8FAA4B47E0F88987040CCA47AAFD7209AD1409DE404BBA706D1BBD0F024"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Robe_Umberlee_A_Body_B.GR2",
+      "bytes": 893356,
+      "sha256": "58CC5DA162701165B8CA8422637B685CF34F7300D97AF1DED60F2B082F6B3596"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Robe_Umberlee_A_Body.GR2",
+      "bytes": 893348,
+      "sha256": "890E42E2979EF485BE38F3CB4E686A698D20213CB8DC7DAA8EF7D14E98F55CBD"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Robe_Umberlee_A_Pants.GR2",
+      "bytes": 143096,
+      "sha256": "13A29F81FCAACF6790D13C0241B42F82E1AE7CD1D9F1EBD181764164018B73FD"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Robe_Umberlee_B_Body.GR2",
+      "bytes": 805084,
+      "sha256": "9E2E5C2E1142F7B79F70D45982E874FC57F0F6E9A5039340F0EF6B9763AB6530"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Scalemail_A_0_Body.GR2",
+      "bytes": 477260,
+      "sha256": "636933B85FC7AB477C2A8A1EAD632F406B3BC09D2A8177927404B87E2D72E9B8"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Scalemail_A_1_Body.GR2",
+      "bytes": 622692,
+      "sha256": "9D6E97B5250EBD8EA675C1274A869C330038F4DCE5F4F614724E449B398472D6"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Scalemail_A_2_Body.GR2",
+      "bytes": 1189492,
+      "sha256": "16101016013822AC67DABE36C5B7E49A970747D8C6EBD859C01AFABECFFF2BE2"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Scalemail_A_Pants_A.GR2",
+      "bytes": 108884,
+      "sha256": "854E4A166DCCE9ABC1C19704BBF4942447D2B24269603D70589AB478E2606B99"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Scalemail_A_Pants_B.GR2",
+      "bytes": 178188,
+      "sha256": "30CF7DE0EF4E7B9714FE919B8A8244A5CA80E8F7E8ADAD82A7BE82B3FDB1315B"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Scalemail_Adamantine_A_Body.GR2",
+      "bytes": 702020,
+      "sha256": "8A75A71F63D4B8AD07F27B0600F1C91005B6743B661C5C244C8106BBED5D66D4"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Scalemail_Adamantine_A_Pants.GR2",
+      "bytes": 259204,
+      "sha256": "7D4332AD99E4DE7A771D312D0CD17932B31826DD984867F4BDB28C8F1F78C741"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Scalemail_B_0_Body.GR2",
+      "bytes": 1275628,
+      "sha256": "6DBA5676FB45CAE3441456063548A8A8346B623587B6C7E948CEA1E7DE8292CA"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Scalemail_Paladin_Body.GR2",
+      "bytes": 759068,
+      "sha256": "EFAC55D766A87486DD464076630AD0E3580DBC26926CB4E75038388C2E14AA71"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Society_Of_Brilliance_A_Body.GR2",
+      "bytes": 495732,
+      "sha256": "F9E8AFC9A72CE972AA3AC90545266497158C566C4D340E5FD1B1F6C5260B5F7B"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Splint_A_0_Body.GR2",
+      "bytes": 1555244,
+      "sha256": "17BBCABA00E71975C3806B7FF6752938706DCA232A49CC772D21B5464629AF69"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Splint_A_1_Body.GR2",
+      "bytes": 1839076,
+      "sha256": "E9DAC6C84A66E0664A0A3DA040F7A0D4779CBE0382E6B8DD74DBFF1C0307DE8F"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Splint_A_1_Pants.GR2",
+      "bytes": 317236,
+      "sha256": "53C15D036DF677199812EAFAB715E988458BA8C976A69818A5353931593FF4F7"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Splint_A_2_Body.GR2",
+      "bytes": 1925904,
+      "sha256": "636BCB2C12E9A9FD4D7F57470475E2C285C68EBAB33F7B95ABF62020EB24307C"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Splint_A_2_Pants.GR2",
+      "bytes": 313092,
+      "sha256": "937E720D10715A8708A14EB5CA3C4621EAA3A75AB02CB09DB29C25B55164B95F"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Splint_Adamantine_Body.GR2",
+      "bytes": 992116,
+      "sha256": "0E407AEA55176D741306D5720A471C85DC8D378FC741544AC46EBB88C108D0E0"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_Splint_Adamantine_Pants.GR2",
+      "bytes": 199816,
+      "sha256": "4CD8140BF3D6F35D61840CB675C2E5BCDBE7D06893F62BA3AF203FE0E161A26A"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_StuddedLeather_A_0_Body.GR2",
+      "bytes": 475348,
+      "sha256": "7DD76D8179BFEEF6E6736FEBC6757ACC45C1FF5D75EA4CFE0F8102FD20168495"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_StuddedLeather_A_0_Pants.GR2",
+      "bytes": 297056,
+      "sha256": "3E97FBEABEBBE7D3888F23DB157DA9F49A234C5006F1DAFACA3B2133B242FCA7"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_StuddedLeather_A_1_Body.GR2",
+      "bytes": 1385496,
+      "sha256": "6369C3C7C86AA303C6801F57A3DADA087FBD8BA653918AABAE718DC3912B9FF3"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_StuddedLeather_A_1_Pants.GR2",
+      "bytes": 371816,
+      "sha256": "72FA7E7799E0749D23CE6AD14DD6225D1D3290C60FD6594B42777FFDA7232857"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_StuddedLeather_A_2_Body.GR2",
+      "bytes": 1178928,
+      "sha256": "357DAC0940C77406560C29B3A0CD289E31EDB086740EBF5934732AEDDFDDEEA0"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_StuddedLeather_B_Body.GR2",
+      "bytes": 707912,
+      "sha256": "A657D26388E6EAF1C6994206A8A64DB93A66CE97E0384334B252232857322F66"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_StuddedLeather_C_Body.GR2",
+      "bytes": 893420,
+      "sha256": "A67D740DC75E7CDBA074CAA51BDC327562E3316F644B7D084E2291FCC54D7E9C"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_ARM_StuddedLeather_Minsc_Body_A.GR2",
+      "bytes": 587284,
+      "sha256": "58C642C9F91DFC4A023239282911512CBCEA89D8E08D16472758B203E6618F44"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Alfira_Skirt.GR2",
+      "bytes": 145656,
+      "sha256": "81CA27DAC34E14461AB8D623D73A6A66880D5B6919A570372DE010C3AEF6D088"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Bard_Body_A.GR2",
+      "bytes": 333852,
+      "sha256": "D5435B738A1C4E39DA9949357A9B6BD9E3A3566EE146D7FA30328D55F6B54E02"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Bard_Pants_A.GR2",
+      "bytes": 263728,
+      "sha256": "E6803D00BC62D627EF19E9CD6A56E111FBD9365BA4DEE4284E51EB002B03EF75"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Bard_Skirt_A.GR2",
+      "bytes": 113112,
+      "sha256": "AC7384A4B9BB6433BDB1E6DA5CFFE926E53E23D10FEB9CBA8DB69F0CB5BFFE63"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Blacksmith_Body.GR2",
+      "bytes": 824188,
+      "sha256": "33A844603F3C380622336DA9E9ACBED766821DF6C60230C0DEE0A23458CC53C9"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Blacksmith_Pants.GR2",
+      "bytes": 121564,
+      "sha256": "5B3A6EAB1A9950833CCFCAF91CD76F4C50D1D740A90DC6221FA0109C1F87641E"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Camp_Deva_A_Body_A.GR2",
+      "bytes": 986092,
+      "sha256": "09DD27CCC9B1DC2E0720161CAAC79AB0BF927881D7E844EA16DF2CD592D7D8DB"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Camp_Halsin_Body.GR2",
+      "bytes": 165668,
+      "sha256": "ECCDB09C9F5B39BB4E27C8E90ABB308FCC428618C75518F0AF7B80FF78A08A9A"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Camp_Jaheira_Body_A.GR2",
+      "bytes": 290520,
+      "sha256": "89B6CCAAEF9B2E7F72EA97977485C1B887DE6F766FC8D63495B8D2B2062E4909"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Camp_Jaheira_Pants_A.GR2",
+      "bytes": 148752,
+      "sha256": "43D61415B113E7244422708CB634B5DD79B6992D3EBA486899E504ED8E0FB900"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Camp_Karlach_A_Pants.GR2",
+      "bytes": 177408,
+      "sha256": "82DAAACF56FCD04E304DAB902B2FACB57FD1F8A5E14CCDC5625309220E2DD360"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Camp_Minsc_Body_Ragged.GR2",
+      "bytes": 155272,
+      "sha256": "040C208B02E7E7845335F2C262B1D664FC472C2AB19D24006F58CF4ED3104E5D"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Camp_Minsc_Body.GR2",
+      "bytes": 201016,
+      "sha256": "B2CC83714C5D5816D26BCC96E40A7B54981DFA48C388BD7D7EF7087882F1E667"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Camp_Minsc_Pants_A.GR2",
+      "bytes": 560232,
+      "sha256": "C1F3E64BAFCA6EE235781DBBD75D5F3FAFFDDD6989A0742764D8469CD30E4B87"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Camp_Minsc_Pants_B.GR2",
+      "bytes": 349148,
+      "sha256": "7D2D0CE919CE2394B1974FCE61C56C5183C95BF8B7BE4CB8577A07851A1EF055"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Camp_Outfit_Astarion_Body.GR2",
+      "bytes": 618752,
+      "sha256": "F92574A897C6F5E0C3E37BA624D2E153571239DED9D7C7E62C7CE6F5BA82F892"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Camp_Outfit_Laezel_Pants.GR2",
+      "bytes": 207732,
+      "sha256": "CA5C055736B3500D31411F92C8B573F8046CF56514B34784555D0C7E6B18D9C4"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Camp_Shar_Body.GR2",
+      "bytes": 143520,
+      "sha256": "91F8ADBBB51ACA78425A8B315725DAB49C5D0C4C7BACB6ACB0D76160C26521BA"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Circus_Pants_C.GR2",
+      "bytes": 155072,
+      "sha256": "4DB95C60CD6CE86F73BE5348ABAF93CB61BFBA46DB2673D1F146D36BF39D1BE8"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Circus_Pants_D.GR2",
+      "bytes": 79052,
+      "sha256": "39760876CD7A3B96B00C62C64B6E8A599EDCBCB60705ABF3EF3D8CB034D810A0"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Corset_A.GR2",
+      "bytes": 536420,
+      "sha256": "660D6736AF90081FE40E3D705CFA986D7F30EFEECF7E02EC456D18A05200A5AC"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Corset_C.GR2",
+      "bytes": 308208,
+      "sha256": "AC484D24913A9104099384031592399B77A92109BF8FA407BDBAEF30DBCACFEB"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Corset_Courtesan_A.GR2",
+      "bytes": 349128,
+      "sha256": "DD339CF75466332FE2409AC64C606E8B406A404AF921234A7D6775999AA0B8DF"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Daisy_Dress_A_Accessories.GR2",
+      "bytes": 1035104,
+      "sha256": "978E270BF04CDD0E610AD11D6EE12E1A590411AC20302BEE7C794B3572AC718F"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Daisy_Dress_A.GR2",
+      "bytes": 261548,
+      "sha256": "CF6189559DB34C76C2D28CD832206D2BED9454752929BCE2C4B60ADF392FAF07"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Daisy_Dress_Accessories_Gale_God.GR2",
+      "bytes": 172380,
+      "sha256": "659B46B6EAD9BADCAF0A9023C8BC5507B9874FF3B48E77604DD2A976EC01BCB5"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Daisy_Dress_Cape.GR2",
+      "bytes": 97136,
+      "sha256": "D85B62B72C86B655A539530A13CEA44AE5E5EF00F58ABADACEAACF37E4463D83"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Doublet_Rich_C_Body.GR2",
+      "bytes": 1005356,
+      "sha256": "751F6E428E30BB81CB65693E8F38CF426700D63DEC56C726F37FD5CEDBBF6CE9"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Doublet_Rich_C_Skirt_A.GR2",
+      "bytes": 121592,
+      "sha256": "9CCD81170CC67A1707D3DACD8B085FEA0385F2D342798B544609AEB20103E1EA"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Doublet_Rich_C_Skirt_B.GR2",
+      "bytes": 120824,
+      "sha256": "169898FBA265F425E45209EEC8B109B96BB534CE25FE604ADF3AACBD018E0F6B"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Drow_Body_A.GR2",
+      "bytes": 171552,
+      "sha256": "355406EDB91D5B84FF456865C138E198E844CE7B4CE3BDE17F0982046A38FCEB"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Humans_Pants_A.GR2",
+      "bytes": 175156,
+      "sha256": "20191E5CC0A5E97D0B791E1FB148F186E321493823D75559354F8D2F507835E9"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_MiddleClass_Body_A_0.GR2",
+      "bytes": 444240,
+      "sha256": "0D954B535E42685CF0063B0E50DDF7A84BC03A7F26499874E001307083230ED6"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_MiddleClass_Body_A_1.GR2",
+      "bytes": 500404,
+      "sha256": "1074E2BCC1A262F5A5B4E99F3A705BEE000DE281427446C171B62C28F45FE96F"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_MiddleClass_Body_A_2.GR2",
+      "bytes": 524760,
+      "sha256": "BB75CD12252F921D1DB59C585EBA17B056CA13610DA85758AE0E019AEE6FE338"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_MiddleClass_Body_B.GR2",
+      "bytes": 850176,
+      "sha256": "FAB5C6DAD4C110087C7AEBEB2E2D33C99778FD0D80CEEBCF5E673F6C65E95983"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_MiddleClass_Body_C.GR2",
+      "bytes": 250772,
+      "sha256": "8FB1783EDA4C8DE05B86A2F668AEC65D67689EFDE58C5946C95C573BBE20F20E"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Mizora_Body_A.GR2",
+      "bytes": 1058892,
+      "sha256": "6660AB26ED7E0B5552023CF69246223D1F14AC013A4A288EDDBEAAE64059C385"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Nymph_Dress.GR2",
+      "bytes": 1065084,
+      "sha256": "0AC1516D5D801F0C69F23B36C662B0933CAF7A0D92A9919DEA628200FFA9A05F"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Pants_A.GR2",
+      "bytes": 194356,
+      "sha256": "C0D1DF1F83DB9C808BFF7B2BEF6B86463C54AE6383F29E7D33DAE11DAA63D346"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Pants_B.GR2",
+      "bytes": 174120,
+      "sha256": "9166315C362B64B9538282FFC78033BBB786B5499C296DCD2718BA967E647393"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Pants_C.GR2",
+      "bytes": 222936,
+      "sha256": "B384BC1E3428CF60C901F1C35F5DCDC209F70D0C51E6C8DDDEFF127828C5951A"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Pants_Courtesan_A.GR2",
+      "bytes": 104720,
+      "sha256": "8B66B64FC6CA1A4A98369A08EC045DDF6C662786B7D0FA4F3D94EDA22E85FE8C"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Pants_D.GR2",
+      "bytes": 91348,
+      "sha256": "EFCD7ECE606661F68F9D497657C2EBE2FF6271705EC3584B3654DF0B9130327E"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Pants_E.GR2",
+      "bytes": 284960,
+      "sha256": "37A36A9678F52A93D788C02F9E0E5857E1E79E36BB0D31961C213890B18EA42B"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Pants_F.GR2",
+      "bytes": 120436,
+      "sha256": "5C056F17FDDF9C7CB9466406961B02FDB65DD133B2E8516B64A8F3A246CFC2F8"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Pants_G.GR2",
+      "bytes": 125172,
+      "sha256": "EEC80FB057A24615C58951BB2C63F91029D572F9F8CFD454030BBE49063631EA"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Pants_H_Short.GR2",
+      "bytes": 76044,
+      "sha256": "08C720608AE6D0E1951C978F3AA2084A3055729D63C5A8E8EB9C8655566A048C"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Pants_H.GR2",
+      "bytes": 98884,
+      "sha256": "8E33F440AE9485695A636C3EF3638EAF1113931DBCD3BC5E9D89C96178CD20B1"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Refugees_Corset_A.GR2",
+      "bytes": 141332,
+      "sha256": "3A49328F6E6798B4911C3B34E1B37B28B7F465A68770FBD0EF42BC6D10385C27"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Refugees_Corset_B.GR2",
+      "bytes": 180616,
+      "sha256": "BC26BA5ACCFEB6726326B1A388AFFC6DF05F9EAD22F9151CF44FE4C27BA9D3F4"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Refugees_Pants_Torn.GR2",
+      "bytes": 102972,
+      "sha256": "909090D27A342DCE219A048E95715CA0ED6C3FA59F47653A5FC93FD62C3FB93F"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Refugees_Pants.GR2",
+      "bytes": 137008,
+      "sha256": "896152D317AFAA9988DA020FA9DA8EA19FFA8F36646FAD40041B6D764929659F"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Refugees_Skirt_A.GR2",
+      "bytes": 139124,
+      "sha256": "A6668B8E409ACB678642E7B06CDE758E363C312FF476F0D089DA9967728AADF8"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Refugees_Skirt_B.GR2",
+      "bytes": 107216,
+      "sha256": "8CB128FB4054BDACB1096DEB0F5CB5A4072DB61CE776E5359E55146FC04E98BF"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Refugees_Skirt_C.GR2",
+      "bytes": 93192,
+      "sha256": "6E3261EF61157E9F35D99A51D2231C9DF588791755B04C681A39EB85BFC8E52B"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Rich_D_Body.GR2",
+      "bytes": 1433200,
+      "sha256": "94A62B1AFB564FB7312295F52D3FEAEE58AE9D5F342DA74D8D21B5C93AE3C830"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Rich_D_Pants.GR2",
+      "bytes": 173220,
+      "sha256": "F3D2A92AF9028A2063E7A45717C368CB3CA349B81E8AEC51610642774DADC296"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Rich_Dress_A_Body_2.GR2",
+      "bytes": 275428,
+      "sha256": "16E62288B4117B408B7B02AD504A5780D8453501C0C560D7EA346E217F205333"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Rich_Dress_A_Body_3.GR2",
+      "bytes": 252544,
+      "sha256": "FAD871DE2D4FB020D137F02B288D9703A1A1C08E56D50F64C92AE8E688FADDEA"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Rich_Dress_A_Body.GR2",
+      "bytes": 269964,
+      "sha256": "4C9EF85E4A9B2455A13F713F0A75F34948C765B6A68635A0F8B7797E4EFF8BFA"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Rich_Dress_B_Accessories.GR2",
+      "bytes": 508440,
+      "sha256": "41D71EF659CAB3DE1DBBF3F5250690A05843B5135F3DA331E0637F1819EA8CF9"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Rich_Dress_B_Shirt.GR2",
+      "bytes": 240856,
+      "sha256": "4A3042288C807833774A6F1AABBF3E30A8EDB1E055BEC0FB3290605B0FBF86E3"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Rich_Dress_B.GR2",
+      "bytes": 444948,
+      "sha256": "C541E5814AE1E58F106461458E4A2DAA6A37CA553F4B0208ED8FF5CBFEB68C22"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Rich_Pants_A.GR2",
+      "bytes": 66080,
+      "sha256": "27DBDB3E8F8F44A80D29DC0E628E6C80F8E64EBB278B5CA41E7FECCF4D96ED44"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Rich_Shirt_A_Body.GR2",
+      "bytes": 240240,
+      "sha256": "06523F80F5A08DB02479BF96D6D527DA34DE7919B72504ECC88CE0C1FC1A54E9"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Shirt_Courtesan_A_Corset_A.GR2",
+      "bytes": 439664,
+      "sha256": "F4C178E117EAE1EF36D5853332F0CB40000045B10A261746D800620DEAADBDFF"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Shirt_Courtesan_A_Corset_B.GR2",
+      "bytes": 229116,
+      "sha256": "61AF3A2C8559762463E652B220341FEA86A64AF478CCF18A1B09879CF0155725"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Shirt_Courtesan_A_Corset_E.GR2",
+      "bytes": 186948,
+      "sha256": "05A9F5784ACDBD8487CB8F9379443C7732655FBE59B577DE1DB53E1A342D0B37"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Shirt_Courtesan_A_Corset_Twitch.GR2",
+      "bytes": 183824,
+      "sha256": "9CF156DEE3717D15A1EF249467C84C6B433D2BE2E9E626822B9D2BD4E5DBF4F5"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Shirt_D_Corset_B.GR2",
+      "bytes": 368824,
+      "sha256": "1CBF83D73E552DD8FDEDCC0FF6A8178FCA65142F85A01845C4391E15B80138AF"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Shirt_H_Corset_B.GR2",
+      "bytes": 300144,
+      "sha256": "8740365ACAA5ADB9AB691D057A663729F2ACA0931F522A90CAC60319FA0A5F75"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Shirt_H_Corset_E.GR2",
+      "bytes": 261432,
+      "sha256": "D4AA30B2571002FEFA35989215113E904C3BC983D04AEE267282405131403634"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Skirt_A_Spring.GR2",
+      "bytes": 203088,
+      "sha256": "57BE8B1286150E6B542F47BD8998C67768CEBC6B044BDD26E1DA7374F4B69030"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Skirt_A.GR2",
+      "bytes": 252756,
+      "sha256": "B2645C89F4FC3C61890827F1A4026FB7BD742EFD94C022A42F32A1EBCBF08A8C"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Skirt_B_Mayrina.GR2",
+      "bytes": 209320,
+      "sha256": "F288C99FCFAFBCD7283924B370E3544AB4A017C10F83FA96377E85FE5BE609BF"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Skirt_B.GR2",
+      "bytes": 209512,
+      "sha256": "38276481A3C4FDB909D9DCA932C66B829D58F059C0ACCAC758FF7DD83D2282D2"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Skirt_C.GR2",
+      "bytes": 206996,
+      "sha256": "2F99BD44988207FD0508E29DE71EF5FDCAACAA8DA3389E4DD392396243F4E2CF"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Skirt_Courtesan_A.GR2",
+      "bytes": 153108,
+      "sha256": "E4AC252BFA6E29E63FB09EAA8959992854A10190FA917922F02B7CDC11E72172"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Skirt_Courtesan_B.GR2",
+      "bytes": 87644,
+      "sha256": "E93CD353A8A2EF56CE196E857DD802C72C36868F38F32EACD00F4D1F37543914"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Torn_Body_A.GR2",
+      "bytes": 242044,
+      "sha256": "FA66ECF8E030717F70BE4C929A52DF6C363E2746F4213F40365E87B3DF26EEE9"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Worker_Body.GR2",
+      "bytes": 192040,
+      "sha256": "2CCBF0887AD9663AC1F985F9A7AE63390FDF0E875A2B98D20ED28283607F86D2"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_CLT_Worker_Pants.GR2",
+      "bytes": 193364,
+      "sha256": "DD3AE6B70E7E736D2E98217002F5010D768F08E4DD4E1D4E0AD4320D5EE75323"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_NKD_Body_A.GR2",
+      "bytes": 537492,
+      "sha256": "4B864C57C355B277D7282E316BB9F1EE57ECE898C814A23B014E7E89DA671A9F"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/HUM_F_Nurse_A_Legs_Bandages.GR2",
+      "bytes": 167936,
+      "sha256": "2FDFA0E18445E902D66EBFD1A18E59FBCD578CCE9C9F5774EBEBCDA4216D36FA"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_BCB/OLD_HUM_F_ARM_Nightsong_A_Body.GR2",
+      "bytes": 1624360,
+      "sha256": "180CE6CCA9F99FCBF22E57ADD07FADD54365067D209B309E862D55AEBDDA1989"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_SBBF_Class1/HUM_F_CLT_Camp_Citizen_B.GR2",
+      "bytes": 108568,
+      "sha256": "38145F12A938E73B1295F01E95266A55C12E709B0258A465514AC5BE8B93F78A"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_SBBF_Class1/HUM_F_CLT_Camp_Shirt_A.GR2",
+      "bytes": 200004,
+      "sha256": "152F52F6EE7C82259FAED8C82DF31FAF39FE6414D5A74B0F51D007482BA99DEA"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_SBBF_Class1/HUM_F_CLT_Daisy_Playsuit_A.GR2",
+      "bytes": 1098216,
+      "sha256": "1FE1AD495C710E086558B9F5872B1402AD7B4A159167B3A491DE6ED0A2EED101"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_SBBF_Class1/HUM_F_CLT_Doublet_A.GR2",
+      "bytes": 350740,
+      "sha256": "035BC22719FC68C5212B7684F44900502755B0235A756DA2A5FF695F656341B7"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_SBBF_Class1/HUM_F_CLT_Doublet_Rich_A.GR2",
+      "bytes": 494924,
+      "sha256": "281C2A41E3BE9000CB5E32098730B7834145AAF111370A434C9FD2F4BA346E0B"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_SBBF_Class1/HUM_F_CLT_Doublet_Rich_B.GR2",
+      "bytes": 394624,
+      "sha256": "C8AD618C8A3CFC4CF20B067CDC2472CFB9E1796E0C615C7BB118A6B6909350D4"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_SBBF_Class1/HUM_F_CLT_Humans_Shirt_A.GR2",
+      "bytes": 147312,
+      "sha256": "9A33509D18E1D6CCFBE2793EED2979EB44E5120BF466FF54B5EBBD989BC24D59"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_SBBF_Class1/HUM_F_CLT_Refugees_Jacket.GR2",
+      "bytes": 353524,
+      "sha256": "5710E1FC75C5C20A156DC1FEA89FA6B194E5A423FA4B6A0A32DD6222BDB3D60E"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_SBBF_Class1/HUM_F_CLT_Refugees_Shirt_A_1.GR2",
+      "bytes": 103212,
+      "sha256": "1BAE090C279DA7C94573E5E61D19DD7E1DC3D18962F6B547C30F21CBD4ABDAFD"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_SBBF_Class1/HUM_F_CLT_Refugees_Shirt_A.GR2",
+      "bytes": 205576,
+      "sha256": "B60D5AEA8B2DF675F145D67A3260DC972FA95AA12CEF86359935D3475D665754"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_SBBF_Class1/HUM_F_CLT_Refugees_Shirt_B.GR2",
+      "bytes": 70448,
+      "sha256": "CC3B871E0479F108921E8D8C37BD541AC2D80502F3075A591FF40EE32083899C"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_SBBF_Class1/HUM_F_CLT_Rich_Shirt_A_Trim_A.GR2",
+      "bytes": 64652,
+      "sha256": "59F4508E197C3FC954EC9B3D23A3F9742C0DAF398AF63B87275FEC08D04657F6"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_SBBF_Class1/HUM_F_CLT_Rich_Shirt_A_Trim_B.GR2",
+      "bytes": 64328,
+      "sha256": "685377F588B599C4719E2847D8308003EAA497FE46217B7D36612ABBFFD62711"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_SBBF_Class1/HUM_F_CLT_Shirt_A.GR2",
+      "bytes": 546120,
+      "sha256": "1E5A6F93953B6F55BFAEAC30CFF132ED0A632746B0181EC9BCC38A355CE510D1"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_SBBF_Class1/HUM_F_CLT_Shirt_B.GR2",
+      "bytes": 315064,
+      "sha256": "3B76202A1907454CA6FBE16D5C557ADF10B456794F78D35006513E2E0D10D06F"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_SBBF_Class1/HUM_F_CLT_Shirt_D.GR2",
+      "bytes": 273864,
+      "sha256": "174BB94511BDBC5535DB1E3E0C188566F27730D9F0D7AE6C373B16E30C09B54E"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_SBBF_Class1/HUM_F_CLT_Shirt_E.GR2",
+      "bytes": 290976,
+      "sha256": "EFCD06F85E74FECDF9561DF905DD2A0229F66EF1B28C29A4C3354490FAEEA617"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_SBBF_Class1/HUM_F_CLT_Shirt_J.GR2",
+      "bytes": 174208,
+      "sha256": "878C1C93E09BDB9D46B9F27BD26D7787A91690A0C7B7B77EA3C2712D8EE68264"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources_Vanilla/HUM_F_NKD_Body_A.GR2",
+      "bytes": 370816,
+      "sha256": "00103976F40D0A22AFC8C205CC6160327AD42930ED3C28C6BEB6B32F9F242473"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Adventurer_A_Body.GR2",
+      "bytes": 200220,
+      "sha256": "A05368635357131B4DBC5CB919E5E1396C722DB6FCE35FE16CF761C6B18535D5"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Astarion_Body.GR2",
+      "bytes": 360460,
+      "sha256": "C520CF120BCEF5EFED2BE4D78772E7E9E47549F1F55F9A4422196C8C2FA49AFE"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Astarion_Pants.GR2",
+      "bytes": 134756,
+      "sha256": "A8023BFC24366A1905A511C9C699D06E74B898FCD8681D694AC291F2E76AB9E6"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Bandit_A_Body.GR2",
+      "bytes": 520900,
+      "sha256": "33C524400FF7118ACC9B5BFCF303BF7CBF38E266A037835B87797F7D5D342498"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Bandit_A_Long_Body.GR2",
+      "bytes": 635432,
+      "sha256": "2307116B0A5C14D346536E6727CF4C023B396D2A779143286EC8B284EC18F048"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Bandit_A_Pants.GR2",
+      "bytes": 183196,
+      "sha256": "AF1B8A099C9B2176813AA776F120613DEC58FCF8315EB2F4CC18AEE41756DA40"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Bandit_B_Body.GR2",
+      "bytes": 645272,
+      "sha256": "02B9DD258EB46AEE6657BA8CE0B73E034575D8AD8D9D57FE71D9534FF272154C"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Bandit_C_Body_Accessories.GR2",
+      "bytes": 395912,
+      "sha256": "7CF5B223F8982C5A800BCCBEA509EB5940FB9FA8051570D969CEE23E62741D7B"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Bandit_C_Body.GR2",
+      "bytes": 804968,
+      "sha256": "AC913AA2243F6AE3494EA23E31667AA8FBDE3776A9CAD8C96F64EEEFF4C4CB58"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Bandit_D_Body_Belt_A.GR2",
+      "bytes": 104868,
+      "sha256": "0475E55091168285C75E62C845BFF62A49459DCBC41A7A27082DEA2899B9A8F1"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Bandit_D_Body_Belt_B.GR2",
+      "bytes": 156248,
+      "sha256": "99D78FF92960DAF727318550606907170D12168FCF629B515EA90A29D8B372EA"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Bandit_D_Body.GR2",
+      "bytes": 187280,
+      "sha256": "874837873F93DB7777745DF0E3A3DA8D93313176A3EA3D6F4C75CCA60364EDCC"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Bane_Light_Body_A.GR2",
+      "bytes": 1408020,
+      "sha256": "4CE2A4BA35C56AEA3D0E4550EEC771155D4AD28C654917A9ABB27C4E4224FD93"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Bane_Light_Body_B.GR2",
+      "bytes": 1517188,
+      "sha256": "917D5EFFD99D0C3CFB6745AB83639C6E360EDB39EB71B4CB7F98AFE4739A5958"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Bane_Light_Pants_A.GR2",
+      "bytes": 167812,
+      "sha256": "10A1A016F26F92AF0DAC8098B9094B6F1BD5B474A0E9EC8C8118A8C910D411C4"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Bane_Plate_Body_A.GR2",
+      "bytes": 1855140,
+      "sha256": "27583F8C74608466553191125187FBF15783844DDE5C29BF0EE91CC7CDB04186"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Bane_Robe_Body_A_Sleeve.GR2",
+      "bytes": 309500,
+      "sha256": "504CAD5FC66A35D76723EFFA9A3FA417C2EE2219397DC4A6FF092D072473AE0B"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Bane_Robe_Body_A_Sleeves.GR2",
+      "bytes": 181536,
+      "sha256": "DC6CCC17E0241DF03B0EE4FB6528D91BCF272A519A916BFAA3199813231987CE"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Bane_Robe_Body_A.GR2",
+      "bytes": 1647068,
+      "sha256": "B97F7BF760A0D69DF9556598345FA6DFE6F0C580BFD4B1EA0CD9EA017C0BF744"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Barbarian_A_Body.GR2",
+      "bytes": 646628,
+      "sha256": "6CCA92D75463A9CE221910BB6F43C519A017BF884A1B256EBB10A6213BE31D29"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Barbarian_A_Pants.GR2",
+      "bytes": 167308,
+      "sha256": "CF578B8840CEED8F2CC4FC4EE9348DCB83F1532E9739FD25A35752144580AF8D"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Barbarian_Karlach_A_Body.GR2",
+      "bytes": 786932,
+      "sha256": "AA780124B514EB9AC1EBFE594C2A5905707EC47000F7A20D790FCDA02A0EB988"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Barbarian_Karlach_A_Pants.GR2",
+      "bytes": 191408,
+      "sha256": "40D0D5C1F10FBE76950FA58FC89874C47A3445B08980B3D7CECFFA2F6F52632D"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_BarbarianMagical_A_Body.GR2",
+      "bytes": 486052,
+      "sha256": "9819A5E5304B347DB692CCF355BB62C718F1F346542D80482EF797E31C9BCCA3"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_BarbarianMagical_A_Chest.GR2",
+      "bytes": 107828,
+      "sha256": "AD854D8A6D078B5A293F59314C61387F4DEE466E0EDB6BE8083E0130310C4C63"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_BarbarianMagical_A_Pants.GR2",
+      "bytes": 195276,
+      "sha256": "2818078090D927D7B7F122D8BED532DD69295CFEE067E9F35F9063ECEAE2B5FB"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_BarbarianMagical_B_Body.GR2",
+      "bytes": 661760,
+      "sha256": "7D852F3D1748024199E34F991489AF131BF3F0CC24C0A5DA48C588F11E1CFEE1"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_BarbarianMagical_B_Chest.GR2",
+      "bytes": 110036,
+      "sha256": "C5DB0C519896D0C38A8DA7D1A08B50E8CB655D27C6FE16D096988A7B7FFBFAC6"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_BarbarianMagical_B_Pants.GR2",
+      "bytes": 459684,
+      "sha256": "D4F8B01FB8906FD671069EDFD194D85EE5C5B2374B0A91CF1AC07BEBEB231F78"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Bard_BodyBot.GR2",
+      "bytes": 425340,
+      "sha256": "CD79BBFE4250E89463AC13718F417976F1DB40186CF093E58A9A298C5A664A71"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Bard_BodyTop.GR2",
+      "bytes": 361336,
+      "sha256": "B52A417061FE8F60F7AA3CDDF4AB8BDDE1E567EC9774B6F9201999168A7B90D8"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Bard_Pants.GR2",
+      "bytes": 307396,
+      "sha256": "D196B476BE0F42B507609205629D2331DA12CE96F74AD55AF882CD2C6A8D070F"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_BG_Watch_A_Pants.GR2",
+      "bytes": 183696,
+      "sha256": "5BB5F477FF79D620A8D9F6795FAA1E4997F293256D500CB8B8777D120025EBA7"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_BG_Watch_B_Pants.GR2",
+      "bytes": 185360,
+      "sha256": "3069C746682E3A011D97FB2DCE35B28353E34A6ABDC25A301EB76030D4CF0080"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_BG_Watch_C_Pants.GR2",
+      "bytes": 144912,
+      "sha256": "32A9D8BE884F7E0F08E6E987D71099979D6254B54588825B6F9E3010648EE790"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_BG_Watch_Leather_A_Body.GR2",
+      "bytes": 562380,
+      "sha256": "8353A5A6892CA65EAA3F4DD246EF61705CB0431459957A029FEF5997C86CA0E4"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_BG_Watch_Leather_B_Body.GR2",
+      "bytes": 488788,
+      "sha256": "C69FFA1EA28B96528449BCBCCB20D5404897F6C6642688960701B3BCB57C0F4D"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_BG_Watch_Metal_A_Body.GR2",
+      "bytes": 551136,
+      "sha256": "6407CBE2D7C7BC6F5DC2B457E56224014915EBDCF25091BFA9B08A8DD0AE1680"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Bhaal_A_Body.GR2",
+      "bytes": 1185600,
+      "sha256": "CF0265E8512C008745653AEC437F1842C6C6444C1E305F414297C59527A7AB04"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Bhaal_A_Pants.GR2",
+      "bytes": 172268,
+      "sha256": "BE226EF63C8153015C08BA05AAB8014DE774BF5EC423446F01895F8BB067A32C"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Bhaal_Rags_Body.GR2",
+      "bytes": 264212,
+      "sha256": "D2410AF4B307AE91857DF33CCDB3B88D3EFCC2603972877B586482ECC60FEA88"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Bhaal_Rags_Pants.GR2",
+      "bytes": 129228,
+      "sha256": "220C863327CB34335D047F9C542A87843224F4E71C9E2D04BF30598D83C63211"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Breastplate_A_0_Body.GR2",
+      "bytes": 595732,
+      "sha256": "50A694D514C9AD71C0AF8F22BA2EC3564229F8D547B02EE98581994BFE5386F1"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Breastplate_A_1_Body.GR2",
+      "bytes": 653168,
+      "sha256": "31DEE182787166EF230B122AAB00771787A3FA5AD4B1BA2FE0667B343CE61D39"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Breastplate_A_2_Body.GR2",
+      "bytes": 1723484,
+      "sha256": "09F5A4869A5B20DD2F462E9F5A637754D72DA98F75AF8BC277B54BB9C4D0B932"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Breastplate_A_Pants.GR2",
+      "bytes": 391860,
+      "sha256": "924955A18799B12A903206394D707BA1D12C42F3239066F64F9837E26CDB5FB4"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_ChainMail_A_0_Body.GR2",
+      "bytes": 844384,
+      "sha256": "978DCABC7D61F8672DDA1077B0FF56657790180CB2F84CE41B1A3E806C02E8CA"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_ChainMail_A_1_Body.GR2",
+      "bytes": 1524696,
+      "sha256": "396AA09DD0F98F45831EB928A67BA48785E317D20C05E2B88151E819A3505BA2"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_ChainMail_A_2_Body.GR2",
+      "bytes": 2111004,
+      "sha256": "EFC24EAD89779BD1C2068C37766F9A8C4EDBF9C1F03922D4BE53CB4E69201EDC"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_ChainMail_A_Pants.GR2",
+      "bytes": 178888,
+      "sha256": "4DDEE4D3FE16F141F50F4C3EE3E737FE2DD5B28C43185636DB09A86E58E564F8"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_ChainShirt_A_0_Body.GR2",
+      "bytes": 574560,
+      "sha256": "5EBE1375094E991AADB3361DB67660E51CEC4FC9C88098F6E14D6743DB886B7E"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_ChainShirt_A_1_Body.GR2",
+      "bytes": 365844,
+      "sha256": "D5515F3E63C15D3984C31D7C85C9E914C7AB5838127D12753CE98FA248E31D71"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_ChainShirt_A_2_Body.GR2",
+      "bytes": 492860,
+      "sha256": "AB0080FC844E2A1DBDF760EE1082EE6C964089934129AC147DB3403A6C99FB54"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_ChainShirt_B_0_Body.GR2",
+      "bytes": 310424,
+      "sha256": "E971057F1AA0646EDFCF9639FA0BB09405100A7B01198E5EE9BE1B941FB6BC50"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_ChainShirt_B_0_Broken_Body.GR2",
+      "bytes": 225276,
+      "sha256": "1AE53280B557F3E086EE134D18D9EDE56A9B06234CBB12E70FAD2D052E5C2342"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_ChainShirt_B_1_Body.GR2",
+      "bytes": 594944,
+      "sha256": "EE52B6D6261F8E8B70F1670FDB7937D15635B8D3C5C40E6C45A4EA2D5C51BBDB"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_ChainShirt_B_2_Body.GR2",
+      "bytes": 1105860,
+      "sha256": "4BF147E9E52A1061D77A13FE316A0E84E897296034974A6C1E55923BEF8F7DE8"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_ChainShirt_B_2_Pants.GR2",
+      "bytes": 72872,
+      "sha256": "145CA8FB79BE4CDBDF1A7046C2D3316EF965AA54628EAB44E3E40683F06E7773"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_ChainShirt_B_Broken_Pants.GR2",
+      "bytes": 59684,
+      "sha256": "3B4F57DF1847AD1D99AA55A96465C0634DED358D7C977A88DD929DF70365E774"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_ChainShirt_B_Pants.GR2",
+      "bytes": 72868,
+      "sha256": "9531DA4EA8C406C3AA226F185F6C711E1C4697F0AB761B30691D739AAD47B1AE"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_ChainShirt_Shadowheart_A_Body.GR2",
+      "bytes": 656084,
+      "sha256": "4EAA9F1A2D1E9D61B4303F5AA4E1BEFECE993427343E24D27ACC23C29745751F"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Cloth_Magic_A_Chest.GR2",
+      "bytes": 586700,
+      "sha256": "97ECDD3AF55B16225E287318479B6B2D0DA0C6556982A1029D7D119CD5347F47"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Cloth_Magic_A_Pants.GR2",
+      "bytes": 712676,
+      "sha256": "099BB4B1FF0973696400CF4A79C21F33BE1E04D31C4EDF807C15086F9A157A44"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Cloth_Magic_B_Chest.GR2",
+      "bytes": 496820,
+      "sha256": "876A67B162B2DCA3E2EA069B71182E7F1484F96A893BDF5C8FFCDA1A263FF3B0"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Cloth_Magic_B_Pants.GR2",
+      "bytes": 139628,
+      "sha256": "1C180FA2A96DF28C578D6C590439CC48EA3CA3119A35F95B73A26C623ABDA536"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Cult_Absolute_Body_A.GR2",
+      "bytes": 281916,
+      "sha256": "64C4CA79C865F75216D5C36D9C35B2B9764C1A6ABAFF9D41951C747761E2E904"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Cult_Absolute_Body_B.GR2",
+      "bytes": 244180,
+      "sha256": "D5343E17A2A098A17CE5E5BB4A80AC893FD460F4B2DF60B527E532A90634ADBA"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Cult_Absolute_Body_C.GR2",
+      "bytes": 353708,
+      "sha256": "C930BCA2B1336D31A2E69B9B7DE7F7BB77B0A4E437FF6D48D108B3656D5CE175"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Cult_Absolute_Pants_A.GR2",
+      "bytes": 407688,
+      "sha256": "28E73FE212E4004D04377D62AC403E2DAB12B0829F05F555082C4D92C7F3179F"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Cult_Absolute_Pants_B.GR2",
+      "bytes": 160476,
+      "sha256": "234DF6CF74C5834972AD8AE9BD0B8FB063EBE0C7E7BBC79E99FD468E1D77FA52"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Cult_Absolute_Robe_Body_A_Belt_A.GR2",
+      "bytes": 112904,
+      "sha256": "ED90B0E03158138B97B10F8454D6898F4FFF0CB0FFD49F72C095BC45401E8499"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Cult_Absolute_Robe_Body_A.GR2",
+      "bytes": 708736,
+      "sha256": "927F6B16543F8C6610ECFBA894F56F4E2DE2DBE758544A903B34E41577E4866C"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Cult_Absolute_Robe_Body_B.GR2",
+      "bytes": 703456,
+      "sha256": "012AC55B234F8C5EC97249D45849E4F4B116910F89A66E96C39752D15284C04C"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Cult_Absolute_Robe_Body_C.GR2",
+      "bytes": 831096,
+      "sha256": "8AC2F969F758D78FA355658444AEA1D18F8F45AD9074F47DB0D69ECA70961A44"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Cult_Absolute_Skirt_A.GR2",
+      "bytes": 135828,
+      "sha256": "E3A33C94DD015288DB0FE765DC5C51A23D82D00D5E4A5D52935079B49C2FFEF2"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Cult_Absolute_Skirt_B.GR2",
+      "bytes": 224352,
+      "sha256": "D7196B961B6D16B3A330112799DADD430718D9C43B872DCCF8FEFADA5EC248F5"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Daisy_Body.GR2",
+      "bytes": 527236,
+      "sha256": "F2231A059DCF18E0FE908B97744EE2D88680CCA9E6E8BE5225C205C16211D3D5"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Daisy_Pants.GR2",
+      "bytes": 236344,
+      "sha256": "645B9AD9EBD3E57116D76BBEDAAD4BFE824F194EBDA6DB11AE3283CD97C0A124"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Dark_Justiciar_A_0_Body.GR2",
+      "bytes": 1076348,
+      "sha256": "E4E3A654CFABB7240ECCC82961216C3C5DE994DE64E9E34F573260A09E9B955A"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Dark_Justiciar_A_1_Body.GR2",
+      "bytes": 840340,
+      "sha256": "5C40A8A2EB646D5A43361DE08E27FA1BC8438C29759E8A526ED0F0A55EEB7667"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Dark_Justiciar_A_Pants.GR2",
+      "bytes": 409316,
+      "sha256": "D642F38A3A8A15E879961D01A409A4208886F9950A883669E883F6A1249C08F9"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Dark_Justiciar_Damaged_A_0_Body.GR2",
+      "bytes": 947336,
+      "sha256": "D41D3011CB1A23593F8A0855998CE505F3380BEDCEBF835FBCCA6C9D63392E3A"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Demon_A_Body.GR2",
+      "bytes": 891808,
+      "sha256": "0611F0A5F3CAEDF5A97773A302CB3C268481DBA0FFD8C3E66AF5C6140C337BBD"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Demon_A_Pants.GR2",
+      "bytes": 521356,
+      "sha256": "FAC3473EB8CF33CCEDDDCD0061EF7277F48724D8A40CDE516AB85A80083F271D"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Desire_Dress.GR2",
+      "bytes": 1139636,
+      "sha256": "30D90550668AAA4C60DADAE65F51CE4DCCDEF7F0B4A002D69BDB7F524123FC75"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Desire_Pants.GR2",
+      "bytes": 120516,
+      "sha256": "38C6DE8D73F069F3248DC43D4B5AEBD4F55E8F1C5F961DB9511F43098BFA1EE4"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Devils_Blacksmith_Body.GR2",
+      "bytes": 1169580,
+      "sha256": "F171BC8C65D23508A5DE0DFB57F3FB485F6CEFA80CD7E9BAA5188DF23EFF88FB"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Devils_Blacksmith_Pants_B.GR2",
+      "bytes": 96908,
+      "sha256": "46364D7A58A3A1294B32438BD5BF7E8F0FA60A3C3B7D26BE109CD14A786D3E92"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Devils_Blacksmith_Pants.GR2",
+      "bytes": 149064,
+      "sha256": "654C811C8635CD5806645847E64400432C0D453F2E6AB5D69291B08A2367E265"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_DrowLeather_A_Body.GR2",
+      "bytes": 435296,
+      "sha256": "EDA52CDE3389B039A609652494C2CBD5FF169681904469250E3BE9FF0538B8E5"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_DrowLeather_A_Pants.GR2",
+      "bytes": 120884,
+      "sha256": "80FC34C64E3CC99B001F3C4024BBF728443396BD54CC333DB3833F24C3995A85"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_DrowLeather_B_Body.GR2",
+      "bytes": 263084,
+      "sha256": "80B5D752EFF56CC95EEF1F067A6EE6F13CB343764EAC4694622A4DA3A4E3013A"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_DrowLeather_B_Pants.GR2",
+      "bytes": 87212,
+      "sha256": "406C34B97B2513C722F307DB55A040E8A151AAE80276601C88801B8F14F0ED2F"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_DrowLeather_C_Body.GR2",
+      "bytes": 426516,
+      "sha256": "BB34E58C9402838E09561CE6D24FF501F57126C712C6044C0E32AC31E1DD212B"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Druid_A_Body_Leaves.GR2",
+      "bytes": 274148,
+      "sha256": "C93E800AB4C076BDCC56B63F5F6BA845FBED3751AEDD7B75E2C9B91427C65B8F"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Druid_A_Body.GR2",
+      "bytes": 610552,
+      "sha256": "1E0939F7509205F213F887BFBFA3FF2404C3202472A914E20D6C38469A01D4E5"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Druid_B_1_Pants.GR2",
+      "bytes": 122604,
+      "sha256": "6A8919119B4C09BEAE2501428519C8D37E2E00D342B196B486D2C8E28B36B8B6"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Druid_B_2_Pants.GR2",
+      "bytes": 152848,
+      "sha256": "A231FE14F565F0D0F9175A948A78A5DB435F3FB2996A09BB42096CDE5B71075A"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Druid_B_Body.GR2",
+      "bytes": 1201344,
+      "sha256": "7D455191F98B422FDD752FDC81F38C04A53F9636E9D6C84106CCD02D2D77561A"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Druid_C_2_Body.GR2",
+      "bytes": 1030388,
+      "sha256": "507ECECE464FCEDCF068580377ACCF06B3423F2244C87046300E50D2ACBD2126"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Druid_C_Body.GR2",
+      "bytes": 641936,
+      "sha256": "2B9AFF91110BECAC33B3198AFF4FE09A0B03AB2B662BD4A6A95FD7BC690C3FDD"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_DwarvenPlate_A_Body.GR2",
+      "bytes": 2368520,
+      "sha256": "F7779C229A6613DDC6B8CD55B871F0759801FD30E0A58A1392CB5FDBF1E3A141"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_DwarvenPlate_A_Pants.GR2",
+      "bytes": 401476,
+      "sha256": "9D2CF36BDEF8756F2FEF177A10606C15D37D13833C2E7A8CC07515BF27B55075"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Elven_ChainShirt_Body.GR2",
+      "bytes": 899968,
+      "sha256": "9A1D8C542D1396883975CFAEC058E69DE6F229C04AEE62165E91C42F32D574C7"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Elven_Umberlee_Chainshirt_Body.GR2",
+      "bytes": 583200,
+      "sha256": "1235638B63AD71D0887C336C0850F0C0E1006B8C543B4A7F0B6411DF1665CFDE"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_EPI_Robe_Shar_Body_A.GR2",
+      "bytes": 698732,
+      "sha256": "C39B87913B867FCFE1A1BBCF7C7CC1D2750EF52C73B02F16020200257E48155E"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_FlamingFist_Bandit_A_0_Body_Pin.GR2",
+      "bytes": 41652,
+      "sha256": "DA01A8DFA2947096E92C71D1CA12F77A4B14A869815EF089310BAF502EA563AF"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_FlamingFist_Halfplate_A_0_Body.GR2",
+      "bytes": 784056,
+      "sha256": "E5BFA76A663138D63EDB465500CBAE60F23AD3B3D8EA08AB23439385DE39C995"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_FlamingFist_HalfPlate_A_1_Body.GR2",
+      "bytes": 294480,
+      "sha256": "96FC787725FAB7F2856C0388B7FBA7726F9C9D212FA3157189E2550306A3021A"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_FlamingFist_Leather_Body.GR2",
+      "bytes": 428928,
+      "sha256": "0EBE3F9175569A2DB9EDC040D472AFF4A83F394F08318F6A98B4F524B9603DD7"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_FlamingFist_Robe_Body.GR2",
+      "bytes": 369092,
+      "sha256": "481A5789E29E8C0EEE4E10FCBADA515F4E3F8CC5D88BBBA3D43680FD77C953F5"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_FlamingFist_Scalemail_Body.GR2",
+      "bytes": 1543056,
+      "sha256": "10313A0AF1F5B5B90F4D95BBFE24BB7B4468D76FE9E7AB4D30E529B7FB68893F"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Githyanki_HalfPlate_A_Body.GR2",
+      "bytes": 884564,
+      "sha256": "B78ED4023A25CE473EFB421D2B14504659EFA046448CF0F58085ACEA5E41388D"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Githyanki_HalfPlate_A_Pants.GR2",
+      "bytes": 185572,
+      "sha256": "0CE15549E10B7A21C4E70233944F81FFD47783F5DC1234B950F7B610393049F5"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Githyanki_HalfPlate_B_Body.GR2",
+      "bytes": 491712,
+      "sha256": "3EF47C5519E001A50339F9CC8395C1BBFB84F1DEFA8F81C7375859C025A2AAB5"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Githyanki_HalfPlate_B_Pants.GR2",
+      "bytes": 205432,
+      "sha256": "F51CF554DFAD9380C929A5D95D36B3C39963D6DABA1F872E07A8B2B4E502B403"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Gortash_Body_Jacket.GR2",
+      "bytes": 705852,
+      "sha256": "7CB00516CA76DE75848FDAD0A3E7523E2359C7B34D789C4A275D1F93AD31165B"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Gortash_Body_Skirt.GR2",
+      "bytes": 1177944,
+      "sha256": "B477B4EF5792D28F7C3E986C34AE71B1184FC8E81E3B16579D5C302D285641EC"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_HalfPlate_A_1_Body.GR2",
+      "bytes": 506052,
+      "sha256": "177086613ED4FF5CBA37B88691451FB5BEE53663F44E87D3156BE2930535A5BD"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_HalfPlate_A_2_Body_Shoulderpads.GR2",
+      "bytes": 154188,
+      "sha256": "B01604E82A120B7B1870541E72A7C09491E6A0912AE911761DAA705C1F1C3D21"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_HalfPlate_A_2_Body.GR2",
+      "bytes": 1118724,
+      "sha256": "D6C86D6A99DE8EA8AACE944D90C8079820F3AB95CC908B239A9FF7BD4996191A"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_HalfPlate_A_Pants.GR2",
+      "bytes": 451420,
+      "sha256": "11BA55AB89930EC1AB7341DFFC505E22D69FCD66D37640E2A754A2CEF1EB5AB9"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_HalfPlate_B_0_Body.GR2",
+      "bytes": 280356,
+      "sha256": "0D10DFB442214BD3FAA3A73EE00222971C62B89FAF16174A7823040B9715A7AB"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_HalfPlate_B_0_Skirt.GR2",
+      "bytes": 223140,
+      "sha256": "D186227091EFD1BDADCE3F69397880F80EBC23203695D91FF509B3F496CE1CB1"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_HalfPlate_B_1_Body.GR2",
+      "bytes": 656156,
+      "sha256": "1E86C2FE6869580E10B8226C6210920B779A4D11E1DC6396FA0DA3F72EB25023"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_HalfPlate_B_1_Pants.GR2",
+      "bytes": 326208,
+      "sha256": "E549E515282DE26203DF831A9BC103E4407C4F0E652E817D3B54B5EA73E29E1F"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_HalfPlate_B_1_Skirt.GR2",
+      "bytes": 129760,
+      "sha256": "7DC0C6EEAB48BA721A29D906F4439380CE3FEABC40A657E7A9F1E6B48B090A2E"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_HalfPlate_B_2_Body.GR2",
+      "bytes": 362768,
+      "sha256": "9B143F24A7E05E01B543092BB940B68572BFE069E8EC422AEAC9E125F0525CB3"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_HalfPlate_B_2_Skirt.GR2",
+      "bytes": 371264,
+      "sha256": "5894BE124926CADE03C04EAB1D7210B701A190B87BA90416FA9FFCF982F67BFE"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_HalfPlate_EndGame_Body.GR2",
+      "bytes": 450408,
+      "sha256": "6DD87E9FB3758EAE00D136F746C31678964926AF7B617378C6BFD235D6A553F3"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_HalfPlate_EndGame_Pants.GR2",
+      "bytes": 138348,
+      "sha256": "290BD13827AA7123E79BB1126FE7E2EE49B16E5A5D12EB2F32C020872BF7668F"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Hide_A_0_Body.GR2",
+      "bytes": 991588,
+      "sha256": "0FEB7FAB857802224E2C94E713AB14337FBCC64076C3ABF427EDED50AA7BA640"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Hide_A_1_Body.GR2",
+      "bytes": 796576,
+      "sha256": "BB2E319BC9B728821021D5CA85CA602BF27E81784D4AB025251C13F269C997DE"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Hide_A_2_Body.GR2",
+      "bytes": 1192208,
+      "sha256": "8FCC812C5A36F27C25911CB9D718A2AEA46CDA9A50568A428801BF9E28B7D9A7"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Hide_A_Pants_A.GR2",
+      "bytes": 143652,
+      "sha256": "669DDB11EB9E40372FD20AEEBCCC04494CEAFB68349AE416570CE1039797E073"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Hide_A_Pants_B.GR2",
+      "bytes": 279584,
+      "sha256": "3946434927EB646793B35686520058E8A7413ED895DA0A726FF509077A264D48"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Infernal_Robe_Pants.GR2",
+      "bytes": 293692,
+      "sha256": "8E6899EB58E62F6E99B7872290654F5794BA3398D9CFD5028ED1468788B010EF"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Isobel_A_Body.GR2",
+      "bytes": 743408,
+      "sha256": "CF13CB6CE814DE4F460A61CF035623B92D36532AF30543070C57DB43143708C5"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Isobel_A_Robe_Body.GR2",
+      "bytes": 805768,
+      "sha256": "9125B130B0A3D7F5D6C36DAEC362F77EB826C4536718FA73D8352F343024F27F"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Isobel_A_Robe_Skirt_B.GR2",
+      "bytes": 53472,
+      "sha256": "F445883ACA564B7DA5ECCA7E23D5EF4DDC0B26D8CC3278F3654D73181CC61D6D"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Jaheira_Pants.GR2",
+      "bytes": 130780,
+      "sha256": "F12000872B6F22C0EB5FCD4AD628BD7A86EA7CB09013237855128102D36DC24E"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Jaheira_Skirt.GR2",
+      "bytes": 190528,
+      "sha256": "0255E358E89BBCA9C13B940782AF90BE0B56822C05EBE43C5EEC321FDBDFDAD0"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Karlach_Epilogue_Player_Body.GR2",
+      "bytes": 1061908,
+      "sha256": "E659AD7CD4FAA342132EB5B991DB78861E6DCFECD9D9DF382822A6CF8814A011"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Ketheric_Body_A.GR2",
+      "bytes": 2269648,
+      "sha256": "E9CA0214D888EBB0D0DDAA41B349D1426A34784595AF736B66D69BD494C4DA26"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Ketheric_Pants_A.GR2",
+      "bytes": 508156,
+      "sha256": "C464ED54A6AB74BDBB356929C452CC2A080C6F992DDE5F444DC8614728EA2398"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Laezel_Githyanki_HalfPlate_A_Body.GR2",
+      "bytes": 422600,
+      "sha256": "9262BE56EA4D81BABFEFCBED792C5FA46DB56739B983CEC46E4D3AA811291DA1"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Laezel_Githyanki_HalfPlate_Broken_A_Body.GR2",
+      "bytes": 428484,
+      "sha256": "D4941C7B6E62EAFCD257F75B3E391E463BC3E91FC6E0ADA3BC24F22E9ECA3203"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Leather_A_1_Body.GR2",
+      "bytes": 549552,
+      "sha256": "D2B056F2CE0BF71ED23036853348841D145CF6F3459E8E1D3BAF7C7658C9E2A6"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Leather_A_1_Pants.GR2",
+      "bytes": 186060,
+      "sha256": "02E234FE37045D00CBB3B393E377FCBADD6B73BFB1ADE46ABAC3FB74C3520925"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Leather_A_2_Body.GR2",
+      "bytes": 519460,
+      "sha256": "E188B44B7F7C3F467C36A8259EA2A41D037CA13DF9D993B51F91BA4E67FB3989"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Leather_A_2_Pants.GR2",
+      "bytes": 189792,
+      "sha256": "7D379ACB30F0F3A42F7E53D384C8EE2B687F4FEE292A0A392958EE55703A7C20"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Leather_A_Body.GR2",
+      "bytes": 402776,
+      "sha256": "4C90A2826A845E9AED53F5AC0D093219007E37873D21E3FCB2D8D28EE49A760A"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Leather_A_Pants.GR2",
+      "bytes": 103536,
+      "sha256": "2A46B9B0B7FA3DA069E3D176EA7E78B67193850CF0B46AFDF421EA8F2EF867D5"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Leather_Old_A_Body.GR2",
+      "bytes": 1196060,
+      "sha256": "B85C6B525D9C33088F773BFAD1828966099EF5CBE1CEE36A1D92DC38A159AD8A"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Leather_Old_A_Pants_B_Kneepads.GR2",
+      "bytes": 112124,
+      "sha256": "47C144978CDA7E164FAE61AFEBF9511F8B7B2F7F4828735F44406D8C029DB7BC"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Leather_Old_A_Pants_B.GR2",
+      "bytes": 117568,
+      "sha256": "EF808C5D9218C613D30D7F4EF42A0725786E9718FEBA538500481ECE30F47D5A"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Leather_Old_A_Pants.GR2",
+      "bytes": 351244,
+      "sha256": "E9C69A193F928893FCF64310108AFDB45FDB1C54D14AFFA768F61ECB12480973"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Magic_Monk_B_Body.GR2",
+      "bytes": 589872,
+      "sha256": "F54761778066327904A706F40C20DF4296FC5426E8271DD4B2A8D5F3BF8D06C3"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Magic_Monk_Body.GR2",
+      "bytes": 447160,
+      "sha256": "E8C18C137810F15EA8921067BA953E32B8735921DD65F0EAEDEAAB1EB1BA296C"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Magic_Monk_Pants_Scarf.GR2",
+      "bytes": 136208,
+      "sha256": "D02CC0CFE9DAC31D99FD2C5249A19024B83A59DFB9EADCAD6915DF92EC810EEA"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Magic_Monk_Pants.GR2",
+      "bytes": 104268,
+      "sha256": "F068B271A118EEC07E979A2F9257083A213FFA672D9B01567C69F357AE2D89C0"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Mindflayer_Body_A.GR2",
+      "bytes": 446124,
+      "sha256": "2D477D3F7AD9F31F365BFB228B53EC1579455A2C6CBD0DB6E1E6B6CE67A30BB9"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Mindflayer_Pants_A.GR2",
+      "bytes": 56116,
+      "sha256": "514D45C390E56C31574B0C1E3172A3B437A1E4462408C47D13F1B5CD118B742A"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Mindflayer_Skirt_A.GR2",
+      "bytes": 429608,
+      "sha256": "DDA741C766CDEC05637ACD2816A052CE2C0C18DB472EDBC5B8C91C134CDFBD72"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Monk_A_Body.GR2",
+      "bytes": 305372,
+      "sha256": "A0CA30587A3A571216BED603D4AA5E67777D8A5B8E87793CAEB83DD17A5E6157"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Monk_A_Pants.GR2",
+      "bytes": 130156,
+      "sha256": "D5A24B7BAA9B9637049C5903A89B00E800EA318A58167E6F51E18A9E7F4646B7"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Myrkul_A_Body.GR2",
+      "bytes": 1219612,
+      "sha256": "0A57B7C5522279B3BF7020CEDD84A51A3F6EE997F33B7E3E50C9968BF564A455"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Myrkul_A_Pants.GR2",
+      "bytes": 179292,
+      "sha256": "11C58909000C9C94D4A9E0954BA564A710E1A6F0FF424AD697CC4A0D241A3B65"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Myrkul_B_Body.GR2",
+      "bytes": 859276,
+      "sha256": "EDBC37DF187746962F4FA5810DF9E377160BF6A3B18580C243C2FB17280C837F"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Myrkul_Plate_Body_A.GR2",
+      "bytes": 538632,
+      "sha256": "0C283765E6EE33656E5076D2C8DA4E71B4D6D0C7867EE3A923727B5BD7098AAB"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Myrkul_Plate_Body_C.GR2",
+      "bytes": 1019088,
+      "sha256": "0B2002BBFACAF73B88CCD1D57B39ED65D63DD329BA30B06339AF913C63FCEF93"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Myrkul_Plate_Body_D.GR2",
+      "bytes": 546144,
+      "sha256": "007FEBFE2F64311EBBB7778A0DD3A8F2EAC4D10BCA0BFA0E3B57A693D5982DA7"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Myrkul_Plate_Pants_A.GR2",
+      "bytes": 343968,
+      "sha256": "297914BBBC05C43F8B085E39C39AB1510247CE0387FF3F1FCE30BAFF0E437E6A"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Nightsong_Body.GR2",
+      "bytes": 1003192,
+      "sha256": "475B9AE173E2C9E946EDAA28BF5FAD1AEC68CA50A75B027F7B9915519754279E"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_NightsongPrison_Body.GR2",
+      "bytes": 147840,
+      "sha256": "5F0CBDEC85FA906078640DC2AE16642C6F22B3E44BAF2A92A8220BC947B12A10"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_NightsongPrison_Pants.GR2",
+      "bytes": 55236,
+      "sha256": "AF54E0E397009ADDC64DAC71FBA15543EB18C2536AB5CEDED927E1078B8B36B3"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Orin_Body_Player.GR2",
+      "bytes": 520676,
+      "sha256": "297420ACB13CC0B1314966293F458EEE10DA01F0E94A90CEEB01395CFB886041"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Orin_Body.GR2",
+      "bytes": 470580,
+      "sha256": "EC1216296E74DB7EC42EED4A41144EADB2B27A687470F25B0D3FAE4B998A7150"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Orin_Pants_Player.GR2",
+      "bytes": 574364,
+      "sha256": "ABD8A9EC78FBBEB51942738A83AF5D2D7E89E93F174BABF46AD8B10D83371985"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Orin_Pants.GR2",
+      "bytes": 352568,
+      "sha256": "B4AE947B9E1882F9486C9E97CD40F2ECB81A07CE072DB3067905E4B924FBA19F"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Padded_A_0_Body_Broken.GR2",
+      "bytes": 448256,
+      "sha256": "7285D8322B5898DB442C4DB742BB812CE37F9C8D93760BC0744709C5DB2654E9"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Padded_A_0_Body.GR2",
+      "bytes": 788300,
+      "sha256": "259808513E2644D4F224FF2AB736AD6AE529917B2E52455503399389BDDA1E93"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Padded_A_0_Pants_Broken.GR2",
+      "bytes": 209036,
+      "sha256": "A08EB2FAB7CE10EFE63C5406A9E9B1430ED6ED726779CD2BF458C635A165D323"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Padded_A_1_Body_Spring.GR2",
+      "bytes": 585464,
+      "sha256": "84B14BD83375112480C9CEE95C76A6850C1AE56DE3804894E2C2D1B2EDD981F8"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Padded_A_1_Body.GR2",
+      "bytes": 941756,
+      "sha256": "F9622623691FDED28A5D89A9C7A12C5FF14A7653E9C0FE62E2115B01F43FBFD6"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Padded_A_2_Body_B.GR2",
+      "bytes": 1313856,
+      "sha256": "EE6D3B4233C715DC7B25AE369A14410BEE1CACEDFA632B88B4E00AB4238B6B15"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Padded_A_2_Body.GR2",
+      "bytes": 1324976,
+      "sha256": "433C2C20441D23FFB1BB7FCC2850D72E751142C3E260D3F25C818004C8B7397D"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Padded_A_Pants.GR2",
+      "bytes": 262412,
+      "sha256": "B8DE71F282755896B0DC2D363180C42641E4E6070869D61BEAF46BD5208EAE7B"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_PlateMail_A_0_Body.GR2",
+      "bytes": 453512,
+      "sha256": "6073EE0B9E9D60D681B9CDF8D7AD54DC8B5F51D4791B1E07C140D5F04BC2A7BD"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_PlateMail_A_0_Skirt.GR2",
+      "bytes": 219356,
+      "sha256": "483158DB437B1E37FAC588C88FE39B7A82EB561F0AFB689D0B22407752248725"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_PlateMail_A_1_Body.GR2",
+      "bytes": 453188,
+      "sha256": "D7D983E94355B43E28919965649D392043AECBA449F0233E19FCE1C3560C79BC"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_PlateMail_A_1_Skirt.GR2",
+      "bytes": 305072,
+      "sha256": "898FE524071E6C2774CC3A7C0B774A38EBBBF9F35B17E250B2045D337BEC66AF"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_PlateMail_A_2_Body.GR2",
+      "bytes": 526116,
+      "sha256": "42171BA997D9F646A5592E35DF622E47287418671521B5D984C765203278C139"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_PlateMail_A_2_Skirt.GR2",
+      "bytes": 257196,
+      "sha256": "5F38AF71E4BA9B84D0F39D07574F84809D9A5D2A69C4664A38244DE3993F8C07"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_PlateMail_A_Pants.GR2",
+      "bytes": 503192,
+      "sha256": "405E949C4C9DE3B31CF0C95A8F67B390333A77A665F1F023E4B05814E9BEC9C0"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Platemail_B_Body.GR2",
+      "bytes": 1568744,
+      "sha256": "68F787A5300DC55D32201E1D700C029E737D6B91BDF99F30388BE19777446577"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Ravengard_A_Body.GR2",
+      "bytes": 1137468,
+      "sha256": "6F5C6220EF856F3BE337568317657108BA3B27C71B81DEEF49F1303AC10435AB"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_RingMail_A_0_Body.GR2",
+      "bytes": 300452,
+      "sha256": "D16D972C7643706E7EC92CA5CD9D2B0F6DAC76DC97771629A5F232A8DF5517D4"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_RingMail_A_0_Skirt.GR2",
+      "bytes": 164892,
+      "sha256": "92D2F7BA574A4FC94595CB14EC72C5EBCECAE0D286E6402527BCE532863037F3"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_RingMail_A_1_Body.GR2",
+      "bytes": 496900,
+      "sha256": "53A4E4EC8AC716B2AF51938ED2EBF4D033CEF1387C42AB0C43D7E7C62CEDA2B3"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_RingMail_A_1_Skirt.GR2",
+      "bytes": 519784,
+      "sha256": "2D718A939F47720D5C52508E52B4A93F5B32FFE6109466201EEE4829C09C507D"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_RingMail_A_2_Body.GR2",
+      "bytes": 618940,
+      "sha256": "18E47B49AE342AE5D75BA7EF5E1EDF90B058C85FE7D0C71FA2E0AC349F32942B"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_RingMail_A_2_Skirt.GR2",
+      "bytes": 645664,
+      "sha256": "AFD2F222EA045506FC5A2B788E27E9C5038ABBCE69B27FC17F904327867091F0"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_RingMail_A_Pants.GR2",
+      "bytes": 183028,
+      "sha256": "28AB7BE08AA7E7CFF3DB26FB44CC167AC52FE3F7E7E5B8FF24E09EFB7A7FD5AB"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_RingMail_B_Body.GR2",
+      "bytes": 621388,
+      "sha256": "512AA78DD204C3D6C8E6A8C4C2C9BBF5BEAFAAAF8831576317177AC238D33F19"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_RingMail_B_Pants.GR2",
+      "bytes": 427468,
+      "sha256": "9056D507DF968C865E931F56E66FE807BB22E180CC7C84C85014819699B4EBB8"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_RingMail_B_Skirt.GR2",
+      "bytes": 647604,
+      "sha256": "477F349A98EB13A0B0476C929C733B8D45D17B5371E159BCCAF19D524CE9C15E"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_RingMail_C_Skirt.GR2",
+      "bytes": 111068,
+      "sha256": "49147D4D0268147F2ED2EB18306D1D6CA7590EE4640D81D83E8850DFD4798660"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Robe_A_1_Body.GR2",
+      "bytes": 345324,
+      "sha256": "E6F06EA765DEA02829D94E67EB976CFAA578300D3CEE6839325E18436A382716"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Robe_A_2_Body.GR2",
+      "bytes": 246964,
+      "sha256": "85B792114F6DE4FBABC26F7131B66FF3023061FFD2F67B8ADB13C9CA332FED61"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Robe_A_Body.GR2",
+      "bytes": 434508,
+      "sha256": "76F0A58357581912106ABF848541E52BD76A423B5DCEBF167E71B6C49C3F4B92"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Robe_B_2_Body.GR2",
+      "bytes": 611132,
+      "sha256": "198DACCEE5745DC23A0B9C1309E0C15D789CAA6A0559C508CAEC20391B76E978"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Robe_B_Body.GR2",
+      "bytes": 389212,
+      "sha256": "723FAB3B8320CA66ED4CDF4A898FA81657F2FC244DC990F0C61CCD47BF23C344"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Robe_B_Wizard_Body.GR2",
+      "bytes": 423052,
+      "sha256": "D5E3DA05A5A8B4AD380D52B17947CCFF11110A62F322057E727DA9C7D20F728C"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Robe_C_0_Body.GR2",
+      "bytes": 808020,
+      "sha256": "7DAA8E7F36355B87018DCF2B238514ED8B3D99F4FA9001E44DBBC049F21ABB5F"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Robe_C_1_Body.GR2",
+      "bytes": 1009656,
+      "sha256": "7566390A806F9E8C898310EABAF8BC4FECB1FBE71247D5E8DC952AFDB1D3ADBE"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Robe_C_2_Body.GR2",
+      "bytes": 1722888,
+      "sha256": "3337C066A06F6386D028360F866041597E19B230C652F3939D97E5AB40252255"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Robe_C_3_Body.GR2",
+      "bytes": 1282464,
+      "sha256": "D442B3911CFAB78F28FC12584B001186C337359EF2B989BA3262476486C4C681"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Robe_D_Body.GR2",
+      "bytes": 546200,
+      "sha256": "ECC7192F5EE965AA3E4A212479A9F1BD4775EAB228A2B2D73143359EFC1E6ED3"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Robe_E_Body.GR2",
+      "bytes": 1015152,
+      "sha256": "AC777CA2BEC603B21339E53636A343F6FA459243EAD309E10B13960FFC7BC6B9"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Robe_EndGame_A_Body.GR2",
+      "bytes": 1709408,
+      "sha256": "7993A61EFAC5E6AF15D7A26EDF5848C291AAC8A941D075E1654BBA8B722DFA64"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Robe_Lorroakan_A_Body.GR2",
+      "bytes": 591928,
+      "sha256": "57FDBD34DB6BFE3D03B606A4E4A5CD6E100A33E12B1C29A978B24C0AAEE92A4B"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Robe_Lorroakan_Body.GR2",
+      "bytes": 752248,
+      "sha256": "B7ED78BC0984031DA268F1959AC7029F11DFBCB56BA3C4D637598F1129E5105B"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Robe_Shar_Body_A.GR2",
+      "bytes": 776024,
+      "sha256": "481D96FDA9859811806F4214B97EB7D30E214AD44D4099DBD2D511F53C974CFB"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Robe_Shar_Body_B.GR2",
+      "bytes": 557312,
+      "sha256": "87C18F62DFA8DF75F65659D7BB01885D93EF24444D2264394A8464A6B8C2DBFB"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Robe_Shar_Pants_A.GR2",
+      "bytes": 78160,
+      "sha256": "F35F6565FFC303B3F7D7386FBF2C7F6D19263F4B61CD194ED55A711953E24A8C"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Robe_Shar_Pants_B.GR2",
+      "bytes": 161992,
+      "sha256": "00032053B2B4063C9264B608E4D760757C9DD86EF130E7351BF892331196000E"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Robe_Shar_Skirt.GR2",
+      "bytes": 143880,
+      "sha256": "9B4ECA75858A5D03921D17E98F8A6180F262E8E08630FD1416CCCC13D4553DC1"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Robe_Umberlee_A_Body_B.GR2",
+      "bytes": 880596,
+      "sha256": "8B369220439BB62B8F6EB3C0485646CD8B35EC4D69C00B598816B07AE94C8535"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Robe_Umberlee_A_Body.GR2",
+      "bytes": 881176,
+      "sha256": "03938413F0F1BE127D94C6BDD49AB67D9DEC71AAB830D3BB41AFBE6544F295BE"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Robe_Umberlee_A_Pants.GR2",
+      "bytes": 143096,
+      "sha256": "0061B683136A164A7DC272AE1066E500FAE1EB70FFC6105DD2F41ABEBB877996"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Robe_Umberlee_B_Body.GR2",
+      "bytes": 516052,
+      "sha256": "891B40B973EE4A1E94265335D07D26C5BEFCD6800B94ACDCFB27B83FE47591A8"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Scalemail_A_0_Body.GR2",
+      "bytes": 477656,
+      "sha256": "9274F0DCBC2DA358AB3E926C7EFBE502F9EDF24A324102D98542A9B025A3AD2A"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Scalemail_A_1_Body.GR2",
+      "bytes": 428844,
+      "sha256": "2BED51CA15A26E2644A299B61ACC392234CA62A5027431CCB7E5B365EE7AE0A8"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Scalemail_A_2_Body.GR2",
+      "bytes": 1189492,
+      "sha256": "DEBC5C0999CD53C4525CB58A47AB68E61034373C24FC273451017E9FE699C21E"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Scalemail_A_Pants_A.GR2",
+      "bytes": 108884,
+      "sha256": "00BCB39EA32C8B321C302A2AAFC34F942E3AEE3EB537F693D4AFEFE352C0614A"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Scalemail_A_Pants_B.GR2",
+      "bytes": 178188,
+      "sha256": "4AF55705444CBA5F1111C11C88A850485E5FFA05BFC465E08BBD3BE21C89F270"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Scalemail_Adamantine_A_Body.GR2",
+      "bytes": 702020,
+      "sha256": "DD2D7592749E23F5662C8D72C92B0C12F4BDE7390D8379CD83B6B4EA358D314F"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Scalemail_Adamantine_A_Pants.GR2",
+      "bytes": 259204,
+      "sha256": "12034BC64865CA2B1AEA93204F6874E2AB12BBF5427610EB3BC9A945C9016268"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Scalemail_B_0_Body.GR2",
+      "bytes": 1275628,
+      "sha256": "2C65BC558E11FE540C1B49F171D87DF5570684D40DDDB322A42D07B4990633BB"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Scalemail_Paladin_Body.GR2",
+      "bytes": 759068,
+      "sha256": "4CA137FBE2EE6424A96C6D8778F4E01E94CF95F11B48F553D62AB77B69FF7797"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Society_Of_Brilliance_A_Body.GR2",
+      "bytes": 495732,
+      "sha256": "3530BCC54604D29487F640A173138AD3D1CF5E5DAE1557AD71C09AA8666406A9"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Splint_A_0_Body.GR2",
+      "bytes": 1555244,
+      "sha256": "EB332DDA8F2F471FFA19B77995B0F89E7939150D57121AE0866793718A5FFAED"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Splint_A_1_Body.GR2",
+      "bytes": 1839076,
+      "sha256": "57356A17105B2C591AF30C0B8B5B3A1AF7DE6163A5E0CECB7118E882A938586A"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Splint_A_1_Pants.GR2",
+      "bytes": 317236,
+      "sha256": "13001B1EEEA8C976511F17708578FCF1F7AA43912C9023AD9C6BFA09A975434D"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Splint_A_2_Body.GR2",
+      "bytes": 1925904,
+      "sha256": "1407EFB8D92DF6BA4A990ADAD693D8C0B8BA2CBE3DAE6EA777F7B7629353C2B6"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Splint_A_2_Pants.GR2",
+      "bytes": 313092,
+      "sha256": "C423BD51D0354F68FAEDEE5C91EE7E4C17AFD230B1DC30C09830F6BBCA2592D0"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Splint_Adamantine_Body.GR2",
+      "bytes": 992116,
+      "sha256": "BFC3FDED3D4A68B77F246AFB258FD2F69C00D0E0AD246DA8679000D47CA23614"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_Splint_Adamantine_Pants.GR2",
+      "bytes": 199816,
+      "sha256": "4F5AE2F17A4D4806B7E44926FA13FE83A24C12B3A1B332F82994D84C208F9F84"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_StuddedLeather_A_0_Body.GR2",
+      "bytes": 941704,
+      "sha256": "46BDA6EFD6A3B644FECA0BBC36452E79AB690435BF2AD51A965A95876A233024"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_StuddedLeather_A_0_Pants.GR2",
+      "bytes": 297056,
+      "sha256": "5C16DFDEDAAB225BA03B8605DD73A8D06B8C3FBFA06B83EB2B9A225DCAC2CD3C"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_StuddedLeather_A_1_Body.GR2",
+      "bytes": 1385496,
+      "sha256": "011CFE5FE7977FEA6AE6B93DB25DF66619378FAF708843128D3533B864A43214"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_StuddedLeather_A_1_Pants.GR2",
+      "bytes": 371816,
+      "sha256": "C464561DA210F808E1E205BCB90553017EAC410E07B77790C9358E07505E0915"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_StuddedLeather_A_2_Body.GR2",
+      "bytes": 1178928,
+      "sha256": "881C7F52299F9694C0DAFE6B66A6103A3376ADF90D28D074624AE60349851BD4"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_StuddedLeather_B_Body.GR2",
+      "bytes": 376368,
+      "sha256": "E4DBE83181F0A0D3E088C29CEE31BFD88343C101A40DDAB941E3EA61518D87E9"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_StuddedLeather_C_Body.GR2",
+      "bytes": 893420,
+      "sha256": "EC18B1CAA217359BED02DA075A187CECC8B87F7C7A65726829BFFC7F624B605E"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_ARM_StuddedLeather_Minsc_Body_A.GR2",
+      "bytes": 587284,
+      "sha256": "EF4ED8C7BBD7103B53B5469C09CF88944DDCC901362756C5EC2BF0646D2F3029"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Alfira_Skirt.GR2",
+      "bytes": 145656,
+      "sha256": "061F52247376668A9F9E24836545CFBBAEE0D61583523403D2123799F7433D56"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Bard_Body_A.GR2",
+      "bytes": 179728,
+      "sha256": "23CBC47DB32F7ED4872C6B67A130D449C02B3FE3E5D2218E4492A33928309921"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Bard_Pants_A.GR2",
+      "bytes": 263728,
+      "sha256": "0171B13C16C3F0A869D969FF521D499DCF9BFA5E4AA06A83F120BBA963771107"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Bard_Skirt_A.GR2",
+      "bytes": 113112,
+      "sha256": "69FEAC64220960C9B6B28B946887A1F6B71BCCA2050271A0E9F68549D7F8C8D9"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Blacksmith_Body.GR2",
+      "bytes": 824188,
+      "sha256": "F73EA2845FFE606DAF6181027338C4DFAD01A2B2508ADE57BF9DD58C80D5D7BF"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Blacksmith_Pants.GR2",
+      "bytes": 121564,
+      "sha256": "4F09F6AA06E2D9F8225FDFEFD6498E60779EC9D7106251CD22A9AB1F83E877FA"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Camp_Deva_A_Body_A.GR2",
+      "bytes": 659476,
+      "sha256": "9ACEA437B7A7619884A1EFBAC5C4C07A213DB3A335794ECF06401553EFD1380F"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Camp_Halsin_Body.GR2",
+      "bytes": 165644,
+      "sha256": "31AB70217572D8AE84120601B4239E017A4A6C27FADDAA228E443DD697194A01"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Camp_Jaheira_Body_A.GR2",
+      "bytes": 197872,
+      "sha256": "6D00D5085C87096F36CB0D6AE0F347FB03F1945B800A6BB5386C7B16F9AE41F4"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Camp_Jaheira_Pants_A.GR2",
+      "bytes": 102940,
+      "sha256": "D418BA9F0710AFB24C49F2114C4103A0794920FBE69EC6ED93F12F1491B7E834"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Camp_Karlach_A_Pants.GR2",
+      "bytes": 169180,
+      "sha256": "4348B81F2721DAF85E05065BEAE772DE00ED40453C7C68E63B4715A175FE99FC"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Camp_Minsc_Body_Ragged.GR2",
+      "bytes": 112104,
+      "sha256": "6A4320A7874759CAD2DB52A7690A16C7FF2AA70D566F425F2F598BD3DAFD044C"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Camp_Minsc_Body.GR2",
+      "bytes": 142044,
+      "sha256": "9FD59E36C7FFF9AC674C4D9BED8471A69F90B437153917A7AEFDFC3482DEF9B7"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Camp_Minsc_Pants_A.GR2",
+      "bytes": 378252,
+      "sha256": "DB41402A0B5F70E1462D70FCDC2CE93CB764F668C71D71BFF80A3E192F77F242"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Camp_Minsc_Pants_B.GR2",
+      "bytes": 238604,
+      "sha256": "A4F5ADD4856EF96CB600556101390A38694220ACB8532955D67F0E85FDFC70B6"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Camp_Outfit_Astarion_Body.GR2",
+      "bytes": 404136,
+      "sha256": "8F1BD52386B4A8E0C68646E772F4E781ACD747621AB489E0900A49CF3F547F5E"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Camp_Outfit_Laezel_Pants.GR2",
+      "bytes": 142600,
+      "sha256": "D530D17475FDB75313F51AA34E4587DB9C1A1881D9C327D5423D56E4E5CE3E9F"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Camp_Shar_Body.GR2",
+      "bytes": 100208,
+      "sha256": "0A36507C6E691E3998C41D1337CDED6A6F1B277AEAF91E2DAE82E56B54037F85"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Circus_Pants_C.GR2",
+      "bytes": 155540,
+      "sha256": "E9E4E304E96D02FE31AE588922FD64EB566EAC9706746437D66DFE793D6F3134"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Circus_Pants_D.GR2",
+      "bytes": 79064,
+      "sha256": "E7C5AF5FAFEB5ED1B2123AFF2A1B20FC234311EEE55CD2C51E6B88B7F64750AD"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Corset_A.GR2",
+      "bytes": 304740,
+      "sha256": "D347220A1944DADB35DC039D43736F9DD6C5E7F11476D0D89656A94EC9531D9C"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Corset_C.GR2",
+      "bytes": 308172,
+      "sha256": "9493208E911E3B34B1BACA71EE7FB5CD047FAF1D6A6E133318B9F6DC6AA969EF"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Corset_Courtesan_A.GR2",
+      "bytes": 174144,
+      "sha256": "F1AFE96287AB54FB4727F3A8AE67AF804DE8693C47D43F74464DE818189C0984"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Daisy_Dress_A_Accessories.GR2",
+      "bytes": 542436,
+      "sha256": "A3994CF8E1BE420165542A1DD5CFC5AD689AC3C22D3C1255AF9E1A8D404E578E"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Daisy_Dress_A.GR2",
+      "bytes": 179692,
+      "sha256": "CCA1F080C45DC1079C59B2CD94A092173260CD4DC0CAE82BE7A54EA37459410D"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Daisy_Dress_Accessories_Gale_God.GR2",
+      "bytes": 172380,
+      "sha256": "4E016B24DF078E9130101CCF06A3D129ECEC4D00743D24541C79C924683F2707"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Daisy_Dress_Cape.GR2",
+      "bytes": 97136,
+      "sha256": "26C8E5FFFB450E8DAFD9C0CF697AF4A2248E5078A916C2D85233DFD1B8870EB2"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Doublet_Rich_C_Body.GR2",
+      "bytes": 1005896,
+      "sha256": "27C39A672E2C17544BEB498F83D46822AF741B6D5A3E0BD3DF85D2DF3ACCC7F2"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Doublet_Rich_C_Skirt_A.GR2",
+      "bytes": 67284,
+      "sha256": "AB8DE61DAE947945648689FFD96D91ADA6E123540FB49D04E9A57B920FF2860F"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Doublet_Rich_C_Skirt_B.GR2",
+      "bytes": 120824,
+      "sha256": "3AB3C617C52D59CAE8DAA06DEBF46C7849768C09802A5051EA8E2BC6611B2DAE"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Drow_Body_A.GR2",
+      "bytes": 122612,
+      "sha256": "FDEA8536858B37C1F00FFD8B1ABB62E729522D4B4CAB81B1CF937BB3E39CB4A3"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Humans_Pants_A.GR2",
+      "bytes": 121180,
+      "sha256": "482F099DB8237D263D7F79D17A7A63ADD56D8530DCD4A9233F0C610CE66C0028"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_MiddleClass_Body_A_0.GR2",
+      "bytes": 444264,
+      "sha256": "9450B4F72B54779D5169A34332AB9318404F38FA45999C2249D5B6E63D423AA3"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_MiddleClass_Body_A_1.GR2",
+      "bytes": 500428,
+      "sha256": "2546B8C23E1D97A37CB87D49189AA4E1B1E7E404028908552A09CFD29FEC3F61"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_MiddleClass_Body_A_2.GR2",
+      "bytes": 524804,
+      "sha256": "006D52C3EFAFAF4D4763A8FFC6F7C9A61299A066D806BC9008F4C6AC0B4A60FE"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_MiddleClass_Body_B.GR2",
+      "bytes": 850220,
+      "sha256": "2729C97E739F61D7755593E4F437F9CDDAFF2B1826B29EFB57D8B52293871474"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_MiddleClass_Body_C.GR2",
+      "bytes": 250516,
+      "sha256": "1C3A7D1AAE19C00E3F0759532EE88DEA40EAE1E461C7B36B34E7E7767C5EF3A0"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Mizora_Body_A.GR2",
+      "bytes": 612712,
+      "sha256": "1CAC228A50A94DA771849E20A5843C8F4A4F74225522033F08E675C5A3D97341"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Nymph_Dress.GR2",
+      "bytes": 710324,
+      "sha256": "A17D66E7BF12615CC688010F711548737B4DE73AE6FF5F741CF23102DC0854EB"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Pants_A.GR2",
+      "bytes": 100156,
+      "sha256": "790A1945BC5BF65B26F593E5BC7322AF558D108128C74F6FE9A7631F52011A59"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Pants_B.GR2",
+      "bytes": 91004,
+      "sha256": "F9DDD8E60E5FEB0F13B7CB3650C9AE83221C129CCBC7B4DB16EDA2DA0B6239C9"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Pants_C.GR2",
+      "bytes": 222936,
+      "sha256": "16C3950FFD34214EF533E6B201CED0E4F03DAC1DF362A64ECEF9622E77C89C7D"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Pants_Courtesan_A.GR2",
+      "bytes": 58524,
+      "sha256": "4BC068DB4D04005A224D364C518D5F57168AF1BB235206AF38257D034D79AB34"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Pants_D.GR2",
+      "bytes": 91364,
+      "sha256": "336892931BD85FAF9EBD5811965CC0AD583C89D845815055092D2B354809AF5F"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Pants_E.GR2",
+      "bytes": 150580,
+      "sha256": "97AD59209ED3EBEE6CB266D878409999A83B1BAA06B131A1074B5E106F55FFBA"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Pants_F.GR2",
+      "bytes": 120452,
+      "sha256": "3DB925437328D1A1FDAF8C2EEDE9674C9A78B1C3BA2E23832EA2E27402E18712"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Pants_G.GR2",
+      "bytes": 69224,
+      "sha256": "1CBB30ABD804DEF9DE09F2E595EEDDB4977E0A743D865804AEB979E587928204"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Pants_H_Short.GR2",
+      "bytes": 77244,
+      "sha256": "855AC961FE021A90234C2A6457BA3645A3C9DE4338FD07FAD9B3E9E33266FAC7"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Pants_H.GR2",
+      "bytes": 100088,
+      "sha256": "FF341F55C1ABD26A1B828AD254F88AA381CB887616CC84F1ACF53885D9B81B0D"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Refugees_Corset_A.GR2",
+      "bytes": 140932,
+      "sha256": "FD951DE9C00710A09BB146FD4434900E76DC35057AF99D85B7488FC195EC47AA"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Refugees_Corset_B.GR2",
+      "bytes": 124684,
+      "sha256": "315A0E987DAEA40468CFA4CC848C55DA349245DE9A447774C6FC7E4C47000692"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Refugees_Pants_Torn.GR2",
+      "bytes": 102980,
+      "sha256": "02BD4CFBC8E7DCA8B12C024C00A565BB7F5907970EC1E9BEA7F5E7A5F0A53E7B"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Refugees_Pants.GR2",
+      "bytes": 74268,
+      "sha256": "28CB9A5BD0D214F78848C01668A489630AB4AC6A85428D1EB8ED4284775A2DB8"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Refugees_Skirt_A.GR2",
+      "bytes": 139124,
+      "sha256": "8D983FE798B713F8FD5BEB0F799C653524FEBC165C1501A1862B8B5DC3C1940E"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Refugees_Skirt_B.GR2",
+      "bytes": 107216,
+      "sha256": "D54BDE72C4516F93F03B88439E121B6AA8B448303CA0113CB9B65A42692B7F0D"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Refugees_Skirt_C.GR2",
+      "bytes": 93192,
+      "sha256": "53219393F309E7FDD3B211A571DEAFA38003DB6448987ECB01A76B0A157910F3"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Rich_D_Body.GR2",
+      "bytes": 1433224,
+      "sha256": "D5C4AE8EB8C6D397CE3813140CC245A4FE1E69295C57967D55014A917866B2E6"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Rich_D_Pants.GR2",
+      "bytes": 173220,
+      "sha256": "3A16CBDF475237B0C1860A51550B4C25D8F47ADF8DF99EA69AD027B44BED10C1"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Rich_Dress_A_Body_2.GR2",
+      "bytes": 275428,
+      "sha256": "FE0808C1D865C9F4B78C43AF58AC667146D2E9C92F4FA507142280EDEC6F9B6F"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Rich_Dress_A_Body_3.GR2",
+      "bytes": 252544,
+      "sha256": "FC8138F9F260A62992912F472AF02EC70395DCB26C6C9029C561EBFFAEEA8947"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Rich_Dress_A_Body.GR2",
+      "bytes": 269964,
+      "sha256": "EC071C94450E3CB6911C27D06910CFAA87DC02EE9263C2EFDC44D96C9E8E27A4"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Rich_Dress_B_Accessories.GR2",
+      "bytes": 508440,
+      "sha256": "EC2652C61B1E5702ED22FEE4B74C144AE305771F1F560A1E06F845B0139CE556"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Rich_Dress_B_Shirt.GR2",
+      "bytes": 240856,
+      "sha256": "85EC1F1284A423D277B78FFBBB91023867FAFB3CA699D826A28D043F9AEFBFB7"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Rich_Dress_B.GR2",
+      "bytes": 302764,
+      "sha256": "1AD3383C0568E547A6059C06C476E114FA591D47477190305EDA5877FB166B5D"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Rich_Pants_A.GR2",
+      "bytes": 66080,
+      "sha256": "FAB76D20D8F7812FAF93BED6DC8BD8F416FE400C7629DF740E9C003ACFFDEACD"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Rich_Shirt_A_Body.GR2",
+      "bytes": 185120,
+      "sha256": "6AE05A57E150DB541180175A6B6F6C4C293410DA6969448C898BFF27BE1E4CF4"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Shirt_Courtesan_A_Corset_A.GR2",
+      "bytes": 294952,
+      "sha256": "05EBAEA6232085ED07A172FC1C18C1449EF7434F0B0C44E71285FECB22F2E02D"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Shirt_Courtesan_A_Corset_B.GR2",
+      "bytes": 162360,
+      "sha256": "B6C7E882C019AF087BBEDFF51D9D1F4ECD47E4D382A487014A7A9D3BF4D7DFD9"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Shirt_Courtesan_A_Corset_E.GR2",
+      "bytes": 126744,
+      "sha256": "47307DDB1775ED3C2989E12FD8342F62276A25F55E92601CEA39DFCC231212A8"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Shirt_Courtesan_A_Corset_Twitch.GR2",
+      "bytes": 130512,
+      "sha256": "DB178453C4938AAC7427E2D9169AF2CA2F992FA6D7F63DBF1C2A00834F1B4A53"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Shirt_D_Corset_B.GR2",
+      "bytes": 189452,
+      "sha256": "AFF6529F5E142C297D725C729E001D7AC941A92F4FE685895CCA39D75E22A1FE"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Shirt_H_Corset_B.GR2",
+      "bytes": 203120,
+      "sha256": "B7E2F363C5A9E52AE28C49E21236BF62AA6201E764CEC93E3ECD64F80D1D6C12"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Shirt_H_Corset_E.GR2",
+      "bytes": 177848,
+      "sha256": "93F1DF1D9FE83868FC9BAD825F9F8133B5F6AC8C12385CF22974FE6D4626DB5E"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Skirt_A_Spring.GR2",
+      "bytes": 203088,
+      "sha256": "6BFC61AC676018A5077DB168050A615AC205469D02938D554C8AB74F65AB537B"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Skirt_A.GR2",
+      "bytes": 252756,
+      "sha256": "BDE7FF4953C50F9158A1ED8C0CEA7827722C1BF99D19235A09A7E624E4EF036E"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Skirt_B_Mayrina.GR2",
+      "bytes": 209320,
+      "sha256": "AF338E956A9D5D9E3CB1EE6A1E2D381BD5240ECA633C539324CB28340B7E6D5A"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Skirt_B.GR2",
+      "bytes": 209512,
+      "sha256": "99B3548766603E603156F7A5B5A2C65D45BA0AB48FD9129214814CFC28AAE5AC"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Skirt_C.GR2",
+      "bytes": 206996,
+      "sha256": "8A0F196658611E2326F48C34D354C7DDD75A693CE96568E3477F22630AE596F0"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Skirt_Courtesan_A.GR2",
+      "bytes": 153108,
+      "sha256": "6C828E34861C722C1E20BF7D67F239660832F8AFD8783CC4FCB27495A9CB9AE7"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Skirt_Courtesan_B.GR2",
+      "bytes": 87644,
+      "sha256": "EFB2DE14FC46C13D95FD71F851CFD4665B0A484AC7AAB02BFF8A746296465400"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Torn_Body_A.GR2",
+      "bytes": 166580,
+      "sha256": "17F9BC9510846F32CFC2BCEB74F6154317DF9C2D2484127D06C082000B78D204"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Worker_Body.GR2",
+      "bytes": 191864,
+      "sha256": "93955F8688C4E500A8B9E9567FFEE6DCED63C107C93D3E199C512B3E4419982E"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_CLT_Worker_Pants.GR2",
+      "bytes": 193364,
+      "sha256": "A534EDA05924B11BDF45E75301138FC90FD786358FE9D3508D2B5C5F3BEA19FE"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_NKD_Body_A.GR2",
+      "bytes": 469884,
+      "sha256": "7E3314F3551E72098FA5D8BF66E66755A376400C6EF8DD1577F1A8753264B517"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/HUM_F_Nurse_A_Legs_Bandages.GR2",
+      "bytes": 167936,
+      "sha256": "BAC429DAFB6CF80DA3CA074B320DF6335A4936DBDD402148582BE213F511B65A"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Characters/_Models/Humans/_Female/Resources/OLD_HUM_F_ARM_Nightsong_A_Body.GR2",
+      "bytes": 1624360,
+      "sha256": "B4842F66DBE054827D23852190761F27B50A878DF4F34D45334CE846BB4CE246"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/SBBF/GTY_F_NKD_Body_A.GR2",
+      "bytes": 527064,
+      "sha256": "073E3550432BECD366B8DA8F06736A695235159EE0FA883770210B62A71238BD"
+    },
+    {
+      "path": "Generated/Public/ClothMorphRuntime/Assets/Vanilla/GTY_F_NKD_Body_A.GR2",
+      "bytes": 532512,
+      "sha256": "755C534D2AE7C5DBA188A3C5A2AEFD0F0233055D71524E1B732858CD2ED0E2F1"
+    },
+    {
+      "path": "Mods/ClothMorphRuntime/MCM_blueprint.json",
+      "bytes": 5065,
+      "sha256": "5E25992C05CD789B279D8AA9E7862784969B5D52565FC7121A5DF19165313C1F"
+    },
+    {
+      "path": "Mods/ClothMorphRuntime/meta.lsx",
+      "bytes": 3547,
+      "sha256": "CC9999A3E25C23C3B3FFB1DACD525FC5C61F01631C4FD17E6582B55846DC64FC"
+    },
+    {
+      "path": "Mods/ClothMorphRuntime/ScriptExtender/Config.json",
+      "bytes": 96,
+      "sha256": "793643A0B29D069CBBDF36BDF987DD177CE57D1FF012F093D070F8AA00F3284A"
+    },
+    {
+      "path": "Mods/ClothMorphRuntime/ScriptExtender/Lua/BodyFamilyEquipRace.lua",
+      "bytes": 12794,
+      "sha256": "92E7EB70E280A3725B3BE5F7FF2F70B7D3B508C845B9B8B9A3076F3347054518"
+    },
+    {
+      "path": "Mods/ClothMorphRuntime/ScriptExtender/Lua/BodyFamilyRegistry.lua",
+      "bytes": 6112,
+      "sha256": "5BFFA5B914D783E52A982BF6464F944A9753D4736562902C1017A8E46197578D"
+    },
+    {
+      "path": "Mods/ClothMorphRuntime/ScriptExtender/Lua/BodyRegistry.lua",
+      "bytes": 2604,
+      "sha256": "B27A4C68EE41B37A13372A1CD5A8DEEEBEF84A44F029A761F0EDB4E743208C36"
+    },
+    {
+      "path": "Mods/ClothMorphRuntime/ScriptExtender/Lua/BootstrapClient.lua",
+      "bytes": 13923,
+      "sha256": "825645C4D3853577A533F3FD6D70163EC14D79A635220AA89FC99D86299DF5E8"
+    },
+    {
+      "path": "Mods/ClothMorphRuntime/ScriptExtender/Lua/BootstrapServer.lua",
+      "bytes": 86814,
+      "sha256": "723C8B718CE6FCBB50DE2126A0BEFECA0B9F161E3B35F292F597A2D8DB25327C"
+    },
+    {
+      "path": "Mods/ClothMorphRuntime/ScriptExtender/Lua/EquipRace.lua",
+      "bytes": 225936,
+      "sha256": "54E2ED0CE1D6E5467E4DEFA8CB95085A85F6896BE413C80320AD728D5B43BAD3"
+    },
+    {
+      "path": "Mods/ClothMorphRuntime/ScriptExtender/Lua/MCMIntegration.lua",
+      "bytes": 10062,
+      "sha256": "64158C0DD4C52679653EC02CE0338035395E61DDC36E39661FFFF15A8F537E1B"
+    },
+    {
+      "path": "Mods/ClothMorphRuntime/ScriptExtender/Lua/Shared.lua",
+      "bytes": 6700,
+      "sha256": "64E707662460C789779B948BE4E4930412EBE7DDB7513D5955FFE73E8C4C490C"
+    },
+    {
+      "path": "Mods/ClothMorphRuntime/ScriptExtender/Lua/SharedTemplateProbe.lua",
+      "bytes": 2370,
+      "sha256": "46517217EB9C3C7032587202E33C489045FD8CCC87AF67E9BA8773D73A4FD843"
+    },
+    {
+      "path": "Mods/ClothMorphRuntime/ScriptExtender/Lua/Targeting.lua",
+      "bytes": 4446,
+      "sha256": "A7A4EA413BA2E26985F317F73BDA0BD2ADC9F4133E4E7AD08436A9F25C1DF6DA"
+    },
+    {
+      "path": "Mods/ClothMorphRuntime/ScriptExtender/Lua/TattooDiagnostics.lua",
+      "bytes": 1238,
+      "sha256": "8CA2E85AD79013557CAE00EB2BEAD1D370EC35DCC6EFDCDA5F979FA26CF24899"
+    },
+    {
+      "path": "Mods/ClothMorphRuntime/ScriptExtender/Lua/TattooPolicy.lua",
+      "bytes": 7148,
+      "sha256": "2AC4342D349977F0533E0E7FBA1EA523735C17594C0B967096D02499FC45D916"
+    },
+    {
+      "path": "Mods/ClothMorphRuntime/ScriptExtender/Lua/TattooPolicySelfTest.lua",
+      "bytes": 11962,
+      "sha256": "EF4BF455473BA2F74711BB9692C14993EDEE5626ED7C59876FC885AC0753C5B4"
+    },
+    {
+      "path": "Mods/ClothMorphRuntime/ScriptExtender/Lua/TattooStateProbe.lua",
+      "bytes": 63945,
+      "sha256": "603A103E0D61AF8B11335E7687722ADC2122EFDE90720E2114993CE0CCB6E648"
+    },
+    {
+      "path": "Public/ClothMorphRuntime/CharacterCreation/CharacterCreationSharedVisuals.lsx",
+      "bytes": 7113,
+      "sha256": "0C3550315ACB4F261F8136B35CEDE0C1DC9FF13C679A857546DAD860AB8FA00D"
+    },
+    {
+      "path": "Public/ClothMorphRuntime/Content/Assets/Characters/[PAK]_ClothMorphGithyanki_Vanilla/_merged.lsf",
+      "bytes": 2839,
+      "sha256": "CF69FB12ECDD95297C5D2750D0C3C9581BD8973AEF7EE5B3982B0273DC30552E"
+    },
+    {
+      "path": "Public/ClothMorphRuntime/Content/Assets/Characters/[PAK]_ClothMorphGithyanki/_merged.lsf",
+      "bytes": 4111,
+      "sha256": "0D9F2A39C7637B2D60DC3D7C629D1E65641E0D598FCE32459565768C959023AD"
+    },
+    {
+      "path": "Public/ClothMorphRuntime/Content/Assets/Characters/Humans/[PAK]_BCB_Female_Body/_merged.lsf",
+      "bytes": 2384,
+      "sha256": "515F98C35F567FE42DEF72E0B256541E071963846F33E3ACBBB2FB9690B57C1E"
+    },
+    {
+      "path": "Public/ClothMorphRuntime/Content/Assets/Characters/Humans/[PAK]_ClothMorph_Refits_BCB/_merged.lsf",
+      "bytes": 2212872,
+      "sha256": "DAD7FDB82F9F5375EC69C216ECB46900363BBE1BDF3D152E525ABCE7195721CB"
+    },
+    {
+      "path": "Public/ClothMorphRuntime/Content/Assets/Characters/Humans/[PAK]_ClothMorph_Refits_Class1_SBBF/_merged.lsf",
+      "bytes": 43200,
+      "sha256": "D546353E68A630346CEDF42A14192CDDCAE5939558C90E8F5CA967360EB2DB77"
+    },
+    {
+      "path": "Public/ClothMorphRuntime/Content/Assets/Characters/Humans/[PAK]_ClothMorph_Refits_Class1/_merged.lsf",
+      "bytes": 252136,
+      "sha256": "37A62D9AA08258B841EDF3E68E155B064A864CDD18E546E80A4F7E4F527414E6"
+    },
+    {
+      "path": "Public/ClothMorphRuntime/Content/Assets/Characters/Humans/[PAK]_ClothMorph_Refits_Vanilla/_merged.lsf",
+      "bytes": 2422823,
+      "sha256": "300A13ADBCD52EB901FD3B387F74A75D39F74096A6228BA37C26827A8FFBA005"
+    },
+    {
+      "path": "Public/ClothMorphRuntime/Content/Assets/Characters/Humans/[PAK]_ClothMorph_Refits/_merged.lsf",
+      "bytes": 1865571,
+      "sha256": "087B99C8C0F18F3FA7D78303A401DA53BB1D4CCDA0CBB8F71782139D346139FE"
+    },
+    {
+      "path": "Public/ClothMorphRuntime/Content/Assets/Characters/Humans/[PAK]_ClothMorph_Tattoo_Bodies/_merged.lsf",
+      "bytes": 11954,
+      "sha256": "F2EE20BA39E46EC571EE160669E46982A1BE5724DC60978F6535E470DC150668"
+    },
+    {
+      "path": "Public/ClothMorphRuntime/Content/Assets/Characters/Humans/[PAK]_CM_Vanilla_Female_Body/_merged.lsf",
+      "bytes": 2531,
+      "sha256": "43E34F12841A1D013A01E658EB6D93D7ED769D2328BC9FB1EE84112634B96838"
+    },
+    {
+      "path": "Public/ClothMorphRuntime/Content/Assets/Characters/Humans/[PAK]_SBBF_Female_Body/_merged.lsf",
+      "bytes": 2377,
+      "sha256": "F3693CE84982FD6F0C8D213C5F865315CD1BA4860F1D3BD35BC88E5D87D69127"
+    },
+    {
+      "path": "Public/ClothMorphRuntime/Content/Assets/Characters/Shared_Materials/[PAK]_ClothMorph_Tattoo_Materials/_merged.lsf",
+      "bytes": 37929,
+      "sha256": "EFCB4242191D3D3C175263EA9BD309FA475CD8AF2D607B00FB1057A1E4662CBD"
+    },
+    {
+      "path": "Public/ClothMorphRuntime/RootTemplates/_merged.lsf",
+      "bytes": 1608,
+      "sha256": "53D7562BACC4DCE7919698373841D19E2C6D2E12D8EF92F16E9475B8B536D697"
+    }
+  ],
+  "r1": [
+    {
+      "path": "Mods/ClothMorphRuntime/MCM_blueprint.json",
+      "bytes": 5602,
+      "sha256": "0F3B7A014CD9F2623CD07FF7C350DD8F7DF20B5F994A85EE568BD06B8AC50660"
+    },
+    {
+      "path": "Mods/ClothMorphRuntime/ScriptExtender/Lua/BootstrapClient.lua",
+      "bytes": 14580,
+      "sha256": "D0591EDB873925B5A5885341ED69E1580B8C90492F4A550080868B537C0D0CC8"
+    },
+    {
+      "path": "Mods/ClothMorphRuntime/ScriptExtender/Lua/BootstrapServer.lua",
+      "bytes": 103426,
+      "sha256": "59A7E784AC8CFB592D56BAE2432563B25E792E85A44A4DB7BFB02E841B050E8A"
+    },
+    {
+      "path": "Mods/ClothMorphRuntime/ScriptExtender/Lua/MCMIntegration.lua",
+      "bytes": 11123,
+      "sha256": "C282CC21BD82F5AA829103A823B78424F51BDC748D19FBAF3FD1D7F8DA2CAF1A"
+    },
+    {
+      "path": "Mods/ClothMorphRuntime/ScriptExtender/Lua/MasterState.lua",
+      "bytes": 14855,
+      "sha256": "AE4C7FFD9B270F31AC6BB47E1D5609999F605886E5A378263334E07AD3C52D2A"
+    },
+    {
+      "path": "Mods/ClothMorphRuntime/ScriptExtender/Lua/OwnershipLedger.lua",
+      "bytes": 7091,
+      "sha256": "2BADDFEB48771E2D372C79937789844BD7584B2E37B4EE536A0C743E2885B5DA"
+    },
+    {
+      "path": "Mods/ClothMorphRuntime/ScriptExtender/Lua/ProviderRegistry.lua",
+      "bytes": 18347,
+      "sha256": "8ACA2D712614629DC8267988EDA5AC6384F2E31383679F17E3E6D050A125F763"
+    },
+    {
+      "path": "Mods/ClothMorphRuntime/ScriptExtender/Lua/R1Foundation.lua",
+      "bytes": 7068,
+      "sha256": "89870C6EE752839B7A1C45811F6D2868543BA8B6E27186E9C1202C53F98DC6F4"
+    },
+    {
+      "path": "Mods/ClothMorphRuntime/ScriptExtender/Lua/RuntimeRollback.lua",
+      "bytes": 3292,
+      "sha256": "0DD1235799831EB8D47815E328107A1077A7B3FCF9A47B663DAA0A32376C9E84"
+    },
+    {
+      "path": "Mods/ClothMorphRuntime/ScriptExtender/Lua/Shared.lua",
+      "bytes": 6783,
+      "sha256": "A0E331E3835CFB0EFB82A6FE272EC22FE2F2FEF98DEC1FC7B6C87F8FC59DC71A"
+    },
+    {
+      "path": "Mods/ClothMorphRuntime/ScriptExtender/Lua/StateSchema7.lua",
+      "bytes": 9496,
+      "sha256": "71EF3C0AC908092CFF8B57372582094C3CBEA561ABE2B12FF9BDD54FC137B580"
+    },
+    {
+      "path": "Mods/ClothMorphRuntime/meta.lsx",
+      "bytes": 3547,
+      "sha256": "6524455B49340C84DB5F7EDBC1C4B3A083BF2ACE807684A3975F20D4B0C91C80"
+    }
+  ],
+  "harnesses": [
+    {
+      "path": "tests/lua/test_support.lua",
+      "bytes": 2514,
+      "sha256": "8FC168236E544E7912B63C275676534D83EE2EDDA7428BF501FAACCBDEFD5EF5"
+    },
+    {
+      "path": "tests/lua/bootstrap_fixture.lua",
+      "bytes": 15774,
+      "sha256": "FCF33612263925252CA98F406484EC75F021446EC44AB70ADB8DC92321E8FA26"
+    },
+    {
+      "path": "tests/lua/run_task2a.lua",
+      "bytes": 20372,
+      "sha256": "6C74BDD8595BDFD935A76C42BB24417280A26D357E94C9EDD0FF0F01DFAC175B"
+    },
+    {
+      "path": "tests/lua/test_bootstrap_wiring.lua",
+      "bytes": 19926,
+      "sha256": "2F56EBEA536FD77666261630F03937A48ECBD365CADEB76C2A828F8289F31BF0"
+    },
+    {
+      "path": "tests/lua/test_task2b_bootstrap.lua",
+      "bytes": 16912,
+      "sha256": "F74C80410E237066026DF42F5133E212C293F728B4DB27204E78391AACF406DA"
+    }
+  ]
+}
