@@ -43,6 +43,12 @@ RECORD_ID = "LEDGER_" + "A" * 64
 IDENTITY_SHA256 = "B" * 64
 PROFILE_SHA256 = "C" * 64
 RELEASE_MODES = ("vanilla", "sbbf", "bcb", "external")
+COMPLETE_AUTHORITY_CONTEXT = {
+    "provider_authority_present": True,
+    "provider_authority_complete": True,
+    "package_authority_present": True,
+    "package_authority_complete": True,
+}
 
 
 def _mode_scope(terminal_state="NONTERMINAL", advertised=True):
@@ -59,6 +65,8 @@ def _terminal_exclusions():
 def _attach_terminal_exclusions(records, events, evidence, **kwargs):
     kwargs.setdefault("independent_provider_claims", {})
     kwargs.setdefault("independent_package_claims", {})
+    for key, value in COMPLETE_AUTHORITY_CONTEXT.items():
+        kwargs.setdefault(key, value)
     return _attach_terminal_exclusions_impl(
         records, events, evidence, **kwargs
     )
@@ -392,6 +400,7 @@ def test_one_of_four_valid_events_attaches_only_that_mode_and_record_stays_block
     manifest = _manifest_payload(
         [], discovered_events=(discovered,),
         independent_provider_claims={}, independent_package_claims={},
+        **COMPLETE_AUTHORITY_CONTEXT,
     )
     assert manifest["exclusion_event_files"] == [{
         "relative_path": "history/synthetic.json", "sha256": discovered.sha256,
@@ -524,6 +533,7 @@ def test_production_lifecycle_reconciles_attaches_each_mode_and_only_fourth_clos
             },
             independent_provider_claims={},
             independent_package_claims={},
+            **COMPLETE_AUTHORITY_CONTEXT,
         )
 
         selected_modes = RELEASE_MODES[:event_count]
@@ -600,6 +610,7 @@ def test_valid_exclusion_with_unresolved_markers_attaches_and_validates_end_to_e
         discovered_event_files={discovered.relative_path: discovered.sha256},
         independent_provider_claims={},
         independent_package_claims={},
+        **COMPLETE_AUTHORITY_CONTEXT,
     ) == []
 
 
@@ -653,6 +664,7 @@ def test_generated_validation_rejects_unexpected_enclosing_exclusion_keys(
         discovered_event_files={discovered.relative_path: discovered.sha256},
         independent_provider_claims={},
         independent_package_claims={},
+        **COMPLETE_AUTHORITY_CONTEXT,
     )
 
     assert expected in errors
@@ -671,6 +683,7 @@ def test_coordinated_event_or_file_provenance_forgery_fails_against_independent_
         "discovered_event_files": {discovered.relative_path: discovered.sha256},
         "independent_provider_claims": {},
         "independent_package_claims": {},
+        **COMPLETE_AUTHORITY_CONTEXT,
     }
     event_forgery = deepcopy(document)
     forged_event = event_forgery["records"][0]["terminal_exclusion"]["sbbf"]["event"]
@@ -718,6 +731,7 @@ def test_generated_validation_rechecks_zero_claims_for_each_attached_mode(mutate
         discovered_event_files={discovered.relative_path: discovered.sha256},
         independent_provider_claims={},
         independent_package_claims={},
+        **COMPLETE_AUTHORITY_CONTEXT,
     )
 
     assert any(
@@ -757,6 +771,7 @@ def test_terminal_schema_contract_rejects_unconstrained_nested_values(mutate):
         discovered_event_files={discovered.relative_path: discovered.sha256},
         independent_provider_claims={},
         independent_package_claims={},
+        **COMPLETE_AUTHORITY_CONTEXT,
     )
 
     assert any(error.startswith("RECORD[0]:TERMINAL_EXCLUSION_SCHEMA:") for error in errors)
@@ -1019,4 +1034,5 @@ def test_forged_attached_event_data_fails_generated_validation(path, value):
         discovered_event_files={discovered.relative_path: discovered.sha256},
         independent_provider_claims={},
         independent_package_claims={},
+        **COMPLETE_AUTHORITY_CONTEXT,
     ))

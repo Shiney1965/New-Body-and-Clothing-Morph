@@ -691,6 +691,10 @@ def _validate_terminal_exclusion(
     discovered_event_files: Mapping[str, str] | None,
     independent_provider_claims: Mapping[object, object] | None,
     independent_package_claims: Mapping[object, object] | None,
+    provider_authority_present: bool | None,
+    provider_authority_complete: bool | None,
+    package_authority_present: bool | None,
+    package_authority_complete: bool | None,
 ) -> bool:
     """Validate every per-mode attachment and return record-wide exclusion closure."""
     if "terminal_exclusion" not in record:
@@ -760,6 +764,10 @@ def _validate_terminal_exclusion(
                 lifecycle="attached",
                 independent_provider_claims=independent_provider_claims,
                 independent_package_claims=independent_package_claims,
+                provider_authority_present=provider_authority_present,
+                provider_authority_complete=provider_authority_complete,
+                package_authority_present=package_authority_present,
+                package_authority_complete=package_authority_complete,
             ):
                 errors.append(f"TERMINAL_EXCLUSION_EVENT_INVALID:{error}")
                 mode_valid = False
@@ -834,6 +842,10 @@ def validate_record(
     discovered_event_files: Mapping[str, str] | None = None,
     independent_provider_claims: Mapping[object, object] | None = None,
     independent_package_claims: Mapping[object, object] | None = None,
+    provider_authority_present: bool | None = None,
+    provider_authority_complete: bool | None = None,
+    package_authority_present: bool | None = None,
+    package_authority_complete: bool | None = None,
 ) -> list[str]:
     """Return stable errors for an emitted record; an empty list is valid."""
     if not isinstance(record, dict):
@@ -878,6 +890,10 @@ def validate_record(
         discovered_event_files=discovered_event_files,
         independent_provider_claims=independent_provider_claims,
         independent_package_claims=independent_package_claims,
+        provider_authority_present=provider_authority_present,
+        provider_authority_complete=provider_authority_complete,
+        package_authority_present=package_authority_present,
+        package_authority_complete=package_authority_complete,
     )
     _validate_blocker_codes(record, errors, terminal_exclusion_valid)
 
@@ -898,6 +914,10 @@ def validate_generated_ledger(
     discovered_event_files: Mapping[str, str] | None = None,
     independent_provider_claims: Mapping[object, object] | None = None,
     independent_package_claims: Mapping[object, object] | None = None,
+    provider_authority_present: bool | None = None,
+    provider_authority_complete: bool | None = None,
+    package_authority_present: bool | None = None,
+    package_authority_complete: bool | None = None,
 ) -> list[str]:
     """Validate a complete generated ledger envelope and every record."""
     if not isinstance(document, Mapping):
@@ -924,6 +944,10 @@ def validate_generated_ledger(
                     discovered_event_files=discovered_event_files,
                     independent_provider_claims=independent_provider_claims,
                     independent_package_claims=independent_package_claims,
+                    provider_authority_present=provider_authority_present,
+                    provider_authority_complete=provider_authority_complete,
+                    package_authority_present=package_authority_present,
+                    package_authority_complete=package_authority_complete,
                 )
             )
         summary = document.get("summary")

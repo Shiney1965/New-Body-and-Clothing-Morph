@@ -99,6 +99,10 @@ def _current_terminal_exclusion(
     discovered_event_files: Mapping[str, str],
     independent_provider_claims: Mapping[object, object] | None,
     independent_package_claims: Mapping[object, object] | None,
+    provider_authority_present: bool | None,
+    provider_authority_complete: bool | None,
+    package_authority_present: bool | None,
+    package_authority_complete: bool | None,
 ) -> tuple[set[str], bool, bool, bool, set[str]]:
     """Return valid modes, record closure, claimed, packaged conflict, and codes."""
     record_data = record.to_dict()
@@ -131,6 +135,10 @@ def _current_terminal_exclusion(
         if (
             independent_provider_claims is None
             or independent_package_claims is None
+            or provider_authority_present is None
+            or provider_authority_complete is None
+            or package_authority_present is None
+            or package_authority_complete is None
         ):
             failure_codes.add(
                 "MISSING_INDEPENDENT_EXCLUSION_CLAIM_CONTEXT:"
@@ -164,6 +172,10 @@ def _current_terminal_exclusion(
             lifecycle="attached",
             independent_provider_claims=independent_provider_claims,
             independent_package_claims=independent_package_claims,
+            provider_authority_present=provider_authority_present,
+            provider_authority_complete=provider_authority_complete,
+            package_authority_present=package_authority_present,
+            package_authority_complete=package_authority_complete,
         )
         for error in selection.errors:
             failure_codes.add(f"{error}:{record_id}:{mode}")
@@ -223,6 +235,10 @@ def build_completeness_audit(
     discovered_event_files: Mapping[str, str] | None = None,
     independent_provider_claims: Mapping[object, object] | None = None,
     independent_package_claims: Mapping[object, object] | None = None,
+    provider_authority_present: bool | None = None,
+    provider_authority_complete: bool | None = None,
+    package_authority_present: bool | None = None,
+    package_authority_complete: bool | None = None,
 ) -> dict[str, object]:
     """Compute exact, sorted audit sets without inferring later gate success."""
     events = tuple(event for event in exclusion_events if isinstance(event, Mapping))
@@ -257,6 +273,8 @@ def build_completeness_audit(
         ) = _current_terminal_exclusion(
             record, events, evidence, event_files,
             independent_provider_claims, independent_package_claims,
+            provider_authority_present, provider_authority_complete,
+            package_authority_present, package_authority_complete,
         )
         valid_excluded_modes.update(
             f"{record.record_id}:{mode}" for mode in valid_modes

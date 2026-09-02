@@ -112,6 +112,90 @@ def test_package_inventory_retains_raw_package_ownership_claims(tmp_path):
     }
 
 
+@pytest.mark.parametrize(
+    ("input_id", "payload", "error"),
+    [
+        pytest.param(
+            "provider_claim_inventory",
+            {"schema": "clothmorph.provider-claims-inventory", "schema_version": 1, "routes": []},
+            "PROVIDER_CLAIM_INVENTORY_SCHEMA_INVALID",
+            id="provider-near-miss-schema",
+        ),
+        pytest.param(
+            "provider_claim_inventory",
+            {"schema": "clothmorph.provider-claim-inventory", "schema_version": 2, "routes": []},
+            "PROVIDER_CLAIM_INVENTORY_SCHEMA_INVALID",
+            id="provider-version",
+        ),
+        pytest.param(
+            "provider_claim_inventory",
+            {"schema": "clothmorph.provider-claim-inventory", "schema_version": 1, "routes": [], "unexpected": True},
+            "PROVIDER_CLAIM_INVENTORY_UNEXPECTED_KEY:unexpected",
+            id="provider-top-level-key",
+        ),
+        pytest.param(
+            "provider_claim_inventory",
+            {
+                "schema": "clothmorph.provider-claim-inventory", "schema_version": 1,
+                "routes": [{
+                    "record_id": "LEDGER_" + "A" * 64, "mode": "sbbf",
+                    "provider_ids": ["TYPO"],
+                }],
+            },
+            "PROVIDER_CLAIM_INVENTORY_ROUTE_UNEXPECTED_KEY:provider_ids",
+            id="provider-route-typo",
+        ),
+        pytest.param(
+            "provider_claim_inventory",
+            {
+                "schema": "clothmorph.provider-claim-inventory", "schema_version": 1,
+                "routes": [{
+                    "canonical_source_key": "not-canonical", "mode": "sbbf",
+                    "provider_id": "PROVIDER",
+                }],
+            },
+            "CLAIM_INVENTORY_CANONICAL_SOURCE_KEY_INVALID",
+            id="provider-unresolvable-canonical-key",
+        ),
+        pytest.param(
+            "package_claim_inventory",
+            {"schema": "clothmorph.package-claims-inventory", "schema_version": 1, "routes": []},
+            "PACKAGE_CLAIM_INVENTORY_SCHEMA_INVALID",
+            id="package-near-miss-schema",
+        ),
+        pytest.param(
+            "package_claim_inventory",
+            {"schema": "clothmorph.package-claim-inventory", "schema_version": 2, "routes": []},
+            "PACKAGE_CLAIM_INVENTORY_SCHEMA_INVALID",
+            id="package-version",
+        ),
+        pytest.param(
+            "package_claim_inventory",
+            {"schema": "clothmorph.package-claim-inventory", "schema_version": 1, "routes": [], "unexpected": True},
+            "PACKAGE_CLAIM_INVENTORY_UNEXPECTED_KEY:unexpected",
+            id="package-top-level-key",
+        ),
+        pytest.param(
+            "package_claim_inventory",
+            {
+                "schema": "clothmorph.package-claim-inventory", "schema_version": 1,
+                "routes": [{
+                    "record_id": "LEDGER_" + "A" * 64, "mode": "sbbf",
+                    "package_id": "PACKAGE_SHA256:" + "B" * 64,
+                }],
+            },
+            "PACKAGE_CLAIM_INVENTORY_ROUTE_UNEXPECTED_KEY:package_id",
+            id="package-route-typo",
+        ),
+    ],
+)
+def test_claim_authority_schemas_are_closed(tmp_path, input_id, payload, error):
+    input_ = verified_json(tmp_path, input_id, "SUPPORTING_EVIDENCE", payload)
+
+    with pytest.raises(InventoryIntegrityError, match=error):
+        extract_independent_inventories([input_])
+
+
 def test_prior_evidence_join_drop_mutation_populates_unreferenced_set(tmp_path):
     input_ = verified_json(tmp_path, "support", "SUPPORTING_EVIDENCE", {"records": []})
     inventories = extract_independent_inventories([input_])

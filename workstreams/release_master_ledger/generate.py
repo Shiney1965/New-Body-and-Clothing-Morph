@@ -138,6 +138,10 @@ def _attach_terminal_exclusions(
     *,
     independent_provider_claims: Mapping[object, object],
     independent_package_claims: Mapping[object, object],
+    provider_authority_present: bool,
+    provider_authority_complete: bool,
+    package_authority_present: bool,
+    package_authority_complete: bool,
 ) -> tuple[LedgerRecord, ...]:
     """Attach valid per-mode events; any invalid sibling leaves the record untouched."""
     history = tuple(events)
@@ -166,6 +170,10 @@ def _attach_terminal_exclusions(
                 lifecycle="pre_attachment",
                 independent_provider_claims=independent_provider_claims,
                 independent_package_claims=independent_package_claims,
+                provider_authority_present=provider_authority_present,
+                provider_authority_complete=provider_authority_complete,
+                package_authority_present=package_authority_present,
+                package_authority_complete=package_authority_complete,
             )
             for mode in modes
         }
@@ -366,6 +374,10 @@ def _manifest_payload(
     verified_evidence: Mapping[str, str] = {},
     independent_provider_claims: Mapping[object, object] | None = None,
     independent_package_claims: Mapping[object, object] | None = None,
+    provider_authority_present: bool | None = None,
+    provider_authority_complete: bool | None = None,
+    package_authority_present: bool | None = None,
+    package_authority_complete: bool | None = None,
 ) -> dict[str, object]:
     payload: dict[str, object] = {
         "inputs": [
@@ -399,6 +411,10 @@ def _manifest_payload(
                 and item.event.get("mode") in RELEASE_MODES
                 and isinstance(independent_provider_claims, Mapping)
                 and isinstance(independent_package_claims, Mapping)
+                and provider_authority_present is True
+                and provider_authority_complete is True
+                and package_authority_present is True
+                and package_authority_complete is True
                 and not has_independent_claim(
                     independent_provider_claims,
                     str(item.event["record_id"]), str(item.event["mode"]),
@@ -510,6 +526,10 @@ def generate(config: LocalConfiguration) -> GenerationResult:
         verified_exclusion_evidence,
         independent_provider_claims=independent_provider_claims,
         independent_package_claims=independent_package_claims,
+        provider_authority_present=inventories.provider_authority_present,
+        provider_authority_complete=inventories.provider_authority_complete,
+        package_authority_present=inventories.package_authority_present,
+        package_authority_complete=inventories.package_authority_complete,
     )
     supporting_input_ids = sorted(
         input_.input_id
@@ -524,6 +544,10 @@ def generate(config: LocalConfiguration) -> GenerationResult:
         discovered_event_files=discovered_event_files,
         independent_provider_claims=independent_provider_claims,
         independent_package_claims=independent_package_claims,
+        provider_authority_present=inventories.provider_authority_present,
+        provider_authority_complete=inventories.provider_authority_complete,
+        package_authority_present=inventories.package_authority_present,
+        package_authority_complete=inventories.package_authority_complete,
     )
     audit["registered_inventories"] = {
         "packaged_records": sorted(inventories.packaged_records),
@@ -546,6 +570,10 @@ def generate(config: LocalConfiguration) -> GenerationResult:
         discovered_event_files=discovered_event_files,
         independent_provider_claims=independent_provider_claims,
         independent_package_claims=independent_package_claims,
+        provider_authority_present=inventories.provider_authority_present,
+        provider_authority_complete=inventories.provider_authority_complete,
+        package_authority_present=inventories.package_authority_present,
+        package_authority_complete=inventories.package_authority_complete,
     )
     if ledger_errors:
         raise ValueError("GENERATED_LEDGER_INVALID:" + ",".join(ledger_errors))
@@ -555,6 +583,10 @@ def generate(config: LocalConfiguration) -> GenerationResult:
         verified_evidence=verified_exclusion_evidence,
         independent_provider_claims=independent_provider_claims,
         independent_package_claims=independent_package_claims,
+        provider_authority_present=inventories.provider_authority_present,
+        provider_authority_complete=inventories.provider_authority_complete,
+        package_authority_present=inventories.package_authority_present,
+        package_authority_complete=inventories.package_authority_complete,
     )
 
     output_dir = config.output_path.parent

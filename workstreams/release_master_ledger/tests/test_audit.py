@@ -61,6 +61,12 @@ def inventories(**overrides):
 EVENT_FILE_PATH = "history/synthetic.json"
 EVENT_FILE_SHA256 = "A" * 64
 EVENT_FILE_REGISTRY = {EVENT_FILE_PATH: EVENT_FILE_SHA256}
+COMPLETE_AUTHORITY_CONTEXT = {
+    "provider_authority_present": True,
+    "provider_authority_complete": True,
+    "package_authority_present": True,
+    "package_authority_complete": True,
+}
 
 
 def _mode_summary(event, mode):
@@ -145,6 +151,7 @@ def audit_terminal_event(
         ),
         independent_provider_claims=provider_claims,
         independent_package_claims=package_claims,
+        **COMPLETE_AUTHORITY_CONTEXT,
     )
 
 

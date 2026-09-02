@@ -43,6 +43,10 @@ class IndependentInventories:
     protected_manifest_relations: Mapping[str, ProtectedManifestRelation] = field(default_factory=dict)
     provider_claims: Mapping[object, object] = field(default_factory=dict)
     package_claims: Mapping[object, object] = field(default_factory=dict)
+    provider_authority_present: bool = False
+    provider_authority_complete: bool = False
+    package_authority_present: bool = False
+    package_authority_complete: bool = False
 
     @property
     def missing_source_profiles(self) -> tuple[str, ...]:
@@ -63,8 +67,16 @@ def extract_independent_inventories(
 ) -> IndependentInventories:
     payloads = {input_.input_id: _read_verified_json(input_) for input_ in verified_inputs}
     relations = _protected_manifest_relations(verified_inputs, payloads)
-    provider_claims = _provider_claim_inventory(verified_inputs, payloads)
-    package_claims = _package_claim_inventory(verified_inputs, payloads)
+    (
+        provider_claims,
+        provider_authority_present,
+        provider_authority_complete,
+    ) = _provider_claim_inventory(verified_inputs, payloads)
+    (
+        package_claims,
+        package_authority_present,
+        package_authority_complete,
+    ) = _package_claim_inventory(verified_inputs, payloads)
     source_observations: set[str] = set()
     prior_evidence = {
         str(input_.path)
@@ -97,17 +109,58 @@ def extract_independent_inventories(
         protected_manifest_relations=relations,
         provider_claims=provider_claims,
         package_claims=package_claims,
+        provider_authority_present=provider_authority_present,
+        provider_authority_complete=provider_authority_complete,
+        package_authority_present=package_authority_present,
+        package_authority_complete=package_authority_complete,
     )
+
+
+def _claim_authority_inputs(
+    verified_inputs: list[VerifiedInput], payloads: Mapping[str, object], role: str,
+) -> list[VerifiedInput]:
+    expected_input_id = f"{role}_claim_inventory"
+    expected_kind = f"{role.upper()}_CLAIM_INVENTORY"
+    expected_schema = f"clothmorph.{role}-claim-inventory"
+    return [
+        input_
+        for input_ in verified_inputs
+        if input_.input_id == expected_input_id
+        or input_.kind.upper() == expected_kind
+        or (
+            isinstance(payloads[input_.input_id], Mapping)
+            and payloads[input_.input_id].get("schema") == expected_schema
+        )
+    ]
 
 
 def _claim_key(route: Mapping[str, object]) -> tuple[str, str]:
     record_id = route.get("record_id")
+    canonical_source_key = route.get("canonical_source_key")
     mode = route.get("mode")
-    if not isinstance(record_id, str) or RECORD_ID_RE.fullmatch(record_id) is None:
+    if (record_id is None) == (canonical_source_key is None):
+        raise InventoryIntegrityError("CLAIM_INVENTORY_IDENTITY_INVALID")
+    if record_id is not None and (
+        not isinstance(record_id, str) or RECORD_ID_RE.fullmatch(record_id) is None
+    ):
         raise InventoryIntegrityError("CLAIM_INVENTORY_RECORD_ID_INVALID")
+    if canonical_source_key is not None and (
+        not isinstance(canonical_source_key, str)
+        or not canonical_source_key.startswith("OBSERVATION:")
+        or not canonical_source_key.removeprefix("OBSERVATION:")
+    ):
+        raise InventoryIntegrityError("CLAIM_INVENTORY_CANONICAL_SOURCE_KEY_INVALID")
     if not isinstance(mode, str) or mode not in RELEASE_MODES:
         raise InventoryIntegrityError("CLAIM_INVENTORY_MODE_INVALID")
-    return record_id, mode
+    return str(record_id if record_id is not None else canonical_source_key), mode
+
+
+def _reject_unexpected_keys(
+    value: Mapping[str, object], allowed: frozenset[str], error_prefix: str,
+) -> None:
+    unexpected = sorted(set(value) - allowed)
+    if unexpected:
+        raise InventoryIntegrityError(f"{error_prefix}:{unexpected[0]}")
 
 
 def _claim_text(route: Mapping[str, object], field: str, label: str) -> list[str]:
@@ -142,19 +195,36 @@ def _claim_sequence(
 
 def _provider_claim_inventory(
     verified_inputs: list[VerifiedInput], payloads: Mapping[str, object],
-) -> dict[object, tuple[str, ...]]:
+) -> tuple[dict[object, tuple[str, ...]], bool, bool]:
     collected: dict[object, set[str]] = {}
-    for payload in payloads.values():
+    authorities = _claim_authority_inputs(verified_inputs, payloads, "provider")
+    if len(authorities) > 1:
+        raise InventoryIntegrityError("PROVIDER_CLAIM_AUTHORITY_DUPLICATE")
+    for authority in authorities:
+        payload = payloads[authority.input_id]
         if not isinstance(payload, Mapping) or payload.get("schema") != "clothmorph.provider-claim-inventory":
-            continue
+            raise InventoryIntegrityError("PROVIDER_CLAIM_INVENTORY_SCHEMA_INVALID")
         if payload.get("schema_version") != 1 or isinstance(payload.get("schema_version"), bool):
             raise InventoryIntegrityError("PROVIDER_CLAIM_INVENTORY_SCHEMA_INVALID")
+        _reject_unexpected_keys(
+            payload,
+            frozenset({"schema", "schema_version", "routes"}),
+            "PROVIDER_CLAIM_INVENTORY_UNEXPECTED_KEY",
+        )
         routes = payload.get("routes")
         if not isinstance(routes, list):
             raise InventoryIntegrityError("PROVIDER_CLAIM_INVENTORY_ROUTES_INVALID")
         for route in routes:
             if not isinstance(route, Mapping):
                 raise InventoryIntegrityError("PROVIDER_CLAIM_INVENTORY_ROUTE_INVALID")
+            _reject_unexpected_keys(
+                route,
+                frozenset({
+                    "record_id", "canonical_source_key", "mode", "provider_id",
+                    "target_vrs", "target_paths", "payload_hashes", "provenance",
+                }),
+                "PROVIDER_CLAIM_INVENTORY_ROUTE_UNEXPECTED_KEY",
+            )
             key = _claim_key(route)
             claims = [
                 *_claim_text(route, "provider_id", "provider_id"),
@@ -181,10 +251,12 @@ def _provider_claim_inventory(
                     collected.setdefault(mode, set()).add(
                         f"missing_provider_route_inventory:{input_.input_id}"
                     )
-    return {
+    claims = {
         key: tuple(sorted(values))
         for key, values in sorted(collected.items(), key=lambda item: str(item[0]))
     }
+    present = bool(authorities)
+    return claims, present, present
 
 
 def _normalize_package_id(value: object) -> str:
@@ -198,19 +270,36 @@ def _normalize_package_id(value: object) -> str:
 
 def _package_claim_inventory(
     verified_inputs: list[VerifiedInput], payloads: Mapping[str, object],
-) -> dict[tuple[str, str], tuple[str, ...]]:
+) -> tuple[dict[tuple[str, str], tuple[str, ...]], bool, bool]:
     collected: dict[tuple[str, str], set[str]] = {}
-    for payload in payloads.values():
+    authorities = _claim_authority_inputs(verified_inputs, payloads, "package")
+    if len(authorities) > 1:
+        raise InventoryIntegrityError("PACKAGE_CLAIM_AUTHORITY_DUPLICATE")
+    for authority in authorities:
+        payload = payloads[authority.input_id]
         if not isinstance(payload, Mapping) or payload.get("schema") != "clothmorph.package-claim-inventory":
-            continue
+            raise InventoryIntegrityError("PACKAGE_CLAIM_INVENTORY_SCHEMA_INVALID")
         if payload.get("schema_version") != 1 or isinstance(payload.get("schema_version"), bool):
             raise InventoryIntegrityError("PACKAGE_CLAIM_INVENTORY_SCHEMA_INVALID")
+        _reject_unexpected_keys(
+            payload,
+            frozenset({"schema", "schema_version", "routes"}),
+            "PACKAGE_CLAIM_INVENTORY_UNEXPECTED_KEY",
+        )
         routes = payload.get("routes")
         if not isinstance(routes, list):
             raise InventoryIntegrityError("PACKAGE_CLAIM_INVENTORY_ROUTES_INVALID")
         for route in routes:
             if not isinstance(route, Mapping):
                 raise InventoryIntegrityError("PACKAGE_CLAIM_INVENTORY_ROUTE_INVALID")
+            _reject_unexpected_keys(
+                route,
+                frozenset({
+                    "record_id", "canonical_source_key", "mode", "package_ids",
+                    "shipped_package_id",
+                }),
+                "PACKAGE_CLAIM_INVENTORY_ROUTE_UNEXPECTED_KEY",
+            )
             key = _claim_key(route)
             raw_package_ids = route.get("package_ids")
             claims: list[str] = []
@@ -250,10 +339,12 @@ def _package_claim_inventory(
                 collected.setdefault((source_key, mode), set()).add(
                     f"package_id:{package_id}"
                 )
-    return {
+    claims = {
         key: tuple(sorted(values))
         for key, values in sorted(collected.items())
     }
+    present = bool(authorities)
+    return claims, present, present
 
 
 def _read_verified_json(input_: VerifiedInput) -> object:

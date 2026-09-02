@@ -40,6 +40,7 @@ def synthetic_config(root: Path, *, record_count: int = 1) -> LocalConfiguration
 
 def lifecycle_generate_fixture(
     root: Path, *, provider_routes=(), package_routes=(), extra_inputs=(),
+    include_provider_authority=True, include_package_authority=True,
 ) -> tuple[LocalConfiguration, str]:
     local = root / "local"
     evidence_root = local / "evidence"
@@ -169,15 +170,23 @@ def lifecycle_generate_fixture(
         event["event_id"] = exclusion_event_id(event)
         _write_json(event_root / f"{mode}.json", event)
 
-    inputs = (
+    inputs = [
         EvidenceInput("coverage", "COVERAGE", coverage_path, coverage_sha),
         EvidenceInput("source_audit", "SUPPORTING_EVIDENCE", proof_path, proof_sha),
-        EvidenceInput("provider_claim_inventory", "SUPPORTING_EVIDENCE", provider_path, provider_sha),
-        EvidenceInput("package_claim_inventory", "SUPPORTING_EVIDENCE", package_path, package_sha),
-        *extra_inputs,
-    )
+    ]
+    if include_provider_authority:
+        inputs.append(EvidenceInput(
+            "provider_claim_inventory", "SUPPORTING_EVIDENCE",
+            provider_path, provider_sha,
+        ))
+    if include_package_authority:
+        inputs.append(EvidenceInput(
+            "package_claim_inventory", "SUPPORTING_EVIDENCE",
+            package_path, package_sha,
+        ))
+    inputs.extend(extra_inputs)
     return LocalConfiguration(
-        inputs=inputs,
+        inputs=tuple(inputs),
         output_path=local / "generated" / "REMAINING_TARGET_MASTER_LEDGER.json",
         exclusion_events_dir=event_root,
     ), record.record_id
@@ -205,6 +214,46 @@ def test_generate_production_lifecycle_uses_empty_raw_claim_inventories(tmp_path
     assert audit["excluded_with_proof"] == [record_id]
     assert audit["exclusion_validation_failures"] == []
     assert audit["in_scope_nonterminal"] == []
+
+
+@pytest.mark.parametrize(
+    ("include_provider", "include_package", "expected_codes"),
+    [
+        pytest.param(
+            False, True, {"MISSING_PROVIDER_CLAIM_AUTHORITY"},
+            id="missing-provider-authority",
+        ),
+        pytest.param(
+            True, False, {"MISSING_PACKAGE_CLAIM_AUTHORITY"},
+            id="missing-package-authority",
+        ),
+        pytest.param(
+            False, False,
+            {"MISSING_PROVIDER_CLAIM_AUTHORITY", "MISSING_PACKAGE_CLAIM_AUTHORITY"},
+            id="missing-both-authorities",
+        ),
+    ],
+)
+def test_generate_attempted_attachment_requires_both_verified_claim_authorities(
+    tmp_path, include_provider, include_package, expected_codes,
+):
+    config, record_id = lifecycle_generate_fixture(
+        tmp_path,
+        include_provider_authority=include_provider,
+        include_package_authority=include_package,
+    )
+
+    result = generate(config)
+    audit = json.loads(result.audit_path.read_text(encoding="utf-8"))
+
+    assert audit["excluded_with_proof"] == []
+    assert audit["exclusion_validation_failures"] == [record_id]
+    assert audit["in_scope_nonterminal"] == [record_id]
+    assert expected_codes <= {
+        failure.split(":")[2]
+        for failure in audit["exclusion_history_failures"]
+        if failure.startswith("INVALID_EVENT:")
+    }
 
 
 @pytest.mark.parametrize(

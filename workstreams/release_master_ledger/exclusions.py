@@ -643,6 +643,10 @@ def _validate_independent_claims(
     event: Mapping[str, object], errors: list[str], *,
     independent_provider_claims: Mapping[object, object] | None,
     independent_package_claims: Mapping[object, object] | None,
+    provider_authority_present: bool | None,
+    provider_authority_complete: bool | None,
+    package_authority_present: bool | None,
+    package_authority_complete: bool | None,
 ) -> None:
     record_id = event.get("record_id")
     mode = event.get("mode")
@@ -651,9 +655,21 @@ def _validate_independent_claims(
     if (
         not isinstance(independent_provider_claims, Mapping)
         or not isinstance(independent_package_claims, Mapping)
+        or provider_authority_present is None
+        or provider_authority_complete is None
+        or package_authority_present is None
+        or package_authority_complete is None
     ):
         errors.append("MISSING_INDEPENDENT_EXCLUSION_CLAIM_CONTEXT")
         return
+    if provider_authority_present is not True:
+        errors.append("MISSING_PROVIDER_CLAIM_AUTHORITY")
+    elif provider_authority_complete is not True:
+        errors.append("INCOMPLETE_PROVIDER_CLAIM_AUTHORITY")
+    if package_authority_present is not True:
+        errors.append("MISSING_PACKAGE_CLAIM_AUTHORITY")
+    elif package_authority_complete is not True:
+        errors.append("INCOMPLETE_PACKAGE_CLAIM_AUTHORITY")
     if has_independent_claim(independent_provider_claims, record_id, str(mode)):
         errors.append("INDEPENDENT_PROVIDER_CLAIM")
     if has_independent_claim(independent_package_claims, record_id, str(mode)):
@@ -702,6 +718,10 @@ def validate_exclusion_event(
     lifecycle: Literal["pre_attachment", "attached"] | None = None,
     independent_provider_claims: Mapping[object, object] | None = None,
     independent_package_claims: Mapping[object, object] | None = None,
+    provider_authority_present: bool | None = None,
+    provider_authority_complete: bool | None = None,
+    package_authority_present: bool | None = None,
+    package_authority_complete: bool | None = None,
 ) -> list[str]:
     """Return stable errors for one event against one record and verified evidence map."""
     if not isinstance(event, Mapping):
@@ -755,6 +775,10 @@ def validate_exclusion_event(
             errors,
             independent_provider_claims=independent_provider_claims,
             independent_package_claims=independent_package_claims,
+            provider_authority_present=provider_authority_present,
+            provider_authority_complete=provider_authority_complete,
+            package_authority_present=package_authority_present,
+            package_authority_complete=package_authority_complete,
         )
     _validate_reason_proof(event, record, registry, links, errors)
     if event.get("record_id") != record.get("record_id"):
@@ -776,6 +800,10 @@ def select_current_exclusion(
     lifecycle: Literal["pre_attachment", "attached"] | None = None,
     independent_provider_claims: Mapping[object, object] | None = None,
     independent_package_claims: Mapping[object, object] | None = None,
+    provider_authority_present: bool | None = None,
+    provider_authority_complete: bool | None = None,
+    package_authority_present: bool | None = None,
+    package_authority_complete: bool | None = None,
 ) -> ExclusionSelection:
     """Choose only a valid newest unrevoked event from an unambiguous full history."""
     relevant = [event for event in events if isinstance(event, Mapping) and event.get("record_id") == record_id and event.get("mode") == mode]
@@ -796,6 +824,10 @@ def select_current_exclusion(
             lifecycle=lifecycle,
             independent_provider_claims=independent_provider_claims,
             independent_package_claims=independent_package_claims,
+            provider_authority_present=provider_authority_present,
+            provider_authority_complete=provider_authority_complete,
+            package_authority_present=package_authority_present,
+            package_authority_complete=package_authority_complete,
         )
     ]
     if validation_errors:
