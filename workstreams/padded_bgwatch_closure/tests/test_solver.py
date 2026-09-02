@@ -11,6 +11,7 @@ import pytest
 
 from workstreams.padded_bgwatch_closure.configuration import VerifiedInput
 from workstreams.padded_bgwatch_closure.geometry import (
+    ParsedGlbSurface,
     ParsedColladaGeometry,
     SurfaceConstraints,
     TriangleMesh,
@@ -18,6 +19,10 @@ from workstreams.padded_bgwatch_closure.geometry import (
     derive_minimal_roi,
     parse_collada_geometry,
     parse_glb_surface,
+)
+from workstreams.padded_bgwatch_closure.integration import (
+    derive_fixed_coverage_contract,
+    derive_original_active_ids,
 )
 from workstreams.padded_bgwatch_closure.solver import (
     Candidate,
@@ -90,8 +95,45 @@ def test_geometry_parsers_consume_verified_content_bytes():
     assert garment.non_position_sha256 == "12D30A0B8846A9CE163A969EE6AFBB001ADEDA068D80046BD02B4E7221BCF652"
     assert body.positions.tolist() == [[0.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]
     assert body.faces.tolist() == [[0, 1, 2]]
+    assert isinstance(body, ParsedGlbSurface)
+    np.testing.assert_allclose(body.vertex_normals, [[1.0, 0.0, 0.0]] * 3)
     assert garment.positions.flags.writeable is False
     assert body.faces.flags.writeable is False
+
+
+def test_original_active_ids_use_interpolated_body_normals_and_pin_every_penetration():
+    """Catches replacing the original 593-vertex rule with face-normal or nearest-vertex guesses."""
+    source_positions = np.array([[0.1, 0.1, -0.2], [0.8, 0.1, -0.1], [0.1, 0.8, 0.2]])
+    body = ParsedGlbSurface(
+        positions=np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0]], dtype=float),
+        faces=np.array([[0, 1, 2]], dtype=int),
+        vertex_normals=np.array([[0, 0, 1]] * 3, dtype=float),
+    )
+
+    active = derive_original_active_ids(source_positions, body)
+
+    assert active == (0, 1)
+
+
+def test_fixed_coverage_contract_uses_only_pristine_outward_body_samples_within_five_cm():
+    """Catches redefining the retained 0.05 m cohort after candidate movement."""
+    source_positions = np.array([
+        [0, 0, 0.01], [1, 0, 0.01], [0, 1, 0.01],
+        [10, 10, -1.0], [11, 10, -1.0], [10, 11, -1.0],
+    ], dtype=float)
+    source_faces = np.array([[0, 1, 2], [3, 4, 5]], dtype=int)
+    body = ParsedGlbSurface(
+        positions=np.array([[0.1, 0.1, 0], [0.2, 0.1, 0], [0.1, 0.2, 0]], dtype=float),
+        faces=np.array([[0, 1, 2]], dtype=int),
+        vertex_normals=np.array([[0, 0, 1]] * 3, dtype=float),
+    )
+
+    evidence = derive_fixed_coverage_contract(source_positions, source_faces, body)
+
+    assert evidence.body_vertex_ids == (0, 1, 2)
+    np.testing.assert_array_equal(evidence.contract.points, body.positions)
+    np.testing.assert_array_equal(evidence.contract.normals, body.vertex_normals)
+    assert evidence.contract.maximum_distance == 0.05
 
 
 def test_minimal_roi_connects_active_vertices_and_fixes_one_ring_boundary():
@@ -107,6 +149,25 @@ def test_minimal_roi_connects_active_vertices_and_fixes_one_ring_boundary():
     assert roi.movable_ids == (0, 1, 2, 3)
     assert roi.boundary_ids == (4, 5)
     assert roi.roi_ids == (0, 1, 2, 3, 4, 5)
+
+
+def test_minimal_roi_builds_one_coherent_subroi_per_occupied_mesh_component():
+    """Catches the real multi-component garment dropping active components or aborting."""
+    positions = np.array([
+        [0, 0, 0], [1, 0, 0], [2, 0, 0], [1, 1, 0],
+        [10, 0, 0], [11, 0, 0], [12, 0, 0], [11, 1, 0],
+    ], dtype=float)
+    faces = np.array([
+        [0, 1, 3], [1, 2, 3],
+        [4, 5, 7], [5, 6, 7],
+    ], dtype=int)
+
+    roi = derive_minimal_roi(positions, faces, active_ids=[0, 2, 4, 6])
+
+    assert roi.active_ids == (0, 2, 4, 6)
+    assert roi.movable_ids == (0, 1, 2, 4, 5, 6)
+    assert roi.boundary_ids == (3, 7)
+    assert roi.roi_ids == (0, 1, 2, 3, 4, 5, 6, 7)
 
 
 def test_surface_constraints_use_exact_closest_triangle_not_nearest_vertex():

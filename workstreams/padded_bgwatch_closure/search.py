@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 import hashlib
 import json
+from collections.abc import Callable
 
 import numpy as np
 
@@ -167,6 +168,8 @@ def _serialize_result(
 def run_position_only_search(
     source: ParsedColladaGeometry,
     contract: CandidateContract,
+    *,
+    candidate_roundtrip: Callable[[Candidate], Candidate] | None = None,
 ) -> SearchResult:
     """Evaluate every fixed case and select the first production pass by grid order."""
     if not isinstance(source, ParsedColladaGeometry):
@@ -190,6 +193,10 @@ def run_position_only_search(
             fairness=parameters.fairness,
             iterations=parameters.iterations,
         )
+        if candidate_roundtrip is not None:
+            candidate = candidate_roundtrip(candidate)
+            if not isinstance(candidate, Candidate):
+                raise TypeError("CANDIDATE_ROUNDTRIP_MUST_RETURN_CANDIDATE")
         gates = evaluate_candidate(source, candidate, contract)
         position_sha256 = _position_sha256(candidate)
         reasons = _failure_reasons(candidate, gates)

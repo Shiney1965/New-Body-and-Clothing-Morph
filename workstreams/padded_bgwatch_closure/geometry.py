@@ -63,6 +63,25 @@ class TriangleMesh:
 
 
 @dataclass(frozen=True)
+class ParsedGlbSurface(TriangleMesh):
+    """Read-only GLB triangle surface retaining exact transformed vertex normals."""
+
+    vertex_normals: np.ndarray
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        normals = _readonly(self.vertex_normals, np.float64)
+        if normals.shape != self.positions.shape or not np.all(np.isfinite(normals)):
+            raise ValueError("GLB vertex normals must match finite positions")
+        lengths = np.linalg.norm(normals, axis=1)
+        if np.any(lengths <= 1e-15):
+            raise ValueError("GLB vertex normals must be nonzero")
+        normals = normals / lengths[:, None]
+        normals.setflags(write=False)
+        object.__setattr__(self, "vertex_normals", normals)
+
+
+@dataclass(frozen=True)
 class ParsedColladaGeometry(TriangleMesh):
     """Selected DAE geometry plus immutable source/semantic identities."""
 
@@ -209,6 +228,63 @@ def _non_position_digest(content: bytes, array_id: str) -> str:
     return hashlib.sha256(replaced.encode("utf-8")).hexdigest().upper()
 
 
+def serialize_collada_positions(
+    verified_source: VerifiedInput,
+    parsed_source: ParsedColladaGeometry,
+    candidate_positions: object,
+) -> bytes:
+    """Replace only the verified selected POSITION payload using six decimals."""
+    if verified_source.input_id != "pristine_source_dae":
+        raise ValueError("COLLADA writer requires pristine_source_dae verified content")
+    source_digest = hashlib.sha256(verified_source.content).hexdigest().upper()
+    if (
+        len(verified_source.content) != verified_source.byte_count
+        or source_digest != verified_source.actual_sha256
+        or source_digest != verified_source.expected_sha256
+        or source_digest != parsed_source.content_sha256
+    ):
+        raise ValueError("VERIFIED_SOURCE_IDENTITY_MISMATCH")
+    positions = np.asarray(candidate_positions, dtype=np.float64)
+    if positions.shape != parsed_source.positions.shape:
+        raise ValueError("CANDIDATE_POSITION_SHAPE_MISMATCH")
+    if not np.all(np.isfinite(positions)):
+        raise ValueError("CANDIDATE_POSITIONS_MUST_BE_FINITE")
+
+    root = ET.fromstring(verified_source.content)
+    selected = None
+    for geometry in root.findall(".//c:library_geometries/c:geometry", NS):
+        if geometry.get("id") == parsed_source.geometry_id:
+            selected = geometry.find("c:mesh", NS)
+            break
+    if selected is None:
+        raise ValueError("DAE selected geometry is missing during write")
+    _source_id, array, stride = _position_source(selected)
+    if stride != 3 or not array.get("id"):
+        raise ValueError("DAE selected POSITION source must have stride three and an ID")
+    if _non_position_digest(verified_source.content, array.get("id")) != parsed_source.non_position_sha256:
+        raise ValueError("DAE_NON_POSITION_SOURCE_IDENTITY_MISMATCH")
+
+    formatted: list[str] = []
+    for value in positions.reshape(-1):
+        rounded = round(float(value), 6)
+        if rounded == 0.0:
+            rounded = 0.0
+        formatted.append(f"{rounded:.6f}")
+    payload = " ".join(formatted)
+    text = verified_source.content.decode("utf-8")
+    pattern = re.compile(
+        rf'(<float_array\b[^>]*\bid=["\']{re.escape(array.get("id"))}["\'][^>]*>).*?(</float_array>)',
+        re.DOTALL,
+    )
+    written_text, count = pattern.subn(lambda match: match.group(1) + payload + match.group(2), text, count=1)
+    if count != 1:
+        raise ValueError("DAE POSITION float array cannot be isolated during write")
+    written = written_text.encode("utf-8")
+    if _non_position_digest(written, array.get("id")) != parsed_source.non_position_sha256:
+        raise ValueError("DAE_NON_POSITION_SENTINEL_DIGEST_CHANGED")
+    return written
+
+
 def parse_collada_geometry(verified: VerifiedInput) -> ParsedColladaGeometry:
     """Parse the largest triangle geometry from verified bytes without reopening a path."""
     if verified.input_id != "pristine_source_dae":
@@ -341,7 +417,21 @@ def _scene_nodes(document: dict) -> list[tuple[int, np.ndarray]]:
     return found
 
 
-def parse_glb_surface(verified: VerifiedInput) -> TriangleMesh:
+def _computed_vertex_normals(positions: np.ndarray, faces: np.ndarray) -> np.ndarray:
+    triangles = positions[faces]
+    face_vectors = np.cross(
+        triangles[:, 1] - triangles[:, 0], triangles[:, 2] - triangles[:, 0],
+    )
+    normals = np.zeros_like(positions)
+    for corner in range(3):
+        np.add.at(normals, faces[:, corner], face_vectors)
+    lengths = np.linalg.norm(normals, axis=1)
+    if np.any(lengths <= 1e-15):
+        raise ValueError("cannot derive GLB normals for isolated vertices")
+    return normals / lengths[:, None]
+
+
+def parse_glb_surface(verified: VerifiedInput) -> ParsedGlbSurface:
     """Parse the largest non-LOD triangle primitive from verified GLB bytes."""
     if verified.input_id != "bcb_body_glb":
         raise ValueError("GLB parser requires bcb_body_glb verified content")
@@ -349,7 +439,7 @@ def parse_glb_surface(verified: VerifiedInput) -> TriangleMesh:
     if len(verified.content) != verified.byte_count or digest != verified.actual_sha256 or digest != verified.expected_sha256:
         raise ValueError("verified GLB content contract mismatch")
     document, binary = _read_glb(verified.content)
-    candidates: list[tuple[bool, int, np.ndarray, np.ndarray]] = []
+    candidates: list[tuple[bool, int, np.ndarray, np.ndarray, np.ndarray]] = []
     for node_index, world in _scene_nodes(document):
         node = document["nodes"][node_index]
         if "mesh" not in node:
@@ -369,12 +459,20 @@ def parse_glb_surface(verified: VerifiedInput) -> TriangleMesh:
             homogeneous = np.column_stack([local, np.ones(len(local))])
             positions = (world @ homogeneous.T).T[:, :3]
             faces = raw_faces.astype(np.int64).reshape(-1, 3)
-            candidates.append((is_lod, len(positions), positions, faces))
+            if "NORMAL" in attributes:
+                local_normals = _glb_accessor(
+                    document, binary, int(attributes["NORMAL"]),
+                ).astype(np.float64)
+                normal_matrix = np.linalg.inv(world[:3, :3]).T
+                normals = (normal_matrix @ local_normals.T).T
+            else:
+                normals = _computed_vertex_normals(positions, faces)
+            candidates.append((is_lod, len(positions), positions, faces, normals))
     if not candidates:
         raise ValueError("GLB contains no indexed triangle primitive")
     non_lod = [item for item in candidates if not item[0]]
-    _, _, positions, faces = max(non_lod or candidates, key=lambda item: item[1])
-    return TriangleMesh(positions, faces)
+    _, _, positions, faces, normals = max(non_lod or candidates, key=lambda item: item[1])
+    return ParsedGlbSurface(positions, faces, normals)
 
 
 def _adjacency(vertex_count: int, faces: np.ndarray) -> tuple[tuple[int, ...], ...]:
@@ -398,24 +496,48 @@ def derive_minimal_roi(
     if not active or active[0] < 0 or active[-1] >= len(positions):
         raise ValueError("active vertex IDs must be a nonempty in-range set")
     adjacency = _adjacency(len(positions), checked_faces)
-    connected = {active[0]}
-    for target in active[1:]:
-        if target in connected:
+    component_ids = [-1] * len(positions)
+    component = 0
+    for vertex_id in range(len(positions)):
+        if component_ids[vertex_id] >= 0:
             continue
-        queue: deque[int] = deque(sorted(connected))
-        parents: dict[int, int | None] = {value: None for value in connected}
-        while queue and target not in parents:
+        queue = deque([vertex_id])
+        component_ids[vertex_id] = component
+        while queue:
             current = queue.popleft()
             for neighbor in adjacency[current]:
-                if neighbor not in parents:
-                    parents[neighbor] = current
+                if component_ids[neighbor] < 0:
+                    component_ids[neighbor] = component
                     queue.append(neighbor)
-        if target not in parents:
-            raise ValueError("active vertices are not in one connected mesh component")
-        cursor: int | None = target
-        while cursor is not None and cursor not in connected:
-            connected.add(cursor)
-            cursor = parents[cursor]
+        component += 1
+
+    connected: set[int] = set()
+    active_components = sorted({component_ids[value] for value in active})
+    for active_component in active_components:
+        component_active = tuple(
+            value for value in active if component_ids[value] == active_component
+        )
+        sub_connected = {component_active[0]}
+        for target in component_active[1:]:
+            if target in sub_connected:
+                continue
+            queue = deque(sorted(sub_connected))
+            parents: dict[int, int | None] = {value: None for value in sub_connected}
+            while queue and target not in parents:
+                current = queue.popleft()
+                for neighbor in adjacency[current]:
+                    if component_ids[neighbor] != active_component:
+                        continue
+                    if neighbor not in parents:
+                        parents[neighbor] = current
+                        queue.append(neighbor)
+            if target not in parents:
+                raise ValueError("active component contains no connecting mesh path")
+            cursor: int | None = target
+            while cursor is not None and cursor not in sub_connected:
+                sub_connected.add(cursor)
+                cursor = parents[cursor]
+        connected.update(sub_connected)
     movable = tuple(sorted(connected))
     boundary = tuple(sorted({
         neighbor
