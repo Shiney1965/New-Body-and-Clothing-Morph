@@ -689,6 +689,8 @@ def _validate_terminal_exclusion(
     record: Mapping[str, Any], errors: list[str], *,
     verified_evidence: Mapping[str, str] | None,
     discovered_event_files: Mapping[str, str] | None,
+    independent_provider_claims: Mapping[object, object] | None,
+    independent_package_claims: Mapping[object, object] | None,
 ) -> bool:
     """Validate every per-mode attachment and return record-wide exclusion closure."""
     if "terminal_exclusion" not in record:
@@ -752,7 +754,12 @@ def _validate_terminal_exclusion(
                 mode_valid = False
             assert verified_evidence is not None
             for error in validate_exclusion_event(
-                event, ledger_record=record, evidence_hashes=verified_evidence
+                event,
+                ledger_record=record,
+                evidence_hashes=verified_evidence,
+                lifecycle="attached",
+                independent_provider_claims=independent_provider_claims,
+                independent_package_claims=independent_package_claims,
             ):
                 errors.append(f"TERMINAL_EXCLUSION_EVENT_INVALID:{error}")
                 mode_valid = False
@@ -825,6 +832,8 @@ def _validate_terminal_exclusion(
 def validate_record(
     record: dict[str, object], *, verified_evidence: Mapping[str, str] | None = None,
     discovered_event_files: Mapping[str, str] | None = None,
+    independent_provider_claims: Mapping[object, object] | None = None,
+    independent_package_claims: Mapping[object, object] | None = None,
 ) -> list[str]:
     """Return stable errors for an emitted record; an empty list is valid."""
     if not isinstance(record, dict):
@@ -867,6 +876,8 @@ def validate_record(
         errors,
         verified_evidence=verified_evidence,
         discovered_event_files=discovered_event_files,
+        independent_provider_claims=independent_provider_claims,
+        independent_package_claims=independent_package_claims,
     )
     _validate_blocker_codes(record, errors, terminal_exclusion_valid)
 
@@ -885,6 +896,8 @@ def validate_record(
 def validate_generated_ledger(
     document: object, *, verified_evidence: Mapping[str, str] | None = None,
     discovered_event_files: Mapping[str, str] | None = None,
+    independent_provider_claims: Mapping[object, object] | None = None,
+    independent_package_claims: Mapping[object, object] | None = None,
 ) -> list[str]:
     """Validate a complete generated ledger envelope and every record."""
     if not isinstance(document, Mapping):
@@ -909,6 +922,8 @@ def validate_generated_ledger(
                     dict(record),
                     verified_evidence=verified_evidence,
                     discovered_event_files=discovered_event_files,
+                    independent_provider_claims=independent_provider_claims,
+                    independent_package_claims=independent_package_claims,
                 )
             )
         summary = document.get("summary")

@@ -178,21 +178,13 @@ def _attach_terminal_exclusions(
             mode: select_current_exclusion(
                 event_history, record.record_id, mode,
                 ledger_record=record_data, evidence_hashes=verified_evidence,
+                lifecycle="pre_attachment",
+                independent_provider_claims=independent_provider_claims,
+                independent_package_claims=independent_package_claims,
             )
             for mode in modes
         }
-        if (
-            any(selection.errors for selection in selections.values())
-            or any(
-                _has_independent_claim(
-                    independent_provider_claims, record.record_id, mode,
-                )
-                or _has_independent_claim(
-                    independent_package_claims, record.record_id, mode,
-                )
-                for mode in modes
-            )
-        ):
+        if any(selection.errors for selection in selections.values()):
             attached.append(record)
             continue
         selected_events = {
@@ -570,6 +562,8 @@ def generate(config: LocalConfiguration) -> GenerationResult:
         ledger,
         verified_evidence=verified_exclusion_evidence,
         discovered_event_files=discovered_event_files,
+        independent_provider_claims=independent_provider_claims,
+        independent_package_claims=independent_package_claims,
     )
     if ledger_errors:
         raise ValueError("GENERATED_LEDGER_INVALID:" + ",".join(ledger_errors))

@@ -148,14 +148,12 @@ def _current_terminal_exclusion(
                 f"{record_id}:{mode}"
             )
             continue
-        independent_conflict = False
         if _has_independent_claim(
             independent_provider_claims, record_id, mode,
         ):
             failure_codes.add(
                 f"INDEPENDENT_PROVIDER_CLAIM:{record_id}:{mode}"
             )
-            independent_conflict = True
         if _has_independent_claim(
             independent_package_claims, record_id, mode,
         ):
@@ -163,20 +161,20 @@ def _current_terminal_exclusion(
                 f"INDEPENDENT_PACKAGE_CLAIM:{record_id}:{mode}"
             )
             packaged_conflict = True
-            independent_conflict = True
         if (
             summary is not None
             and record_data.get("shipped_package_id") != "UNKNOWN_SHIPPED_PACKAGE"
         ):
             packaged_conflict = True
-        if independent_conflict:
-            continue
         selection = select_current_exclusion(
             events,
             record_id,
             mode,
             ledger_record=record_data,
             evidence_hashes=verified_evidence,
+            lifecycle="attached",
+            independent_provider_claims=independent_provider_claims,
+            independent_package_claims=independent_package_claims,
         )
         for error in selection.errors:
             failure_codes.add(f"{error}:{record_id}:{mode}")

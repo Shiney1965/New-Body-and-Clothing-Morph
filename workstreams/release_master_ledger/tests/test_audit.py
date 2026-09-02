@@ -1,7 +1,9 @@
 import pytest
 from copy import deepcopy
+from dataclasses import replace
 
 from workstreams.release_master_ledger.audit import InventorySets, build_completeness_audit
+from workstreams.release_master_ledger.exclusions import ZERO_CLAIM_MODE_ROUTE
 from workstreams.release_master_ledger.identity import canonical_json, sha256_text
 from workstreams.release_master_ledger.models import CanonicalIdentityFields, LedgerRecord, Observation
 from workstreams.release_master_ledger.reconcile import ReconciliationResult, reconcile_observations
@@ -13,7 +15,6 @@ from workstreams.release_master_ledger.tests.test_exclusions import (
     ledger_record,
     RELEASE_MODES,
     signed_event,
-    zero_claim_route,
 )
 from workstreams.release_master_ledger.tests.test_validation import (
     complete_record_fixture,
@@ -99,7 +100,7 @@ def terminal_exclusion_record(events, **overrides):
         "classification": ledger_record()["classification"],
         "body_tuple": ledger_record()["body_tuple"],
         "source_route": ledger_record()["source_route"],
-        "mode_routes": {mode: zero_claim_route() for mode in RELEASE_MODES},
+        "mode_routes": {mode: dict(ZERO_CLAIM_MODE_ROUTE) for mode in RELEASE_MODES},
         "mode_scope": mode_scope,
         "protected_relations": ledger_record()["protected_relations"],
         "disposition": (
@@ -416,6 +417,115 @@ def test_audit_rechecks_independent_provider_and_package_claims(kind, expected):
     assert expected in audit["exclusion_history_failures"]
     assert audit["excluded_modes_with_proof"] == []
     assert audit["exclusion_validation_failures"] == [RECORD_ID]
+
+
+@pytest.mark.parametrize(
+    ("channel", "kind"),
+    [
+        pytest.param("target_vrs", "provider", id="independent-target-vrs"),
+        pytest.param("target_paths", "provider", id="independent-target-paths"),
+        pytest.param("payload_hashes", "provider", id="independent-payload-hashes"),
+        pytest.param("provider_id", "provider", id="independent-provider-id"),
+        pytest.param("provenance", "provider", id="independent-provenance"),
+        pytest.param("package_ownership", "package", id="independent-package-ownership"),
+        pytest.param("shipped_package", "package", id="independent-shipped-package"),
+    ],
+)
+def test_lifecycle_claim_each_independent_preclaim_channel_remains_nonterminal(
+    channel, kind,
+):
+    """Breaks if any independent claim channel can be erased by attachment."""
+    events = tuple(
+        signed_event(mode=mode, created_utc=f"2026-09-01T12:0{index}:00Z")
+        for index, mode in enumerate(RELEASE_MODES)
+    )
+    claims = {(RECORD_ID, "sbbf"): (channel,)}
+
+    audit = audit_terminal_event(
+        terminal_exclusion_record(events),
+        events,
+        provider_claims=claims if kind == "provider" else {},
+        package_claims=claims if kind == "package" else {},
+    )
+
+    assert audit["exclusion_validation_failures"] == [RECORD_ID]
+    assert audit["in_scope_nonterminal"] == [RECORD_ID]
+    assert audit["excluded_with_proof"] == []
+
+
+@pytest.mark.parametrize(
+    "mutate",
+    [
+        pytest.param(
+            lambda record: record.mode_scope["sbbf"].update({"advertised": True}),
+            id="record-advertised",
+        ),
+        pytest.param(
+            lambda record: record.mode_scope["sbbf"].update({"terminal_state": "NONTERMINAL"}),
+            id="record-terminal-state",
+        ),
+        pytest.param(
+            lambda record: record.mode_routes["sbbf"].update({"behavior": "UNASSESSED_ROUTE_BEHAVIOR"}),
+            id="record-behavior",
+        ),
+        pytest.param(
+            lambda record: record.mode_routes["sbbf"].update({"target_vrs": ["VR_CLAIM"]}),
+            id="record-target-vrs",
+        ),
+        pytest.param(
+            lambda record: record.mode_routes["sbbf"].update({"target_paths": ["Public/Claim.GR2"]}),
+            id="record-target-paths",
+        ),
+        pytest.param(
+            lambda record: record.mode_routes["sbbf"].update({"payload_hashes": ["7" * 64]}),
+            id="record-payload-hashes",
+        ),
+        pytest.param(
+            lambda record: record.mode_routes["sbbf"].update({"provider_id": "CLAIMED_PROVIDER"}),
+            id="record-provider-id",
+        ),
+        pytest.param(
+            lambda record: record.mode_routes["sbbf"].update({"provenance": "CLAIMED_PROVENANCE"}),
+            id="record-provenance",
+        ),
+        pytest.param(
+            lambda record: record.mode_routes["sbbf"].update({"static_status": "STATIC_UNASSESSED"}),
+            id="record-static-status",
+        ),
+        pytest.param(
+            lambda record: record.mode_routes["sbbf"].update({"gameplay_status": "GAMEPLAY_UNASSESSED"}),
+            id="record-gameplay-status",
+        ),
+        pytest.param(
+            lambda record: record.mode_routes["sbbf"].update({"save_reload_status": "SAVE_RELOAD_UNASSESSED"}),
+            id="record-save-reload-status",
+        ),
+        pytest.param(
+            lambda record: replace(
+                record, shipped_package_id="PACKAGE_SHA256:" + "7" * 64
+            ),
+            id="record-shipped-package",
+        ),
+    ],
+)
+def test_lifecycle_claim_each_attached_record_claim_channel_remains_nonterminal(
+    mutate,
+):
+    """Breaks if attached audit accepts any non-excluded record representation."""
+    events = tuple(
+        signed_event(mode=mode, created_utc=f"2026-09-01T12:0{index}:00Z")
+        for index, mode in enumerate(RELEASE_MODES)
+    )
+    record = terminal_exclusion_record(events)
+    mutated = mutate(record)
+    if mutated is not None:
+        record = mutated
+
+    audit = audit_terminal_event(record, events)
+
+    assert audit["exclusion_validation_failures"] == [RECORD_ID]
+    assert audit["in_scope_nonterminal"] == [RECORD_ID]
+    assert audit["excluded_with_proof"] == []
 
 
 def test_audit_refuses_exclusion_without_independent_claim_context():

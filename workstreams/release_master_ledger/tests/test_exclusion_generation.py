@@ -12,6 +12,7 @@ from workstreams.release_master_ledger.configuration import (
     LocalConfiguration,
     load_local_configuration,
 )
+from workstreams.release_master_ledger.audit import InventorySets, build_completeness_audit
 from workstreams.release_master_ledger.exclusions import exclusion_event_id
 from workstreams.release_master_ledger.identity import canonical_json, sha256_text
 from workstreams.release_master_ledger.generate import (
@@ -20,7 +21,12 @@ from workstreams.release_master_ledger.generate import (
     DiscoveredExclusionEvent,
     discover_exclusion_events,
 )
-from workstreams.release_master_ledger.models import LedgerRecord
+from workstreams.release_master_ledger.models import (
+    CanonicalIdentityFields,
+    LedgerRecord,
+    Observation,
+)
+from workstreams.release_master_ledger.reconcile import reconcile_observations
 from workstreams.release_master_ledger.validation import (
     _terminal_schema_contract_errors,
     validate_generated_ledger,
@@ -64,8 +70,8 @@ def _zero_claim_route():
         "target_vrs": [],
         "target_paths": [],
         "payload_hashes": [],
-        "provider_id": "NO_PROVIDER",
-        "provenance": "NO_PROVENANCE",
+        "provider_id": "NO_PROVIDER_FOR_EXCLUDED_MODE",
+        "provenance": "NO_PROVENANCE_FOR_EXCLUDED_MODE",
         "static_status": "NOT_APPLICABLE_OUT_OF_SCOPE",
         "gameplay_status": "NOT_APPLICABLE_OUT_OF_SCOPE",
         "save_reload_status": "NOT_APPLICABLE_OUT_OF_SCOPE",
@@ -167,6 +173,56 @@ def _event_for_record(record: LedgerRecord) -> dict[str, object]:
     }
     event["event_id"] = exclusion_event_id(event)
     return event
+
+
+def _production_observation() -> Observation:
+    """One real reconciler input whose routes still have pre-attachment defaults."""
+    return Observation(
+        observation_id="production-lifecycle-observation",
+        observation_kind="WORKSTREAM_EVIDENCE",
+        identity_fields=CanonicalIdentityFields(
+            source_module_uuid="11111111-1111-1111-1111-111111111111",
+            source_profile_digest=PROFILE_SHA256,
+            creation_path_kind="root_template",
+            root_template_uuid="22222222-2222-2222-2222-222222222222",
+            stats_entry="ARM_ProductionLifecycle",
+            inheritance_digest="E" * 64,
+            effective_slot="Underwear",
+            body_tuple=("Human", "Female", "BT1", "Regular", "HUM_F"),
+            ordered_source_vrs=("source-vr",),
+            component_contract_digest="F" * 64,
+        ),
+        source_reference="production-lifecycle.json",
+        evidence_files=("production-lifecycle.json",),
+        payload={
+            "source_module": {
+                "folder": "SYNTHETIC_PROFILE",
+                "version64": "1",
+                "profile_digest": PROFILE_SHA256,
+            },
+            "protected_relations": {
+                "registry_ids": ["REGISTRY_REVIEWED"],
+                "protected_consumers": ["UNACCEPTED_CONSUMER"],
+                "shared_assets": ["Public/Synthetic/Shared.GR2"],
+                "forbidden_targets": ["EMBEDDED_BODY_DATA"],
+            },
+            "disposition": "DEFERRED_WITH_CAUSE",
+            "release_blocking": True,
+            "next_admissible_action": "Recover source.",
+        },
+    )
+
+
+def _production_events(record: LedgerRecord) -> tuple[DiscoveredExclusionEvent, ...]:
+    discovered = []
+    for index, mode in enumerate(RELEASE_MODES):
+        event = _event_for_record(record)
+        event["mode"] = mode
+        event["scope_statement"] = f"Exclude only the synthetic {mode} route."
+        event["created_utc"] = f"2026-09-01T12:0{index}:00Z"
+        event["event_id"] = exclusion_event_id(event)
+        discovered.append(_discovered(event, path=f"history/{mode}.json"))
+    return tuple(discovered)
 
 
 def _structural_event(reason: str, *, hard_contract: bool = False) -> dict[str, object]:
@@ -327,8 +383,8 @@ def test_one_of_four_valid_events_attaches_only_that_mode_and_record_stays_block
         "target_vrs": [],
         "target_paths": [],
         "payload_hashes": [],
-        "provider_id": "NO_PROVIDER",
-        "provenance": "NO_PROVENANCE",
+        "provider_id": "NO_PROVIDER_FOR_EXCLUDED_MODE",
+        "provenance": "NO_PROVENANCE_FOR_EXCLUDED_MODE",
         "static_status": "NOT_APPLICABLE_OUT_OF_SCOPE",
         "gameplay_status": "NOT_APPLICABLE_OUT_OF_SCOPE",
         "save_reload_status": "NOT_APPLICABLE_OUT_OF_SCOPE",
@@ -369,10 +425,17 @@ def test_attachment_refuses_an_excluded_mode_with_any_provider_or_package_claim(
     mutated = mutation(record)
     if mutated is not None:
         record = mutated
+    claims = {(RECORD_ID, "sbbf"): (expected_state,)}
 
     attached = _attach_terminal_exclusions(
         (record,), (_discovered(_event()),),
         {"evidence/source-audit.json": "D" * 64},
+        independent_provider_claims=(
+            claims if expected_state == "provider-claim" else {}
+        ),
+        independent_package_claims=(
+            claims if expected_state == "package-claim" else {}
+        ),
     )
 
     assert attached[0].terminal_exclusion == _terminal_exclusions(), expected_state
@@ -423,6 +486,71 @@ def test_all_four_modes_must_be_independently_terminal_before_record_closes():
     )
 
 
+def test_production_lifecycle_reconciles_attaches_each_mode_and_only_fourth_closes():
+    """Breaks if pre-attachment validation demands the attached route shape."""
+    reconciliation = reconcile_observations([_production_observation()])
+    original = reconciliation.records[0]
+    events = _production_events(original)
+    evidence = {"evidence/source-audit.json": "D" * 64}
+
+    assert all(
+        original.mode_routes[mode]["target_vrs"] == ["UNKNOWN_TARGET_VR"]
+        and original.mode_scope[mode] == {
+            "advertised": True,
+            "terminal_state": "NONTERMINAL",
+        }
+        for mode in RELEASE_MODES
+    )
+
+    for event_count in range(1, len(RELEASE_MODES) + 1):
+        history = events[:event_count]
+        attached = _attach_terminal_exclusions(
+            reconciliation.records,
+            history,
+            evidence,
+            independent_provider_claims={},
+            independent_package_claims={},
+        )
+        record = attached[0]
+        audit = build_completeness_audit(
+            replace(reconciliation, records=attached),
+            InventorySets(source_observations=frozenset({
+                "production-lifecycle-observation"
+            })),
+            exclusion_events=tuple(item.event for item in history),
+            verified_evidence=evidence,
+            discovered_event_files={
+                item.relative_path: item.sha256 for item in history
+            },
+            independent_provider_claims={},
+            independent_package_claims={},
+        )
+
+        selected_modes = RELEASE_MODES[:event_count]
+        assert all(
+            record.mode_routes[mode] == _zero_claim_route()
+            and record.mode_scope[mode] == {
+                "advertised": False,
+                "terminal_state": "OUT_OF_SCOPE_WITH_PROOF",
+            }
+            for mode in selected_modes
+        )
+        assert audit["exclusion_validation_failures"] == []
+        assert audit["excluded_modes_with_proof"] == sorted(
+            f"{record.record_id}:{mode}" for mode in selected_modes
+        )
+        if event_count < len(RELEASE_MODES):
+            assert record.disposition == "DEFERRED_WITH_CAUSE"
+            assert record.release_blocking is True
+            assert audit["excluded_with_proof"] == []
+            assert audit["in_scope_nonterminal"] == [record.record_id]
+        else:
+            assert record.disposition == "OUT_OF_SCOPE_WITH_PROOF"
+            assert record.release_blocking is False
+            assert audit["excluded_with_proof"] == [record.record_id]
+            assert audit["in_scope_nonterminal"] == []
+
+
 def test_source_mode_event_does_not_attach_to_a_four_mode_record():
     event = _event("source")
 
@@ -470,6 +598,8 @@ def test_valid_exclusion_with_unresolved_markers_attaches_and_validates_end_to_e
         document,
         verified_evidence={"evidence/source-audit.json": "D" * 64},
         discovered_event_files={discovered.relative_path: discovered.sha256},
+        independent_provider_claims={},
+        independent_package_claims={},
     ) == []
 
 
@@ -521,6 +651,8 @@ def test_generated_validation_rejects_unexpected_enclosing_exclusion_keys(
         document,
         verified_evidence={"evidence/source-audit.json": "D" * 64},
         discovered_event_files={discovered.relative_path: discovered.sha256},
+        independent_provider_claims={},
+        independent_package_claims={},
     )
 
     assert expected in errors
@@ -537,6 +669,8 @@ def test_coordinated_event_or_file_provenance_forgery_fails_against_independent_
     context = {
         "verified_evidence": {"evidence/source-audit.json": "D" * 64},
         "discovered_event_files": {discovered.relative_path: discovered.sha256},
+        "independent_provider_claims": {},
+        "independent_package_claims": {},
     }
     event_forgery = deepcopy(document)
     forged_event = event_forgery["records"][0]["terminal_exclusion"]["sbbf"]["event"]
@@ -582,6 +716,8 @@ def test_generated_validation_rechecks_zero_claims_for_each_attached_mode(mutate
         document,
         verified_evidence={"evidence/source-audit.json": "D" * 64},
         discovered_event_files={discovered.relative_path: discovered.sha256},
+        independent_provider_claims={},
+        independent_package_claims={},
     )
 
     assert any(
@@ -619,6 +755,8 @@ def test_terminal_schema_contract_rejects_unconstrained_nested_values(mutate):
         document,
         verified_evidence={"evidence/source-audit.json": "D" * 64},
         discovered_event_files={discovered.relative_path: discovered.sha256},
+        independent_provider_claims={},
+        independent_package_claims={},
     )
 
     assert any(error.startswith("RECORD[0]:TERMINAL_EXCLUSION_SCHEMA:") for error in errors)
@@ -879,4 +1017,6 @@ def test_forged_attached_event_data_fails_generated_validation(path, value):
         document,
         verified_evidence={"evidence/source-audit.json": "D" * 64},
         discovered_event_files={discovered.relative_path: discovered.sha256},
+        independent_provider_claims={},
+        independent_package_claims={},
     ))

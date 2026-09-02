@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from datetime import datetime
 import posixpath
 import re
+from typing import Literal
 
 from .identity import canonical_json, sha256_text
 
@@ -51,8 +52,8 @@ ZERO_CLAIM_MODE_ROUTE = {
     "target_vrs": [],
     "target_paths": [],
     "payload_hashes": [],
-    "provider_id": "NO_PROVIDER",
-    "provenance": "NO_PROVENANCE",
+    "provider_id": "NO_PROVIDER_FOR_EXCLUDED_MODE",
+    "provenance": "NO_PROVENANCE_FOR_EXCLUDED_MODE",
     "static_status": "NOT_APPLICABLE_OUT_OF_SCOPE",
     "gameplay_status": "NOT_APPLICABLE_OUT_OF_SCOPE",
     "save_reload_status": "NOT_APPLICABLE_OUT_OF_SCOPE",
@@ -564,6 +565,7 @@ def _event_is_attached_to_mode(
 
 def _validate_mode_binding_and_claims(
     event: Mapping[str, object], record: Mapping[str, object], errors: list[str],
+    lifecycle: Literal["pre_attachment", "attached"] | None,
 ) -> None:
     mode = event.get("mode")
     if not isinstance(mode, str) or mode not in EXCLUSION_MODES:
@@ -574,19 +576,21 @@ def _validate_mode_binding_and_claims(
     scopes = record.get("mode_scope")
     scope = scopes.get(mode) if isinstance(scopes, Mapping) else None
     attached = _event_is_attached_to_mode(record, mode, event)
-    valid_requested = (
+    pre_attachment = (
         isinstance(scope, Mapping)
-        and (
-            (
-                scope.get("advertised") is True
-                and scope.get("terminal_state") == "NONTERMINAL"
-            )
-            or (
-                attached
-                and scope.get("advertised") is False
-                and scope.get("terminal_state") == "OUT_OF_SCOPE_WITH_PROOF"
-            )
-        )
+        and scope.get("advertised") is True
+        and scope.get("terminal_state") == "NONTERMINAL"
+    )
+    attached_state = (
+        attached
+        and isinstance(scope, Mapping)
+        and scope.get("advertised") is False
+        and scope.get("terminal_state") == "OUT_OF_SCOPE_WITH_PROOF"
+    )
+    valid_requested = (
+        pre_attachment if lifecycle == "pre_attachment"
+        else attached_state if lifecycle == "attached"
+        else pre_attachment or attached_state
     )
     if not valid_requested:
         if isinstance(scope, Mapping) and scope.get("advertised") is False:
@@ -594,10 +598,17 @@ def _validate_mode_binding_and_claims(
         else:
             errors.append(f"EXCLUSION_MODE_NOT_REQUESTED:{mode}")
 
+    if lifecycle == "pre_attachment":
+        return
+
     mode_routes = record.get("mode_routes")
     route = mode_routes.get(mode) if isinstance(mode_routes, Mapping) else None
     if not isinstance(route, Mapping):
         errors.append("EXCLUDED_MODE_ROUTE_MISSING")
+    elif lifecycle == "attached":
+        for field, expected in ZERO_CLAIM_MODE_ROUTE.items():
+            if route.get(field) != expected:
+                errors.append(f"EXCLUDED_MODE_CLAIM_PRESENT:{field}")
     else:
         for field in ("target_vrs", "target_paths", "payload_hashes"):
             if route.get(field) != []:
@@ -610,6 +621,43 @@ def _validate_mode_binding_and_claims(
                 errors.append(f"EXCLUDED_MODE_CLAIM_PRESENT:{field}")
     if record.get("shipped_package_id") != "UNKNOWN_SHIPPED_PACKAGE":
         errors.append("EXCLUDED_MODE_PACKAGE_CLAIM_PRESENT")
+
+
+def _has_independent_claim(
+    claims: Mapping[object, object] | None, record_id: str, mode: str,
+) -> bool:
+    if not isinstance(claims, Mapping):
+        return False
+    candidates = (
+        claims.get((record_id, mode)),
+        claims.get(f"{record_id}:{mode}"),
+        claims.get(mode),
+    )
+    nested = claims.get(record_id)
+    if isinstance(nested, Mapping):
+        candidates += (nested.get(mode),)
+    return any(bool(value) for value in candidates)
+
+
+def _validate_independent_claims(
+    event: Mapping[str, object], errors: list[str], *,
+    independent_provider_claims: Mapping[object, object] | None,
+    independent_package_claims: Mapping[object, object] | None,
+) -> None:
+    record_id = event.get("record_id")
+    mode = event.get("mode")
+    if not isinstance(record_id, str) or mode not in RELEASE_MODES:
+        return
+    if (
+        not isinstance(independent_provider_claims, Mapping)
+        or not isinstance(independent_package_claims, Mapping)
+    ):
+        errors.append("MISSING_INDEPENDENT_EXCLUSION_CLAIM_CONTEXT")
+        return
+    if _has_independent_claim(independent_provider_claims, record_id, str(mode)):
+        errors.append("INDEPENDENT_PROVIDER_CLAIM")
+    if _has_independent_claim(independent_package_claims, record_id, str(mode)):
+        errors.append("INDEPENDENT_PACKAGE_CLAIM")
 
 
 def _validate_protected_impact(
@@ -649,7 +697,12 @@ def _validate_protected_impact(
         errors.append("PROTECTED_MUTATION_RESULT")
 
 
-def validate_exclusion_event(event: Mapping[str, object], *, ledger_record: object, evidence_hashes: object) -> list[str]:
+def validate_exclusion_event(
+    event: Mapping[str, object], *, ledger_record: object, evidence_hashes: object,
+    lifecycle: Literal["pre_attachment", "attached"] | None = None,
+    independent_provider_claims: Mapping[object, object] | None = None,
+    independent_package_claims: Mapping[object, object] | None = None,
+) -> list[str]:
     """Return stable errors for one event against one record and verified evidence map."""
     if not isinstance(event, Mapping):
         return ["INVALID:event"]
@@ -693,7 +746,16 @@ def validate_exclusion_event(event: Mapping[str, object], *, ledger_record: obje
         errors.append("INVALID:fixed_acceptance_gates")
     links = _validate_event_evidence(event, registry, errors)
     _validate_protected_impact(event, record, errors)
-    _validate_mode_binding_and_claims(event, record, errors)
+    if lifecycle not in {None, "pre_attachment", "attached"}:
+        errors.append(f"INVALID_EXCLUSION_LIFECYCLE:{lifecycle}")
+    _validate_mode_binding_and_claims(event, record, errors, lifecycle)
+    if lifecycle is not None:
+        _validate_independent_claims(
+            event,
+            errors,
+            independent_provider_claims=independent_provider_claims,
+            independent_package_claims=independent_package_claims,
+        )
     _validate_reason_proof(event, record, registry, links, errors)
     if event.get("record_id") != record.get("record_id"):
         errors.append("RECORD_ID_MISMATCH")
@@ -709,7 +771,11 @@ def validate_exclusion_event(event: Mapping[str, object], *, ledger_record: obje
 
 
 def select_current_exclusion(
-    events: Iterable[Mapping[str, object]], record_id: str, mode: str, *, ledger_record: object, evidence_hashes: object
+    events: Iterable[Mapping[str, object]], record_id: str, mode: str, *,
+    ledger_record: object, evidence_hashes: object,
+    lifecycle: Literal["pre_attachment", "attached"] | None = None,
+    independent_provider_claims: Mapping[object, object] | None = None,
+    independent_package_claims: Mapping[object, object] | None = None,
 ) -> ExclusionSelection:
     """Choose only a valid newest unrevoked event from an unambiguous full history."""
     relevant = [event for event in events if isinstance(event, Mapping) and event.get("record_id") == record_id and event.get("mode") == mode]
@@ -720,7 +786,18 @@ def select_current_exclusion(
             return ExclusionSelection(None, (f"INVALID_EVENT:{index}:INVALID_EVENT_CREATED_UTC",))
         dated.append((index, stamp, event))
     normal = [(index, stamp, event) for index, stamp, event in dated if event.get("event_type", "EXCLUSION") == "EXCLUSION"]
-    validation_errors = [f"INVALID_EVENT:{index}:{error}" for index, _, event in normal for error in validate_exclusion_event(event, ledger_record=ledger_record, evidence_hashes=evidence_hashes)]
+    validation_errors = [
+        f"INVALID_EVENT:{index}:{error}"
+        for index, _, event in normal
+        for error in validate_exclusion_event(
+            event,
+            ledger_record=ledger_record,
+            evidence_hashes=evidence_hashes,
+            lifecycle=lifecycle,
+            independent_provider_claims=independent_provider_claims,
+            independent_package_claims=independent_package_claims,
+        )
+    ]
     if validation_errors:
         return ExclusionSelection(None, tuple(validation_errors))
     ids = [event.get("event_id") for _, _, event in normal]
