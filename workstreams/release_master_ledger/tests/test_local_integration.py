@@ -16,7 +16,9 @@ from workstreams.release_master_ledger.validation import validate_generated_ledg
 CONFIG_PATH = WORKSTREAM_ROOT / "local" / "config.json"
 AUDIT_SET_NAMES = {
     "excluded_but_packaged",
+    "excluded_modes_with_proof",
     "excluded_with_proof",
+    "exclusion_history_failures",
     "exclusion_validation_failures",
     "missing_from_ledger",
     "duplicate_identity",
@@ -51,6 +53,7 @@ def test_current_hash_locked_evidence_generates_truthful_master_ledger():
     by_id = {item.input_id: item for item in verified}
 
     assert len(verified) == len(config.inputs) == 16
+    assert config.exclusion_events_dir == WORKSTREAM_ROOT / "local" / "exclusion_events"
     assert all(item.actual_sha256 == item.expected_sha256 for item in verified)
 
     registry = _json(by_id["protected_registry_v1"].path)
@@ -112,6 +115,16 @@ def test_current_hash_locked_evidence_generates_truthful_master_ledger():
     assert "SUPPORTING_EVIDENCE_REFERENCE" not in ledger["summary"]["observation_kind_counts"]
     assert ledger["summary"]["input_kind_counts"]["SUPPORTING_EVIDENCE"] == 6
     assert ledger["summary"]["observation_count"] == len(ledger["records"]) == 3173
+    assert all(
+        record["mode_scope"] == {
+            mode: {"advertised": True, "terminal_state": "NONTERMINAL"}
+            for mode in ("vanilla", "sbbf", "bcb", "external")
+        }
+        and record["terminal_exclusion"] == {
+            mode: None for mode in ("vanilla", "sbbf", "bcb", "external")
+        }
+        for record in ledger["records"]
+    )
 
     supporting_records = [
         record for record in ledger["records"]
@@ -163,7 +176,9 @@ def test_current_hash_locked_evidence_generates_truthful_master_ledger():
     assert len(audit["ledger_without_source"]) == 208
     assert len(audit["in_scope_nonterminal"]) == 3173
     assert audit["excluded_with_proof"] == []
+    assert audit["excluded_modes_with_proof"] == []
     assert audit["exclusion_validation_failures"] == []
+    assert audit["exclusion_history_failures"] == []
     assert audit["excluded_but_packaged"] == []
 
     assert manifest["inputs"] and len(manifest["inputs"]) == 16

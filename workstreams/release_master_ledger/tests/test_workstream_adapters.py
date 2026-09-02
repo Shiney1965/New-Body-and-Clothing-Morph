@@ -74,13 +74,19 @@ def complete_section_9_contract():
         "body_tuple": {"race": "Human", "sex": "Female", "body_type": "BT1", "body_shape": "Regular", "equipment_race": "HUM_F"},
         "source_route": {"ordered_vrs": list(fields.ordered_source_vrs), "ordered_paths": ["fixture.gr2"], "ordered_file_hashes": ["D" * 64], "component_contract_digest": fields.component_contract_digest},
         "mode_routes": {name: dict(mode) for name in ("vanilla", "sbbf", "bcb", "external")},
+        "mode_scope": {
+            name: {"advertised": True, "terminal_state": "NONTERMINAL"}
+            for name in ("vanilla", "sbbf", "bcb", "external")
+        },
         "protected_relations": {"registry_ids": ["fixture"], "protected_consumers": ["fixture"], "shared_assets": ["fixture"], "forbidden_targets": ["fixture"]},
         "transformation": {"eligibility": "UNASSESSED", "strategy": "UNASSESSED", "allowed_components": ["UNKNOWN_ALLOWED_COMPONENTS"], "allowed_channels": ["UNKNOWN_ALLOWED_CHANNELS"], "exception_id": "NO_EXCEPTION"},
         "gates": {name: "UNASSESSED" for name in ("topology", "component", "material", "skin", "clearance", "package", "fresh_extract", "route", "gameplay")},
         "evidence_paths": ["fixture.json"], "evidence_hashes": ["E" * 64],
         "disposition": "DEFERRED_WITH_CAUSE", "blocker_codes": ["SYNTHETIC_BLOCKER"], "release_blocking": True,
         "next_admissible_action": "Obtain bounded evidence.", "acceptance_event_id": "UNKNOWN_ACCEPTANCE_EVENT", "shipped_package_id": "UNKNOWN_SHIPPED_PACKAGE",
-        "terminal_exclusion": None,
+        "terminal_exclusion": {
+            name: None for name in ("vanilla", "sbbf", "bcb", "external")
+        },
     }
 
 

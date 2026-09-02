@@ -33,6 +33,7 @@ MODE_FIELDS = [
     "gameplay_status",
     "save_reload_status",
 ]
+RELEASE_MODES = ("vanilla", "sbbf", "bcb", "external")
 
 
 def identity_fixture():
@@ -62,6 +63,17 @@ def mode_fixture():
         "gameplay_status": "GAMEPLAY_UNASSESSED",
         "save_reload_status": "SAVE_RELOAD_UNASSESSED",
     }
+
+
+def mode_scope_fixture():
+    return {
+        mode: {"advertised": True, "terminal_state": "NONTERMINAL"}
+        for mode in RELEASE_MODES
+    }
+
+
+def terminal_exclusion_fixture():
+    return {mode: None for mode in RELEASE_MODES}
 
 
 def complete_record_fixture():
@@ -115,6 +127,7 @@ def complete_record_fixture():
             "component_contract_digest": fields.component_contract_digest,
         },
         "mode_routes": {mode: mode_fixture() for mode in ("vanilla", "sbbf", "bcb", "external")},
+        "mode_scope": mode_scope_fixture(),
         "protected_relations": {
             "registry_ids": ["SYNTHETIC_REGISTRY"],
             "protected_consumers": ["SYNTHETIC_CONSUMER"],
@@ -147,7 +160,7 @@ def complete_record_fixture():
         "next_admissible_action": "Obtain bounded synthetic evidence.",
         "acceptance_event_id": "UNKNOWN_ACCEPTANCE_EVENT",
         "shipped_package_id": "UNKNOWN_SHIPPED_PACKAGE",
-        "terminal_exclusion": None,
+        "terminal_exclusion": terminal_exclusion_fixture(),
     }
 
 
@@ -160,6 +173,20 @@ def test_terminal_exclusion_field_is_required_even_when_it_is_null():
     del record["terminal_exclusion"]
 
     assert "MISSING:terminal_exclusion" in validate_record(record)
+
+
+def test_mode_scope_and_terminal_exclusion_are_closed_four_mode_maps():
+    record = complete_record_fixture()
+    record["mode_scope"].pop("external")
+    record["terminal_exclusion"]["source"] = None
+
+    errors = validate_record(record)
+
+    assert "MISSING:mode_scope.external" in errors
+    assert (
+        "TERMINAL_EXCLUSION_SCHEMA:terminal_exclusion:UNEXPECTED:source"
+        in errors
+    )
 
 
 def test_out_of_scope_record_requires_a_valid_terminal_exclusion_attachment():
@@ -325,6 +352,7 @@ def test_schema_binds_every_section_9_2_family_and_exact_dispositions():
     assert set(required) == {
         "record_id", "canonical_identity", "identity_sha256", "source_module", "permission",
         "creation_path", "classification", "body_tuple", "source_route", "mode_routes",
+        "mode_scope",
         "protected_relations", "transformation", "gates", "evidence_paths", "evidence_hashes",
         "disposition", "blocker_codes", "release_blocking", "next_admissible_action",
         "acceptance_event_id", "shipped_package_id", "terminal_exclusion",

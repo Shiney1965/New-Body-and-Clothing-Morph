@@ -122,10 +122,16 @@ def _record_for(identity: str, digest: str, fields: CanonicalIdentityFields, obs
         record_id=f"LEDGER_{digest}", canonical_identity=identity, identity_sha256=digest,
         source_module=source_module, permission=permission, creation_path=creation, classification=classification,
         body_tuple={"race": body[0], "sex": body[1], "body_type": body[2], "body_shape": body[3], "equipment_race": body[4]}, source_route=source_route,
-        mode_routes={mode: _route_defaults() | _mapping(route_data.get(mode)) for mode in _MODES}, protected_relations=protected, transformation=transformation, gates=gates,
+        mode_routes={mode: _route_defaults() | _mapping(route_data.get(mode)) for mode in _MODES},
+        mode_scope={
+            mode: {"advertised": True, "terminal_state": "NONTERMINAL"}
+            for mode in _MODES
+        },
+        protected_relations=protected, transformation=transformation, gates=gates,
         evidence_paths=tuple(dict.fromkeys(path for item in ordered for path in item.evidence_pointers)), evidence_hashes=tuple(dict.fromkeys(item.input_sha256 for item in ordered)),
         disposition=first.disposition, blocker_codes=tuple(sorted(blockers)), release_blocking=any(item.release_blocking for item in ordered) or bool(conflicts) or unresolved,
         next_admissible_action=_payload_value(ordered, "next_admissible_action", "Obtain bounded evidence."), acceptance_event_id=_payload_value(ordered, "acceptance_event_id", "UNKNOWN_ACCEPTANCE_EVENT"), shipped_package_id=_payload_value(ordered, "shipped_package_id", "UNKNOWN_SHIPPED_PACKAGE"),
+        terminal_exclusion={mode: None for mode in _MODES},
     )
     errors = validate_record(record.to_dict())
     if errors:

@@ -74,6 +74,10 @@ def test_observation_and_ledger_record_emit_deterministic_section_9_2_fields():
         body_tuple={"race": "Human"},
         source_route={"ordered_vrs": ["vr-a", "vr-b"]},
         mode_routes={"vanilla": {"zeta": 1, "alpha": 2}},
+        mode_scope={
+            mode: {"advertised": True, "terminal_state": "NONTERMINAL"}
+            for mode in ("vanilla", "sbbf", "bcb", "external")
+        },
         protected_relations={"registry_ids": ["SYNTHETIC"]},
         transformation={"strategy": "UNASSESSED"},
         gates={"gameplay": "UNASSESSED"},
@@ -85,6 +89,9 @@ def test_observation_and_ledger_record_emit_deterministic_section_9_2_fields():
         next_admissible_action="Obtain a bounded synthetic result.",
         acceptance_event_id="UNKNOWN_ACCEPTANCE_EVENT",
         shipped_package_id="UNKNOWN_SHIPPED_PACKAGE",
+        terminal_exclusion={
+            mode: None for mode in ("vanilla", "sbbf", "bcb", "external")
+        },
     )
 
     assert list(observation.to_dict()["payload"]) == ["alpha", "zeta"]
@@ -101,6 +108,7 @@ def test_observation_and_ledger_record_emit_deterministic_section_9_2_fields():
         "body_tuple",
         "source_route",
         "mode_routes",
+        "mode_scope",
         "protected_relations",
         "transformation",
         "gates",

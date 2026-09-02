@@ -19,7 +19,10 @@ EXCLUSION_REASONS = frozenset({
     "NO_SAFE_GEOMETRY_AVAILABLE", "UNRESOLVED_SOURCE_CONTRACT_AFTER_EXHAUSTIVE_AUDIT",
     "INCOMPATIBLE_MUTUALLY_EXCLUSIVE_PROFILE",
 })
-EXCLUSION_MODES = frozenset({"vanilla", "sbbf", "bcb", "external", "source"})
+RELEASE_MODES = ("vanilla", "sbbf", "bcb", "external")
+EXCLUSION_MODES = frozenset({*RELEASE_MODES, "source"})
+APPROVED_BY = "Alan"
+APPROVED_REASON = "fix every outstanding element or declare it unfixable and excluded"
 PROTECTED_DISPOSITIONS = frozenset({
     "ACCEPTED_PROTECTED", "SOURCE_NATIVE_PROTECTED", "PACKAGE_ONLY_PROTECTED",
     "SHIPPED_NATIVE_PASSTHROUGH",
@@ -42,6 +45,18 @@ RECORD_ID_RE = re.compile(r"^LEDGER_[0-9A-F]{64}$")
 TIEFLING_PAK = "ClothMorphTieflingBT1_TEST.pak"
 TIEFLING_UUID = "b57bab2c-5679-5445-8fee-ca8c282990a5"
 TIEFLING_SHA256 = "01E96CF236607F5A4B9E4DD2D7A6BE2CA8A9013456706000DC3248543390F141"
+
+ZERO_CLAIM_MODE_ROUTE = {
+    "behavior": "OUT_OF_SCOPE_WITH_PROOF",
+    "target_vrs": [],
+    "target_paths": [],
+    "payload_hashes": [],
+    "provider_id": "NO_PROVIDER",
+    "provenance": "NO_PROVENANCE",
+    "static_status": "NOT_APPLICABLE_OUT_OF_SCOPE",
+    "gameplay_status": "NOT_APPLICABLE_OUT_OF_SCOPE",
+    "save_reload_status": "NOT_APPLICABLE_OUT_OF_SCOPE",
+}
 
 
 @dataclass(frozen=True)
@@ -417,6 +432,34 @@ def _validate_geometry_proof(
             hard_contract.get("protected_object_path"), digest, registry, links, errors,
         )
         return
+    expected_components = proof.get("expected_components")
+    if (
+        not isinstance(expected_components, (list, tuple))
+        or not expected_components
+        or any(not isinstance(component, str) or not component for component in expected_components)
+        or len(set(expected_components)) != len(expected_components)
+    ):
+        errors.append("INVALID_EXPECTED_COMPONENT_SET")
+        expected_components = ()
+    transformation = record.get("transformation")
+    record_components = (
+        transformation.get("allowed_components")
+        if isinstance(transformation, Mapping) else None
+    )
+    if not isinstance(record_components, (list, tuple)) or list(expected_components) != list(record_components):
+        errors.append("EXPECTED_COMPONENT_SET_MISMATCH")
+    contract_digest = proof.get("component_contract_digest")
+    source_route = record.get("source_route")
+    record_contract_digest = (
+        source_route.get("component_contract_digest")
+        if isinstance(source_route, Mapping) else None
+    )
+    if (
+        not isinstance(contract_digest, str)
+        or SHA256_RE.fullmatch(contract_digest) is None
+        or contract_digest != record_contract_digest
+    ):
+        errors.append("EXPECTED_COMPONENT_CONTRACT_MISMATCH")
     results = proof.get("architecture_results")
     if not isinstance(results, (list, tuple)) or len(results) < 3:
         errors.append("INSUFFICIENT_ARCHITECTURE_RESULTS")
@@ -427,18 +470,34 @@ def _validate_geometry_proof(
                 errors.append("INVALID_ARCHITECTURE_RESULT")
                 continue
             families.append(result.get("method_family"))
+            method_id = str(result.get("method_id", "UNKNOWN_METHOD"))
             implementation = result.get("implementation_sha256")
             if not isinstance(implementation, str) or SHA256_RE.fullmatch(implementation) is None or not isinstance(result.get("candidate_count"), int) or isinstance(result.get("candidate_count"), bool) or result["candidate_count"] <= 0 or result.get("status") != "FAILED_FIXED_GATES":
                 errors.append("INVALID_ARCHITECTURE_RESULT")
             elif not _validate_pair(result.get("implementation_path"), implementation, registry, links):
                 errors.append("INVALID_ARCHITECTURE_IMPLEMENTATION_EVIDENCE")
+            if result.get("component_contract_digest") != contract_digest:
+                errors.append(f"GEOMETRY_COMPONENT_CONTRACT_MISMATCH:{method_id}")
             components = result.get("components")
             if not isinstance(components, (list, tuple)) or not components:
                 errors.append("INVALID_ARCHITECTURE_COMPONENT_EVIDENCE")
+                errors.append(f"GEOMETRY_COMPONENT_SET_MISMATCH:{method_id}")
                 continue
+            component_ids = [
+                component.get("component_id")
+                for component in components if isinstance(component, Mapping)
+            ]
+            if component_ids != list(expected_components):
+                errors.append(f"GEOMETRY_COMPONENT_SET_MISMATCH:{method_id}")
             for component in components:
                 if not isinstance(component, Mapping) or not _nonblank_fields(component, ("component_id", "status"), errors) or component.get("status") not in {"FAIL", "BLOCKED"} or not _validate_link(component, registry, links):
                     errors.append("INVALID_ARCHITECTURE_COMPONENT_EVIDENCE")
+                    continue
+                if component.get("fixed_gates") != proof.get("fixed_gates"):
+                    errors.append(
+                        "INVALID_ARCHITECTURE_COMPONENT_GATES:"
+                        f"{method_id}:{component.get('component_id')}"
+                    )
         if len(set(families)) != len(families):
             errors.append("NON_DISTINCT_ARCHITECTURE_FAMILIES")
         implementations = [result.get("implementation_sha256") for result in results if isinstance(result, Mapping)]
@@ -479,6 +538,117 @@ def _is_accepted_tiefling(record: Mapping[str, object]) -> bool:
     return any((module.get("pak") == TIEFLING_PAK, module.get("uuid") == TIEFLING_UUID, module.get("pak_sha256") == TIEFLING_SHA256))
 
 
+def _contains_unresolved_marker(value: object) -> bool:
+    if isinstance(value, Mapping):
+        return any(_contains_unresolved_marker(member) for member in value.values())
+    if isinstance(value, (list, tuple)):
+        return any(_contains_unresolved_marker(member) for member in value)
+    if not isinstance(value, str):
+        return False
+    upper = value.upper()
+    return (
+        upper.startswith(("UNKNOWN_", "UNASSESSED_", "MISSING_", "BLOCKED_"))
+        or upper.endswith(("_UNKNOWN", "_UNRESOLVED", "_UNASSESSED", "_MISSING"))
+    )
+
+
+def _event_is_attached_to_mode(
+    record: Mapping[str, object], mode: str, event: Mapping[str, object],
+) -> bool:
+    terminal = record.get("terminal_exclusion")
+    if not isinstance(terminal, Mapping):
+        return False
+    summary = terminal.get(mode)
+    return isinstance(summary, Mapping) and summary.get("event") == event
+
+
+def _validate_mode_binding_and_claims(
+    event: Mapping[str, object], record: Mapping[str, object], errors: list[str],
+) -> None:
+    mode = event.get("mode")
+    if not isinstance(mode, str) or mode not in EXCLUSION_MODES:
+        return
+    if mode not in RELEASE_MODES:
+        errors.append(f"EXCLUSION_MODE_NOT_REQUESTED:{mode}")
+        return
+    scopes = record.get("mode_scope")
+    scope = scopes.get(mode) if isinstance(scopes, Mapping) else None
+    attached = _event_is_attached_to_mode(record, mode, event)
+    valid_requested = (
+        isinstance(scope, Mapping)
+        and (
+            (
+                scope.get("advertised") is True
+                and scope.get("terminal_state") == "NONTERMINAL"
+            )
+            or (
+                attached
+                and scope.get("advertised") is False
+                and scope.get("terminal_state") == "OUT_OF_SCOPE_WITH_PROOF"
+            )
+        )
+    )
+    if not valid_requested:
+        if isinstance(scope, Mapping) and scope.get("advertised") is False:
+            errors.append(f"EXCLUSION_MODE_NOT_ADVERTISED:{mode}")
+        else:
+            errors.append(f"EXCLUSION_MODE_NOT_REQUESTED:{mode}")
+
+    mode_routes = record.get("mode_routes")
+    route = mode_routes.get(mode) if isinstance(mode_routes, Mapping) else None
+    if not isinstance(route, Mapping):
+        errors.append("EXCLUDED_MODE_ROUTE_MISSING")
+    else:
+        for field in ("target_vrs", "target_paths", "payload_hashes"):
+            if route.get(field) != []:
+                errors.append(f"EXCLUDED_MODE_CLAIM_PRESENT:{field}")
+        for field, sentinel in (
+            ("provider_id", "NO_PROVIDER"),
+            ("provenance", "NO_PROVENANCE"),
+        ):
+            if route.get(field) != sentinel:
+                errors.append(f"EXCLUDED_MODE_CLAIM_PRESENT:{field}")
+    if record.get("shipped_package_id") != "UNKNOWN_SHIPPED_PACKAGE":
+        errors.append("EXCLUDED_MODE_PACKAGE_CLAIM_PRESENT")
+
+
+def _validate_protected_impact(
+    event: Mapping[str, object], record: Mapping[str, object], errors: list[str],
+) -> None:
+    impact = event.get("protected_impact")
+    if not isinstance(impact, Mapping):
+        errors.append("INVALID:protected_impact")
+        return
+    relations = record.get("protected_relations")
+    if not isinstance(relations, Mapping):
+        errors.append("PROTECTED_RELATIONS_UNRESOLVED")
+        return
+    pairs = (
+        ("registry_ids", "registry_ids"),
+        ("shared_consumers", "protected_consumers"),
+        ("shared_assets", "shared_assets"),
+        ("forbidden_targets", "forbidden_targets"),
+    )
+    unresolved = False
+    for impact_field, record_field in pairs:
+        actual = impact.get(impact_field)
+        expected = relations.get(record_field)
+        if (
+            not isinstance(actual, (list, tuple))
+            or not isinstance(expected, (list, tuple))
+            or any(not isinstance(member, str) or not member for member in expected)
+            or _contains_unresolved_marker(expected)
+        ):
+            unresolved = True
+            continue
+        if list(actual) != list(expected):
+            errors.append(f"PROTECTED_IMPACT_MISMATCH:{impact_field}")
+    if unresolved:
+        errors.append("PROTECTED_RELATIONS_UNRESOLVED")
+    if impact.get("result") != "NO_PROTECTED_MUTATION":
+        errors.append("PROTECTED_MUTATION_RESULT")
+
+
 def validate_exclusion_event(event: Mapping[str, object], *, ledger_record: object, evidence_hashes: object) -> list[str]:
     """Return stable errors for one event against one record and verified evidence map."""
     if not isinstance(event, Mapping):
@@ -486,7 +656,14 @@ def validate_exclusion_event(event: Mapping[str, object], *, ledger_record: obje
     record = _record_mapping(ledger_record)
     if record is None:
         return ["INVALID:ledger_record"]
-    errors: list[str] = []
+    # Imported lazily so selection, attachment, audit, and generated validation
+    # all consume one closed structural contract without an import cycle.
+    from .validation import _terminal_schema_contract_errors
+
+    errors: list[str] = [
+        f"SCHEMA_CONTRACT:{error}"
+        for error in _terminal_schema_contract_errors(event)
+    ]
     registry = _verified_registry(evidence_hashes, errors)
     if event.get("schema") != EXCLUSION_SCHEMA:
         errors.append("INVALID:schema")
@@ -506,22 +683,17 @@ def validate_exclusion_event(event: Mapping[str, object], *, ledger_record: obje
         errors.append(f"INVALID_MODE:{event['mode']}")
     if isinstance(event.get("reason"), str) and event.get("reason") and event.get("reason") not in EXCLUSION_REASONS:
         errors.append(f"INVALID_EXCLUSION_REASON:{event['reason']}")
+    if event.get("approved_by") != APPROVED_BY:
+        errors.append("APPROVED_BY_MISMATCH")
+    if event.get("approved_reason") != APPROVED_REASON:
+        errors.append("APPROVED_REASON_MISMATCH")
     if not isinstance(event.get("attempted_architectures"), (list, tuple)):
         errors.append("INVALID:attempted_architectures")
     if not isinstance(event.get("fixed_acceptance_gates"), Mapping):
         errors.append("INVALID:fixed_acceptance_gates")
     links = _validate_event_evidence(event, registry, errors)
-    impact = event.get("protected_impact")
-    if not isinstance(impact, Mapping):
-        errors.append("INVALID:protected_impact")
-    else:
-        for field in ("registry_ids", "shared_consumers", "forbidden_targets"):
-            if not isinstance(impact.get(field), (list, tuple)):
-                errors.append(f"INVALID_TYPE:protected_impact.{field}")
-            elif impact[field]:
-                errors.append(f"PROTECTED_IMPACT_DECLARED:{field}")
-        if impact.get("result") != "NO_PROTECTED_MUTATION":
-            errors.append("PROTECTED_MUTATION_RESULT")
+    _validate_protected_impact(event, record, errors)
+    _validate_mode_binding_and_claims(event, record, errors)
     _validate_reason_proof(event, record, registry, links, errors)
     if event.get("record_id") != record.get("record_id"):
         errors.append("RECORD_ID_MISMATCH")

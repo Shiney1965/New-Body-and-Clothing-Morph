@@ -126,6 +126,7 @@ class LedgerRecord:
     body_tuple: Mapping[str, Any]
     source_route: Mapping[str, Any]
     mode_routes: Mapping[str, Any]
+    mode_scope: Mapping[str, Any]
     protected_relations: Mapping[str, Any]
     transformation: Mapping[str, Any]
     gates: Mapping[str, Any]
@@ -137,7 +138,7 @@ class LedgerRecord:
     next_admissible_action: str
     acceptance_event_id: str
     shipped_package_id: str
-    terminal_exclusion: Mapping[str, Any] | None = None
+    terminal_exclusion: Mapping[str, Any]
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -151,6 +152,7 @@ class LedgerRecord:
             "body_tuple": _stable_value(self.body_tuple),
             "source_route": _stable_value(self.source_route),
             "mode_routes": _stable_value(self.mode_routes),
+            "mode_scope": _stable_value(self.mode_scope),
             "protected_relations": _stable_value(self.protected_relations),
             "transformation": _stable_value(self.transformation),
             "gates": _stable_value(self.gates),

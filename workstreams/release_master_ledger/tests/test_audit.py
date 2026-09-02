@@ -1,4 +1,5 @@
 import pytest
+from copy import deepcopy
 
 from workstreams.release_master_ledger.audit import InventorySets, build_completeness_audit
 from workstreams.release_master_ledger.identity import canonical_json, sha256_text
@@ -10,9 +11,15 @@ from workstreams.release_master_ledger.tests.test_exclusions import (
     VERIFIED_EVIDENCE,
     exclusion_event_id,
     ledger_record,
+    RELEASE_MODES,
     signed_event,
+    zero_claim_route,
 )
-from workstreams.release_master_ledger.tests.test_validation import complete_record_fixture
+from workstreams.release_master_ledger.tests.test_validation import (
+    complete_record_fixture,
+    mode_scope_fixture,
+    terminal_exclusion_fixture,
+)
 
 
 def observation(observation_id, *, root_template_uuid="22222222-2222-2222-2222-222222222222", disposition="DEFERRED_WITH_CAUSE", release_blocking=True):
@@ -55,9 +62,35 @@ EVENT_FILE_SHA256 = "A" * 64
 EVENT_FILE_REGISTRY = {EVENT_FILE_PATH: EVENT_FILE_SHA256}
 
 
-def terminal_exclusion_record(event, **overrides):
-    """Build one complete record whose terminal state claims this exact event."""
+def _mode_summary(event, mode):
+    path = f"history/{mode}.json"
+    digest = chr(ord("A") + RELEASE_MODES.index(mode)) * 64
+    return {
+        "event": event,
+        "event_file": {
+            "relative_path": path,
+            "sha256": digest,
+            "canonical_event_sha256": sha256_text(canonical_json(event)),
+        },
+    }
+
+
+def terminal_exclusion_record(events, **overrides):
+    """Build one complete record with exact per-mode terminal attachments."""
+    if isinstance(events, dict):
+        events = (events,)
+    events = tuple(events)
     data = complete_record_fixture()
+    mode_scope = mode_scope_fixture()
+    terminal_exclusion = terminal_exclusion_fixture()
+    for event in events:
+        mode = event["mode"]
+        mode_scope[mode] = {
+            "advertised": False,
+            "terminal_state": "OUT_OF_SCOPE_WITH_PROOF",
+        }
+        terminal_exclusion[mode] = _mode_summary(event, mode)
+    record_closed = set(event["mode"] for event in events) == set(RELEASE_MODES)
     data.update({
         "record_id": RECORD_ID,
         "identity_sha256": IDENTITY_SHA256,
@@ -66,25 +99,38 @@ def terminal_exclusion_record(event, **overrides):
         "classification": ledger_record()["classification"],
         "body_tuple": ledger_record()["body_tuple"],
         "source_route": ledger_record()["source_route"],
+        "mode_routes": {mode: zero_claim_route() for mode in RELEASE_MODES},
+        "mode_scope": mode_scope,
         "protected_relations": ledger_record()["protected_relations"],
-        "disposition": "OUT_OF_SCOPE_WITH_PROOF",
-        "blocker_codes": [],
-        "release_blocking": False,
+        "disposition": (
+            "OUT_OF_SCOPE_WITH_PROOF" if record_closed else "DEFERRED_WITH_CAUSE"
+        ),
+        "blocker_codes": [] if record_closed else ["SYNTHETIC_BLOCKER"],
+        "release_blocking": not record_closed,
         "shipped_package_id": "UNKNOWN_SHIPPED_PACKAGE",
-            "terminal_exclusion": {
-                "event": event,
-                "event_file": {
-                    "relative_path": EVENT_FILE_PATH,
-                    "sha256": EVENT_FILE_SHA256,
-                    "canonical_event_sha256": sha256_text(canonical_json(event)),
-                },
-            },
+        "terminal_exclusion": terminal_exclusion,
     })
     data.update(overrides)
     return LedgerRecord(**data)
 
 
-def audit_terminal_event(record, events, *, evidence=VERIFIED_EVIDENCE, event_files=EVENT_FILE_REGISTRY):
+def _event_file_registry(events):
+    return {
+        f"history/{event['mode']}.json": (
+            chr(ord("A") + RELEASE_MODES.index(event["mode"])) * 64
+        )
+        for event in events
+        if event.get("event_type", "EXCLUSION") == "EXCLUSION"
+        and event.get("mode") in RELEASE_MODES
+    }
+
+
+def audit_terminal_event(
+    record, events, *, evidence=VERIFIED_EVIDENCE, event_files=None,
+    provider_claims=None, package_claims=None,
+):
+    provider_claims = {} if provider_claims is None else provider_claims
+    package_claims = {} if package_claims is None else package_claims
     result = ReconciliationResult(
         records=(record,), observation_to_record={}, conflicts=(),
     )
@@ -93,7 +139,11 @@ def audit_terminal_event(record, events, *, evidence=VERIFIED_EVIDENCE, event_fi
         inventories(),
         exclusion_events=events,
         verified_evidence=evidence,
-        discovered_event_files=event_files,
+        discovered_event_files=(
+            _event_file_registry(events) if event_files is None else event_files
+        ),
+        independent_provider_claims=provider_claims,
+        independent_package_claims=package_claims,
     )
 
 
@@ -204,13 +254,33 @@ def test_profile_ids_are_emitted_for_traceability():
     assert audit["missing_source_profiles"] == ["profile-b"]
 
 
-def test_current_valid_terminal_exclusion_is_audited_and_no_longer_nonterminal():
+def test_one_valid_mode_exclusion_is_audited_but_cannot_close_the_record():
     event = signed_event()
 
     audit = audit_terminal_event(terminal_exclusion_record(event), (event,))
 
+    assert audit["excluded_modes_with_proof"] == [f"{RECORD_ID}:sbbf"]
+    assert audit["excluded_with_proof"] == []
+    assert audit["exclusion_validation_failures"] == []
+    assert audit["exclusion_history_failures"] == []
+    assert audit["excluded_but_packaged"] == []
+    assert audit["in_scope_nonterminal"] == [RECORD_ID]
+
+
+def test_all_four_valid_mode_exclusions_are_required_to_close_the_record():
+    events = tuple(
+        signed_event(mode=mode, created_utc=f"2026-09-01T12:0{index}:00Z")
+        for index, mode in enumerate(RELEASE_MODES)
+    )
+
+    audit = audit_terminal_event(terminal_exclusion_record(events), events)
+
+    assert audit["excluded_modes_with_proof"] == [
+        f"{RECORD_ID}:{mode}" for mode in sorted(RELEASE_MODES)
+    ]
     assert audit["excluded_with_proof"] == [RECORD_ID]
     assert audit["exclusion_validation_failures"] == []
+    assert audit["exclusion_history_failures"] == []
     assert audit["excluded_but_packaged"] == []
     assert audit["in_scope_nonterminal"] == []
 
@@ -227,7 +297,7 @@ def test_current_valid_terminal_exclusion_is_audited_and_no_longer_nonterminal()
             id="wrong-event-file-path",
         ),
         pytest.param(
-            lambda summary: summary["event_file"].update({"sha256": "B" * 64}),
+            lambda summary: summary["event_file"].update({"sha256": "E" * 64}),
             id="wrong-event-file-sha256",
         ),
         pytest.param(
@@ -244,48 +314,44 @@ def test_invalid_event_file_provenance_remains_nonterminal(mutate_attachment):
     """Breaks if audit accepts a current event without its immutable attachment."""
     event = signed_event()
     record = terminal_exclusion_record(event)
-    mutate_attachment(record.terminal_exclusion)
+    mutate_attachment(record.terminal_exclusion["sbbf"])
 
     audit = audit_terminal_event(record, (event,))
 
     assert audit["excluded_with_proof"] == []
+    assert audit["excluded_modes_with_proof"] == []
     assert audit["exclusion_validation_failures"] == [RECORD_ID]
     assert audit["excluded_but_packaged"] == []
     assert audit["in_scope_nonterminal"] == [RECORD_ID]
 
 
 @pytest.mark.parametrize(
-    ("mutate", "event_history", "record_overrides"),
+    ("mutate", "event_history"),
     [
         pytest.param(
             lambda event: event["evidence"].clear(),
             lambda event: (event,),
-            {},
             id="missing-evidence",
-        ),
-        pytest.param(
-            lambda event: None,
-            lambda event: (),
-            {"terminal_exclusion": None},
-            id="missing-event",
         ),
         pytest.param(
             lambda event: event["protected_impact"].update({"registry_ids": ["PROTECTED"]}),
             lambda event: (event,),
-            {},
             id="protected-impact",
         ),
         pytest.param(
             lambda event: event.update({"identity_sha256": "C" * 64}),
             lambda event: (event,),
-            {},
             id="identity-mismatch",
         ),
         pytest.param(
             lambda event: event.update({"reason": "TIME_RAN_OUT", "reason_proof": {}}),
             lambda event: (event,),
-            {},
             id="forbidden-reason",
+        ),
+        pytest.param(
+            lambda event: event.update({"unexpected": "forbidden"}),
+            lambda event: (event,),
+            id="closed-schema",
         ),
         pytest.param(
             lambda event: None,
@@ -293,29 +359,23 @@ def test_invalid_event_file_provenance_remains_nonterminal(mutate_attachment):
                 event,
                 signed_event(created_utc="2026-09-01T12:01:00Z"),
             ),
-            {},
             id="stale-event",
-        ),
-        pytest.param(
-            lambda event: None,
-            lambda event: (event,),
-            {"release_blocking": True},
-            id="release-blocking-still-true",
         ),
     ],
 )
 def test_invalid_or_stale_terminal_exclusion_remains_nonterminal(
-    mutate, event_history, record_overrides,
+    mutate, event_history,
 ):
     event = signed_event()
     mutate(event)
     event["event_id"] = exclusion_event_id(event)
 
     audit = audit_terminal_event(
-        terminal_exclusion_record(event, **record_overrides), event_history(event),
+        terminal_exclusion_record(event), event_history(event),
     )
 
     assert audit["excluded_with_proof"] == []
+    assert audit["excluded_modes_with_proof"] == []
     assert audit["exclusion_validation_failures"] == [RECORD_ID]
     assert audit["excluded_but_packaged"] == []
     assert audit["in_scope_nonterminal"] == [RECORD_ID]
@@ -330,6 +390,109 @@ def test_packaged_terminal_exclusion_is_explicitly_blocking():
     audit = audit_terminal_event(record, (event,))
 
     assert audit["excluded_with_proof"] == []
-    assert audit["exclusion_validation_failures"] == []
+    assert audit["excluded_modes_with_proof"] == []
+    assert audit["exclusion_validation_failures"] == [RECORD_ID]
     assert audit["excluded_but_packaged"] == [RECORD_ID]
     assert audit["in_scope_nonterminal"] == [RECORD_ID]
+
+
+@pytest.mark.parametrize(
+    ("kind", "expected"),
+    [
+        ("provider", f"INDEPENDENT_PROVIDER_CLAIM:{RECORD_ID}:sbbf"),
+        ("package", f"INDEPENDENT_PACKAGE_CLAIM:{RECORD_ID}:sbbf"),
+    ],
+)
+def test_audit_rechecks_independent_provider_and_package_claims(kind, expected):
+    event = signed_event()
+    claims = {(RECORD_ID, "sbbf"): ("CLAIM",)}
+
+    audit = audit_terminal_event(
+        terminal_exclusion_record(event), (event,),
+        provider_claims=claims if kind == "provider" else {},
+        package_claims=claims if kind == "package" else {},
+    )
+
+    assert expected in audit["exclusion_history_failures"]
+    assert audit["excluded_modes_with_proof"] == []
+    assert audit["exclusion_validation_failures"] == [RECORD_ID]
+
+
+def test_audit_refuses_exclusion_without_independent_claim_context():
+    event = signed_event()
+    record = terminal_exclusion_record(event)
+    result = ReconciliationResult(
+        records=(record,), observation_to_record={}, conflicts=(),
+    )
+
+    audit = build_completeness_audit(
+        result, inventories(), exclusion_events=(event,),
+        verified_evidence=VERIFIED_EVIDENCE,
+        discovered_event_files=_event_file_registry((event,)),
+    )
+
+    assert audit["excluded_modes_with_proof"] == []
+    assert audit["exclusion_validation_failures"] == [RECORD_ID]
+    assert (
+        f"MISSING_INDEPENDENT_EXCLUSION_CLAIM_CONTEXT:{RECORD_ID}:sbbf"
+        in audit["exclusion_history_failures"]
+    )
+
+
+def test_unmatched_history_is_reported_globally_with_a_stable_code():
+    unmatched_id = "LEDGER_" + "E" * 64
+    unmatched = signed_event(record_id=unmatched_id)
+    record = terminal_exclusion_record(())
+
+    audit = audit_terminal_event(record, (unmatched,))
+
+    assert audit["exclusion_history_failures"] == [
+        f"UNMATCHED_EXCLUSION_RECORD:{unmatched_id}"
+    ]
+    assert audit["exclusion_validation_failures"] == []
+
+
+def test_global_exclusion_history_failure_prevents_release_completion():
+    unmatched_id = "LEDGER_" + "E" * 64
+    unmatched = signed_event(record_id=unmatched_id)
+    section_19 = {
+        name: True for name in (
+            "protected_controls", "in_scope_terminal", "in_scope_terminal_modes",
+            "package_only_gameplay", "source_observations_exactly_once",
+            "route_ownership", "permissions_release_cleared",
+            "package_profile_build_fresh_extract",
+            "gameplay_class_random_save_reload", "advertised_combined_profiles",
+            "installer_restore",
+        )
+    }
+
+    audit = build_completeness_audit(
+        ReconciliationResult(records=(), observation_to_record={}, conflicts=()),
+        inventories(section_19_gates=section_19),
+        exclusion_events=(unmatched,),
+    )
+
+    assert audit["source_complete"] is True
+    assert audit["in_scope_nonterminal"] == []
+    assert audit["exclusion_history_failures"] == [
+        f"UNMATCHED_EXCLUSION_RECORD:{unmatched_id}"
+    ]
+    assert audit["release_complete"] is False
+
+
+def test_orphan_revocation_is_reported_globally_with_a_stable_code():
+    orphan = {
+        "event_type": "REVOCATION",
+        "record_id": RECORD_ID,
+        "mode": "sbbf",
+        "revokes_event_id": "EXCLUSION_" + "F" * 64,
+        "created_utc": "2026-09-01T12:01:00Z",
+    }
+    record = terminal_exclusion_record(())
+
+    audit = audit_terminal_event(record, (orphan,))
+
+    assert audit["exclusion_history_failures"] == [
+        f"REVOCATION_WITHOUT_PRIOR_EVENT:{RECORD_ID}:sbbf"
+    ]
+    assert audit["exclusion_validation_failures"] == [RECORD_ID]

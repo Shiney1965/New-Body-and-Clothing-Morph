@@ -5,7 +5,13 @@ from collections.abc import Callable, Mapping, Sequence
 from datetime import datetime
 from typing import Any
 
-from .exclusions import EXCLUSION_MODES, EXCLUSION_REASONS, validate_exclusion_event
+from .exclusions import (
+    EXCLUSION_MODES,
+    EXCLUSION_REASONS,
+    RELEASE_MODES,
+    ZERO_CLAIM_MODE_ROUTE,
+    validate_exclusion_event,
+)
 from .identity import build_identity, canonical_json, sha256_text
 from .models import CanonicalIdentityFields
 
@@ -25,7 +31,7 @@ DISPOSITIONS = (
     "BLOCKED_WITH_CAUSE",
     "DEFERRED_WITH_CAUSE",
 )
-MODE_ROUTES = ("vanilla", "sbbf", "bcb", "external")
+MODE_ROUTES = RELEASE_MODES
 MODE_FIELDS = (
     "behavior",
     "target_vrs",
@@ -239,15 +245,22 @@ def _validate_mode_routes(record: Mapping[str, Any], errors: list[str]) -> None:
         if not isinstance(route, Mapping):
             errors.append(f"INVALID:{path}")
             continue
+        scopes = record.get("mode_scope")
+        scope = scopes.get(mode) if isinstance(scopes, Mapping) else None
+        excluded = (
+            isinstance(scope, Mapping)
+            and scope.get("advertised") is False
+            and scope.get("terminal_state") == "OUT_OF_SCOPE_WITH_PROOF"
+        )
         for field in MODE_FIELDS:
             field_path = f"{path}.{field}"
             if field not in route:
                 errors.append(f"MISSING:{field_path}")
-            elif _is_blank(route[field]):
-                errors.append(f"BLANK:{field_path}")
             elif field in {"target_vrs", "target_paths", "payload_hashes"}:
                 if not isinstance(route[field], (list, tuple)):
                     errors.append(f"INVALID_TYPE:{field_path}")
+                elif not route[field] and not excluded:
+                    errors.append(f"BLANK:{field_path}")
                 else:
                     for index, member in enumerate(route[field]):
                         member_path = f"{field_path}[{index}]"
@@ -257,8 +270,35 @@ def _validate_mode_routes(record: Mapping[str, Any], errors: list[str]) -> None:
                             errors.append(f"INVALID_TYPE:{member_path}")
                         elif field == "payload_hashes" and not _is_valid_hash_or_unknown(member):
                             errors.append(f"INVALID_SHA256:{member_path}")
+            elif _is_blank(route[field]):
+                errors.append(f"BLANK:{field_path}")
             elif not isinstance(route[field], str):
                 errors.append(f"INVALID_TYPE:{field_path}")
+        if excluded and dict(route) != ZERO_CLAIM_MODE_ROUTE:
+            errors.append(f"MODE_ROUTE_EXCLUSION_MISMATCH:{mode}")
+
+
+def _validate_mode_scope(record: Mapping[str, Any], errors: list[str]) -> None:
+    value = record.get("mode_scope")
+    if not isinstance(value, Mapping):
+        errors.append("MISSING:mode_scope" if "mode_scope" not in record else "INVALID:mode_scope")
+        return
+    for mode in RELEASE_MODES:
+        if mode not in value:
+            errors.append(f"MISSING:mode_scope.{mode}")
+            continue
+        scope = value[mode]
+        if not isinstance(scope, Mapping):
+            errors.append(f"INVALID:mode_scope.{mode}")
+            continue
+        for unexpected in sorted(set(scope) - {"advertised", "terminal_state"}):
+            errors.append(f"UNEXPECTED:mode_scope.{mode}.{unexpected}")
+        if "advertised" not in scope or not isinstance(scope.get("advertised"), bool):
+            errors.append(f"INVALID_TYPE:mode_scope.{mode}.advertised")
+        if scope.get("terminal_state") not in {"NONTERMINAL", "OUT_OF_SCOPE_WITH_PROOF"}:
+            errors.append(f"INVALID_VALUE:mode_scope.{mode}.terminal_state")
+    for unexpected in sorted(set(value) - set(RELEASE_MODES)):
+        errors.append(f"UNEXPECTED:mode_scope.{unexpected}")
 
 
 def _identity_fields_from_record(record: Mapping[str, Any]) -> CanonicalIdentityFields | None:
@@ -456,6 +496,7 @@ def _component_contract(value: object, path: str) -> list[str]:
     return _mapping_contract(value, path, {
         "component_id": _text_contract,
         "status": _enum_contract(frozenset({"FAIL", "BLOCKED"})),
+        "fixed_gates": _fixed_gates_contract,
         "evidence_path": _text_contract,
         "evidence_sha256": _hash_contract,
     })
@@ -469,6 +510,7 @@ def _architecture_contract(value: object, path: str) -> list[str]:
         "implementation_sha256": _hash_contract,
         "candidate_count": _integer_contract,
         "status": _constant_contract("FAILED_FIXED_GATES"),
+        "component_contract_digest": _hash_contract,
         "components": _sequence_contract(_component_contract, minimum=1),
     })
 
@@ -518,6 +560,7 @@ def _protected_impact_contract(value: object, path: str) -> list[str]:
     return _mapping_contract(value, path, {
         "registry_ids": text_array,
         "shared_consumers": text_array,
+        "shared_assets": text_array,
         "forbidden_targets": text_array,
         "result": _constant_contract("NO_PROTECTED_MUTATION"),
     })
@@ -544,10 +587,10 @@ def _terminal_reason_proof_contract(event: Mapping[str, Any]) -> list[str]:
             "date": _text_contract,
             "credit": _text_contract,
             "derivative_scope": _enum_contract(frozenset({
-                "NO_DERIVATIVES", "DERIVATIVE_DENIED",
+                "NO_DERIVATIVES", "DERIVATIVE_DENIED", "ALLOWED",
             })),
             "redistribution_scope": _enum_contract(frozenset({
-                "NO_REDISTRIBUTION", "REDISTRIBUTION_DENIED",
+                "NO_REDISTRIBUTION", "REDISTRIBUTION_DENIED", "ALLOWED",
             })),
             "exact_source_version": _text_contract,
         })
@@ -592,14 +635,23 @@ def _terminal_reason_proof_contract(event: Mapping[str, Any]) -> list[str]:
             "alternate_artifact": _path_hash_contract,
         })
     if reason == "NO_SAFE_GEOMETRY_AVAILABLE":
+        hard_contract = isinstance(proof, Mapping) and isinstance(
+            proof.get("hard_contract_impossibility"), Mapping
+        )
         return _mapping_contract(proof, "reason_proof", {
+            "expected_components": _sequence_contract(_text_contract, minimum=1),
+            "component_contract_digest": _hash_contract,
             "hard_contract_impossibility": _hard_contract_impossibility_contract,
             "architecture_results": _sequence_contract(_architecture_contract),
             "fixed_gates": _fixed_gates_contract,
             "final_available_safe_tooling_failure": _link_contract,
-        }, optional=frozenset({
-            "hard_contract_impossibility", "final_available_safe_tooling_failure",
-        }))
+        }, optional=(
+            frozenset({
+                "expected_components", "component_contract_digest",
+                "final_available_safe_tooling_failure",
+            })
+            if hard_contract else frozenset({"hard_contract_impossibility"})
+        ))
     return ["reason_proof:UNKNOWN_REASON"]
 
 
@@ -638,71 +690,94 @@ def _validate_terminal_exclusion(
     verified_evidence: Mapping[str, str] | None,
     discovered_event_files: Mapping[str, str] | None,
 ) -> bool:
-    """Validate a selected Task-1 event and the immutable event-file provenance."""
+    """Validate every per-mode attachment and return record-wide exclusion closure."""
     if "terminal_exclusion" not in record:
         errors.append("MISSING:terminal_exclusion")
         return False
     value = record.get("terminal_exclusion")
-    requires_event = (
-        record.get("disposition") == "OUT_OF_SCOPE_WITH_PROOF"
-        or (
-            record.get("release_blocking") is False
-            and record.get("disposition") not in NON_EXCLUSION_TERMINAL_DISPOSITIONS
-        )
-    )
-    if value is None:
-        if requires_event:
-            errors.append("MISSING_VALID_TERMINAL_EXCLUSION")
-        return False
     if not isinstance(value, Mapping):
         errors.append("INVALID:terminal_exclusion")
         return False
-    if verified_evidence is None or discovered_event_files is None:
-        errors.append("MISSING_TERMINAL_EXCLUSION_VALIDATION_CONTEXT")
-        return False
-    summary_shape_errors = _closed_mapping(
+    map_shape_errors = _closed_mapping(
         value,
-        allowed=frozenset({"event", "event_file"}),
-        required=frozenset(),
+        allowed=frozenset(RELEASE_MODES),
+        required=frozenset(RELEASE_MODES),
         path="terminal_exclusion",
     )
     errors.extend(
-        f"TERMINAL_EXCLUSION_SCHEMA:{error}" for error in summary_shape_errors
+        f"TERMINAL_EXCLUSION_SCHEMA:{error}" for error in map_shape_errors
     )
-    event = value.get("event")
-    file_provenance = value.get("event_file")
-    valid = (
-        isinstance(event, Mapping)
-        and isinstance(file_provenance, Mapping)
-        and not summary_shape_errors
-    )
-    if not isinstance(event, Mapping):
-        errors.append("TERMINAL_EXCLUSION_EVENT_INVALID:INVALID:event")
-    if not isinstance(file_provenance, Mapping):
-        errors.append("TERMINAL_EXCLUSION_EVENT_FILE_INVALID")
-    if isinstance(event, Mapping):
-        for error in _terminal_schema_contract_errors(event):
-            errors.append(f"TERMINAL_EXCLUSION_SCHEMA:{error}")
-            valid = False
-        for error in validate_exclusion_event(
-            event, ledger_record=record, evidence_hashes=verified_evidence
-        ):
-            errors.append(f"TERMINAL_EXCLUSION_EVENT_INVALID:{error}")
-            valid = False
-    if isinstance(file_provenance, Mapping):
+    attached_modes = [mode for mode in RELEASE_MODES if value.get(mode) is not None]
+    if attached_modes and (
+        verified_evidence is None or discovered_event_files is None
+    ):
+        errors.append("MISSING_TERMINAL_EXCLUSION_VALIDATION_CONTEXT")
+        return False
+
+    valid_modes: set[str] = set()
+    scopes = record.get("mode_scope")
+    for mode in RELEASE_MODES:
+        summary = value.get(mode)
+        scope = scopes.get(mode) if isinstance(scopes, Mapping) else None
+        if summary is None:
+            if (
+                isinstance(scope, Mapping)
+                and scope.get("terminal_state") == "OUT_OF_SCOPE_WITH_PROOF"
+            ):
+                errors.append(f"MISSING_VALID_TERMINAL_EXCLUSION:{mode}")
+            continue
+        mode_valid = True
+        summary_shape_errors = _closed_mapping(
+            summary,
+            allowed=frozenset({"event", "event_file"}),
+            required=frozenset({"event", "event_file"}),
+            path=f"terminal_exclusion.{mode}",
+        )
+        errors.extend(
+            f"TERMINAL_EXCLUSION_SCHEMA:{error}"
+            for error in summary_shape_errors
+        )
+        if summary_shape_errors:
+            mode_valid = False
+        event = summary.get("event") if isinstance(summary, Mapping) else None
+        file_provenance = (
+            summary.get("event_file") if isinstance(summary, Mapping) else None
+        )
+        if not isinstance(event, Mapping):
+            errors.append(f"TERMINAL_EXCLUSION_EVENT_INVALID:{mode}:INVALID:event")
+            mode_valid = False
+        else:
+            for error in _terminal_schema_contract_errors(event):
+                errors.append(f"TERMINAL_EXCLUSION_SCHEMA:{error}")
+                mode_valid = False
+            assert verified_evidence is not None
+            for error in validate_exclusion_event(
+                event, ledger_record=record, evidence_hashes=verified_evidence
+            ):
+                errors.append(f"TERMINAL_EXCLUSION_EVENT_INVALID:{error}")
+                mode_valid = False
+            if event.get("mode") != mode:
+                errors.append(f"TERMINAL_EXCLUSION_MODE_MISMATCH:{mode}")
+                mode_valid = False
+        if not isinstance(file_provenance, Mapping):
+            errors.append(f"TERMINAL_EXCLUSION_EVENT_FILE_INVALID:{mode}")
+            mode_valid = False
+            continue
         file_shape_errors = _closed_mapping(
             file_provenance,
             allowed=frozenset({
                 "relative_path", "sha256", "canonical_event_sha256",
             }),
-            required=frozenset(),
-            path="terminal_exclusion.event_file",
+            required=frozenset({
+                "relative_path", "sha256", "canonical_event_sha256",
+            }),
+            path=f"terminal_exclusion.{mode}.event_file",
         )
         errors.extend(
             f"TERMINAL_EXCLUSION_SCHEMA:{error}" for error in file_shape_errors
         )
         if file_shape_errors:
-            valid = False
+            mode_valid = False
         relative_path = file_provenance.get("relative_path")
         digest = file_provenance.get("sha256")
         canonical_digest = file_provenance.get("canonical_event_sha256")
@@ -713,22 +788,38 @@ def _validate_terminal_exclusion(
             or not isinstance(canonical_digest, str) or SHA256_RE.fullmatch(canonical_digest) is None
             or not isinstance(event, Mapping)
             or canonical_digest != sha256_text(canonical_json(event))
+            or discovered_event_files is None
             or discovered_event_files.get(relative_path) != digest
         ):
-            errors.append("TERMINAL_EXCLUSION_EVENT_FILE_INVALID")
-            valid = False
-    if isinstance(event, Mapping) and event.get("mode") not in EXCLUSION_MODES:
-        errors.append("TERMINAL_EXCLUSION_EVENT_INVALID:INVALID_MODE")
-        valid = False
-    if isinstance(event, Mapping) and event.get("reason") not in EXCLUSION_REASONS:
-        errors.append("TERMINAL_EXCLUSION_EVENT_INVALID:INVALID_EXCLUSION_REASON")
-        valid = False
-    if valid and (record.get("disposition") != "OUT_OF_SCOPE_WITH_PROOF" or record.get("release_blocking") is not False):
+            errors.append(f"TERMINAL_EXCLUSION_EVENT_FILE_INVALID:{mode}")
+            mode_valid = False
+        if not (
+            isinstance(scope, Mapping)
+            and scope.get("advertised") is False
+            and scope.get("terminal_state") == "OUT_OF_SCOPE_WITH_PROOF"
+        ):
+            errors.append(f"TERMINAL_EXCLUSION_STATE_MISMATCH:{mode}")
+            mode_valid = False
+        if mode_valid:
+            valid_modes.add(mode)
+
+    record_closed = len(valid_modes) == len(RELEASE_MODES) and not map_shape_errors
+    state_claims_record_closure = (
+        record.get("disposition") == "OUT_OF_SCOPE_WITH_PROOF"
+        or (
+            record.get("release_blocking") is False
+            and record.get("disposition") not in NON_EXCLUSION_TERMINAL_DISPOSITIONS
+        )
+    )
+    if record_closed and (
+        record.get("disposition") != "OUT_OF_SCOPE_WITH_PROOF"
+        or record.get("release_blocking") is not False
+    ):
         errors.append("TERMINAL_EXCLUSION_STATE_MISMATCH")
-        valid = False
-    elif not valid and requires_event:
+        return False
+    if not record_closed and state_claims_record_closure:
         errors.append("MISSING_VALID_TERMINAL_EXCLUSION")
-    return valid
+    return record_closed
 
 
 def validate_record(
@@ -743,6 +834,7 @@ def validate_record(
     _validate_text_values(record, errors)
     _validate_sequence_values(record, errors)
     _validate_mapping_fields(record, "gates", _GATES, errors)
+    _validate_mode_scope(record, errors)
     _validate_mode_routes(record, errors)
     _validate_hash_values(record, errors)
 

@@ -50,9 +50,9 @@
       "additionalProperties": false,
       "properties": {
         "behavior": {"$ref": "#/$defs/text"},
-        "target_vrs": {"$ref": "#/$defs/text_array"},
-        "target_paths": {"$ref": "#/$defs/text_array"},
-        "payload_hashes": {"$ref": "#/$defs/sha256_or_unknown_array"},
+        "target_vrs": {"type": "array", "items": {"$ref": "#/$defs/text"}},
+        "target_paths": {"type": "array", "items": {"$ref": "#/$defs/text"}},
+        "payload_hashes": {"type": "array", "items": {"$ref": "#/$defs/sha256_or_unknown"}},
         "provider_id": {"$ref": "#/$defs/text"},
         "provenance": {"$ref": "#/$defs/text"},
         "static_status": {"$ref": "#/$defs/text"},
@@ -60,11 +60,38 @@
         "save_reload_status": {"$ref": "#/$defs/text"}
       }
     },
+    "mode_scope_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["advertised", "terminal_state"],
+      "properties": {
+        "advertised": {"type": "boolean"},
+        "terminal_state": {"enum": ["NONTERMINAL", "OUT_OF_SCOPE_WITH_PROOF"]}
+      }
+    },
+    "terminal_exclusion_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["event", "event_file"],
+      "properties": {
+        "event": {"$ref": "#/$defs/terminal_exclusion_event"},
+        "event_file": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["relative_path", "sha256", "canonical_event_sha256"],
+          "properties": {
+            "relative_path": {"type": "string", "minLength": 1, "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"},
+            "sha256": {"type": "string", "pattern": "^[0-9A-F]{64}$"},
+            "canonical_event_sha256": {"type": "string", "pattern": "^[0-9A-F]{64}$"}
+          }
+        }
+      }
+    },
     "ledger_record": {
       "type": "object",
       "required": [
         "record_id", "canonical_identity", "identity_sha256", "source_module", "permission",
-        "creation_path", "classification", "body_tuple", "source_route", "mode_routes",
+        "creation_path", "classification", "body_tuple", "source_route", "mode_routes", "mode_scope",
         "protected_relations", "transformation", "gates", "evidence_paths", "evidence_hashes",
         "disposition", "blocker_codes", "release_blocking", "next_admissible_action",
         "acceptance_event_id", "shipped_package_id", "terminal_exclusion"
@@ -133,6 +160,17 @@
             ]
           }
         },
+        "mode_scope": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["vanilla", "sbbf", "bcb", "external"],
+          "properties": {
+            "vanilla": {"$ref": "#/$defs/mode_scope_entry"},
+            "sbbf": {"$ref": "#/$defs/mode_scope_entry"},
+            "bcb": {"$ref": "#/$defs/mode_scope_entry"},
+            "external": {"$ref": "#/$defs/mode_scope_entry"}
+          }
+        },
         "protected_relations": {
           "type": "object", "required": ["registry_ids", "protected_consumers", "shared_assets", "forbidden_targets"],
           "properties": {
@@ -167,27 +205,15 @@
         "acceptance_event_id": {"$ref": "#/$defs/text"},
         "shipped_package_id": {"$ref": "#/$defs/text"},
         "terminal_exclusion": {
-          "oneOf": [
-            {"type": "null"},
-            {
-              "type": "object",
-              "additionalProperties": false,
-              "required": ["event", "event_file"],
-              "properties": {
-                "event": {"$ref": "#/$defs/terminal_exclusion_event"},
-                "event_file": {
-                  "type": "object",
-                  "additionalProperties": false,
-                  "required": ["relative_path", "sha256", "canonical_event_sha256"],
-                  "properties": {
-                    "relative_path": {"type": "string", "minLength": 1, "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"},
-                    "sha256": {"type": "string", "pattern": "^[0-9A-F]{64}$"},
-                    "canonical_event_sha256": {"type": "string", "pattern": "^[0-9A-F]{64}$"}
-                  }
-                }
-              }
-            }
-          ]
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["vanilla", "sbbf", "bcb", "external"],
+          "properties": {
+            "vanilla": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/terminal_exclusion_summary"}]},
+            "sbbf": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/terminal_exclusion_summary"}]},
+            "bcb": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/terminal_exclusion_summary"}]},
+            "external": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/terminal_exclusion_summary"}]}
+          }
         }
       }
     },
@@ -208,13 +234,13 @@
     },
     "exclusion_component": {
       "type": "object", "additionalProperties": false,
-      "required": ["component_id", "status", "evidence_path", "evidence_sha256"],
-      "properties": {"component_id": {"$ref": "#/$defs/text"}, "status": {"enum": ["FAIL", "BLOCKED"]}, "evidence_path": {"$ref": "#/$defs/text"}, "evidence_sha256": {"$ref": "#/$defs/exclusion_hash"}}
+      "required": ["component_id", "status", "fixed_gates", "evidence_path", "evidence_sha256"],
+      "properties": {"component_id": {"$ref": "#/$defs/text"}, "status": {"enum": ["FAIL", "BLOCKED"]}, "fixed_gates": {"$ref": "#/$defs/exclusion_fixed_gates"}, "evidence_path": {"$ref": "#/$defs/text"}, "evidence_sha256": {"$ref": "#/$defs/exclusion_hash"}}
     },
     "exclusion_architecture": {
       "type": "object", "additionalProperties": false,
-      "required": ["method_id", "method_family", "implementation_path", "implementation_sha256", "candidate_count", "status", "components"],
-      "properties": {"method_id": {"$ref": "#/$defs/text"}, "method_family": {"$ref": "#/$defs/text"}, "implementation_path": {"$ref": "#/$defs/text"}, "implementation_sha256": {"$ref": "#/$defs/exclusion_hash"}, "candidate_count": {"type": "integer", "minimum": 1}, "status": {"const": "FAILED_FIXED_GATES"}, "components": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/exclusion_component"}}}
+      "required": ["method_id", "method_family", "implementation_path", "implementation_sha256", "candidate_count", "status", "component_contract_digest", "components"],
+      "properties": {"method_id": {"$ref": "#/$defs/text"}, "method_family": {"$ref": "#/$defs/text"}, "implementation_path": {"$ref": "#/$defs/text"}, "implementation_sha256": {"$ref": "#/$defs/exclusion_hash"}, "candidate_count": {"type": "integer", "minimum": 1}, "status": {"const": "FAILED_FIXED_GATES"}, "component_contract_digest": {"$ref": "#/$defs/exclusion_hash"}, "components": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/exclusion_component"}}}
     },
     "exclusion_fixed_gate": {"$ref": "#/$defs/exclusion_link"},
     "exclusion_fixed_gates": {
@@ -228,17 +254,17 @@
     },
     "proof_permission": {
       "type": "object", "additionalProperties": false, "required": ["permission_text", "permission_result", "requested_operations", "date", "credit", "derivative_scope", "redistribution_scope", "exact_source_version"],
-      "properties": {"permission_text": {"type": "object", "additionalProperties": false, "required": ["path", "sha256"], "properties": {"path": {"$ref": "#/$defs/text"}, "sha256": {"$ref": "#/$defs/exclusion_hash"}}}, "permission_result": {"const": "PROHIBITED"}, "requested_operations": {"type": "array", "minItems": 1, "items": {"enum": ["DERIVATIVE", "REDISTRIBUTION"]}}, "date": {"$ref": "#/$defs/text"}, "credit": {"$ref": "#/$defs/text"}, "derivative_scope": {"enum": ["NO_DERIVATIVES", "DERIVATIVE_DENIED"]}, "redistribution_scope": {"enum": ["NO_REDISTRIBUTION", "REDISTRIBUTION_DENIED"]}, "exact_source_version": {"$ref": "#/$defs/text"}}
+      "properties": {"permission_text": {"type": "object", "additionalProperties": false, "required": ["path", "sha256"], "properties": {"path": {"$ref": "#/$defs/text"}, "sha256": {"$ref": "#/$defs/exclusion_hash"}}}, "permission_result": {"const": "PROHIBITED"}, "requested_operations": {"type": "array", "minItems": 1, "items": {"enum": ["DERIVATIVE", "REDISTRIBUTION"]}}, "date": {"$ref": "#/$defs/text"}, "credit": {"$ref": "#/$defs/text"}, "derivative_scope": {"enum": ["NO_DERIVATIVES", "DERIVATIVE_DENIED", "ALLOWED"]}, "redistribution_scope": {"enum": ["NO_REDISTRIBUTION", "REDISTRIBUTION_DENIED", "ALLOWED"]}, "exact_source_version": {"$ref": "#/$defs/text"}}
     },
     "proof_nonwearable": {"type": "object", "additionalProperties": false, "required": ["exact_slot", "exact_body_tuple", "source_contract", "release_scope_mismatch"], "properties": {"exact_slot": {"$ref": "#/$defs/text"}, "exact_body_tuple": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/text"}}, "source_contract": {"$ref": "#/$defs/text"}, "release_scope_mismatch": {"$ref": "#/$defs/text"}}},
     "proof_protected_native": {"type": "object", "additionalProperties": false, "required": ["protected_registry_id", "protected_consumer", "protected_route", "protected_path", "protected_sha256", "forbidden_target", "new_target"], "properties": {"protected_registry_id": {"$ref": "#/$defs/text"}, "protected_consumer": {"$ref": "#/$defs/text"}, "protected_route": {"$ref": "#/$defs/text"}, "protected_path": {"$ref": "#/$defs/text"}, "protected_sha256": {"$ref": "#/$defs/exclusion_hash"}, "forbidden_target": {"$ref": "#/$defs/text"}, "new_target": {"$ref": "#/$defs/text"}}},
     "proof_unresolved_source": {"type": "object", "additionalProperties": false, "required": ["exact_profile", "searched_contracts", "search_result", "anti_omission", "anti_omission_pass"], "properties": {"exact_profile": {"$ref": "#/$defs/exclusion_profile"}, "searched_contracts": {"type": "object", "additionalProperties": false, "required": ["root_templates", "named_stats", "inheritance", "visual_banks", "ordered_components", "provider_maps", "uuid_path_hash_aliases"], "properties": {"root_templates": {"$ref": "#/$defs/exclusion_link"}, "named_stats": {"$ref": "#/$defs/exclusion_link"}, "inheritance": {"$ref": "#/$defs/exclusion_link"}, "visual_banks": {"$ref": "#/$defs/exclusion_link"}, "ordered_components": {"$ref": "#/$defs/exclusion_link"}, "provider_maps": {"$ref": "#/$defs/exclusion_link"}, "uuid_path_hash_aliases": {"$ref": "#/$defs/exclusion_link"}}}, "search_result": {"$ref": "#/$defs/exclusion_link"}, "anti_omission": {"$ref": "#/$defs/exclusion_link"}, "anti_omission_pass": {"const": true}}},
-    "proof_geometry": {"type": "object", "additionalProperties": false, "required": ["architecture_results", "fixed_gates"], "properties": {"architecture_results": {"type": "array", "items": {"$ref": "#/$defs/exclusion_architecture"}}, "fixed_gates": {"oneOf": [{"type": "object", "maxProperties": 0}, {"$ref": "#/$defs/exclusion_fixed_gates"}]}, "final_available_safe_tooling_failure": {"$ref": "#/$defs/exclusion_link"}, "hard_contract_impossibility": {"type": "object", "additionalProperties": false, "required": ["result", "protected_object_id", "protected_object_path", "protected_object_sha256", "boundary_contract"], "properties": {"result": {"const": "HARD_CONTRACT_IMPOSSIBILITY"}, "protected_object_id": {"$ref": "#/$defs/text"}, "protected_object_path": {"$ref": "#/$defs/text"}, "protected_object_sha256": {"$ref": "#/$defs/exclusion_hash"}, "boundary_contract": {"type": "object", "additionalProperties": false, "required": ["boundary_type", "record_field", "record_path", "record_value", "evidence_path", "evidence_sha256"], "properties": {"boundary_type": {"enum": ["FORBIDDEN_TARGET", "SHARED_ASSET", "COMPONENT", "MATERIAL", "BODY", "OBJECT"]}, "record_field": {"$ref": "#/$defs/text"}, "record_path": {"$ref": "#/$defs/text"}, "record_value": {"$ref": "#/$defs/text"}, "evidence_path": {"$ref": "#/$defs/text"}, "evidence_sha256": {"$ref": "#/$defs/exclusion_hash"}}}}}}},
+    "proof_geometry": {"oneOf": [{"type": "object", "additionalProperties": false, "required": ["expected_components", "component_contract_digest", "architecture_results", "fixed_gates", "final_available_safe_tooling_failure"], "properties": {"expected_components": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/text"}}, "component_contract_digest": {"$ref": "#/$defs/exclusion_hash"}, "architecture_results": {"type": "array", "minItems": 3, "items": {"$ref": "#/$defs/exclusion_architecture"}}, "fixed_gates": {"$ref": "#/$defs/exclusion_fixed_gates"}, "final_available_safe_tooling_failure": {"$ref": "#/$defs/exclusion_link"}}}, {"type": "object", "additionalProperties": false, "required": ["architecture_results", "fixed_gates", "hard_contract_impossibility"], "properties": {"architecture_results": {"type": "array", "maxItems": 0}, "fixed_gates": {"type": "object", "maxProperties": 0}, "hard_contract_impossibility": {"type": "object", "additionalProperties": false, "required": ["result", "protected_object_id", "protected_object_path", "protected_object_sha256", "boundary_contract"], "properties": {"result": {"const": "HARD_CONTRACT_IMPOSSIBILITY"}, "protected_object_id": {"$ref": "#/$defs/text"}, "protected_object_path": {"$ref": "#/$defs/text"}, "protected_object_sha256": {"$ref": "#/$defs/exclusion_hash"}, "boundary_contract": {"type": "object", "additionalProperties": false, "required": ["boundary_type", "record_field", "record_path", "record_value", "evidence_path", "evidence_sha256"], "properties": {"boundary_type": {"enum": ["FORBIDDEN_TARGET", "SHARED_ASSET", "COMPONENT", "MATERIAL", "BODY", "OBJECT"]}, "record_field": {"$ref": "#/$defs/text"}, "record_path": {"$ref": "#/$defs/text"}, "record_value": {"$ref": "#/$defs/text"}, "evidence_path": {"$ref": "#/$defs/text"}, "evidence_sha256": {"$ref": "#/$defs/exclusion_hash"}}}}}}}]},
     "proof_mutually_exclusive": {"type": "object", "additionalProperties": false, "required": ["selected_profile_id", "alternate_profile_id", "forbidden_module_relationship", "alternate_artifact"], "properties": {"selected_profile_id": {"$ref": "#/$defs/text"}, "alternate_profile_id": {"$ref": "#/$defs/text"}, "forbidden_module_relationship": {"const": "MUTUALLY_EXCLUSIVE"}, "alternate_artifact": {"type": "object", "additionalProperties": false, "required": ["path", "sha256"], "properties": {"path": {"$ref": "#/$defs/text"}, "sha256": {"$ref": "#/$defs/exclusion_hash"}}}}},
     "terminal_exclusion_event": {
       "type": "object", "additionalProperties": false,
       "required": ["schema", "schema_version", "event_id", "record_id", "identity_sha256", "source_profile_id", "mode", "reason", "reason_proof", "scope_statement", "attempted_architectures", "fixed_acceptance_gates", "evidence", "protected_impact", "next_project_if_reopened", "approved_by", "approved_reason", "created_utc"],
-      "properties": {"schema": {"const": "clothmorph.terminal-exclusion"}, "schema_version": {"type": "integer", "const": 1}, "event_id": {"type": "string", "pattern": "^EXCLUSION_[0-9A-F]{64}$"}, "record_id": {"type": "string", "pattern": "^LEDGER_[0-9A-F]{64}$"}, "identity_sha256": {"$ref": "#/$defs/exclusion_hash"}, "source_profile_id": {"$ref": "#/$defs/text"}, "mode": {"enum": ["vanilla", "sbbf", "bcb", "external", "source"]}, "reason": {"enum": ["SOURCE_ABSENT_EXACT_PROFILE", "NO_RELEASE_PERMISSION", "NON_WEARABLE_OR_UNSUPPORTED_BODY_TUPLE", "PROTECTED_NATIVE_ONLY", "NO_SAFE_GEOMETRY_AVAILABLE", "UNRESOLVED_SOURCE_CONTRACT_AFTER_EXHAUSTIVE_AUDIT", "INCOMPATIBLE_MUTUALLY_EXCLUSIVE_PROFILE"]}, "reason_proof": {"type": "object"}, "scope_statement": {"$ref": "#/$defs/text"}, "attempted_architectures": {"type": "array", "items": {"$ref": "#/$defs/exclusion_architecture"}}, "fixed_acceptance_gates": {"oneOf": [{"type": "object", "maxProperties": 0}, {"$ref": "#/$defs/exclusion_fixed_gates"}]}, "evidence": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/exclusion_evidence"}}, "protected_impact": {"type": "object", "additionalProperties": false, "required": ["registry_ids", "shared_consumers", "forbidden_targets", "result"], "properties": {"registry_ids": {"type": "array", "items": {"$ref": "#/$defs/text"}}, "shared_consumers": {"type": "array", "items": {"$ref": "#/$defs/text"}}, "forbidden_targets": {"type": "array", "items": {"$ref": "#/$defs/text"}}, "result": {"const": "NO_PROTECTED_MUTATION"}}}, "next_project_if_reopened": {"$ref": "#/$defs/text"}, "approved_by": {"$ref": "#/$defs/text"}, "approved_reason": {"$ref": "#/$defs/text"}, "created_utc": {"type": "string", "format": "date-time", "pattern": "Z$"}, "event_type": {"const": "EXCLUSION"}},
+      "properties": {"schema": {"const": "clothmorph.terminal-exclusion"}, "schema_version": {"type": "integer", "const": 1}, "event_id": {"type": "string", "pattern": "^EXCLUSION_[0-9A-F]{64}$"}, "record_id": {"type": "string", "pattern": "^LEDGER_[0-9A-F]{64}$"}, "identity_sha256": {"$ref": "#/$defs/exclusion_hash"}, "source_profile_id": {"$ref": "#/$defs/text"}, "mode": {"enum": ["vanilla", "sbbf", "bcb", "external", "source"]}, "reason": {"enum": ["SOURCE_ABSENT_EXACT_PROFILE", "NO_RELEASE_PERMISSION", "NON_WEARABLE_OR_UNSUPPORTED_BODY_TUPLE", "PROTECTED_NATIVE_ONLY", "NO_SAFE_GEOMETRY_AVAILABLE", "UNRESOLVED_SOURCE_CONTRACT_AFTER_EXHAUSTIVE_AUDIT", "INCOMPATIBLE_MUTUALLY_EXCLUSIVE_PROFILE"]}, "reason_proof": {"type": "object"}, "scope_statement": {"$ref": "#/$defs/text"}, "attempted_architectures": {"type": "array", "items": {"$ref": "#/$defs/exclusion_architecture"}}, "fixed_acceptance_gates": {"oneOf": [{"type": "object", "maxProperties": 0}, {"$ref": "#/$defs/exclusion_fixed_gates"}]}, "evidence": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/exclusion_evidence"}}, "protected_impact": {"type": "object", "additionalProperties": false, "required": ["registry_ids", "shared_consumers", "shared_assets", "forbidden_targets", "result"], "properties": {"registry_ids": {"type": "array", "items": {"$ref": "#/$defs/text"}}, "shared_consumers": {"type": "array", "items": {"$ref": "#/$defs/text"}}, "shared_assets": {"type": "array", "items": {"$ref": "#/$defs/text"}}, "forbidden_targets": {"type": "array", "items": {"$ref": "#/$defs/text"}}, "result": {"const": "NO_PROTECTED_MUTATION"}}}, "next_project_if_reopened": {"$ref": "#/$defs/text"}, "approved_by": {"const": "Alan"}, "approved_reason": {"const": "fix every outstanding element or declare it unfixable and excluded"}, "created_utc": {"type": "string", "format": "date-time", "pattern": "Z$"}, "event_type": {"const": "EXCLUSION"}},
       "allOf": [
         {"if": {"properties": {"reason": {"const": "SOURCE_ABSENT_EXACT_PROFILE"}}}, "then": {"properties": {"reason_proof": {"$ref": "#/$defs/proof_source_absent"}, "attempted_architectures": {"maxItems": 0}, "fixed_acceptance_gates": {"maxProperties": 0}}}},
         {"if": {"properties": {"reason": {"const": "NO_RELEASE_PERMISSION"}}}, "then": {"properties": {"reason_proof": {"$ref": "#/$defs/proof_permission"}, "attempted_architectures": {"maxItems": 0}, "fixed_acceptance_gates": {"maxProperties": 0}}}},

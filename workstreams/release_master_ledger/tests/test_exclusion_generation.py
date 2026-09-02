@@ -2,6 +2,7 @@ import hashlib
 import json
 from pathlib import Path
 from copy import deepcopy
+from dataclasses import replace
 
 import pytest
 
@@ -14,7 +15,7 @@ from workstreams.release_master_ledger.configuration import (
 from workstreams.release_master_ledger.exclusions import exclusion_event_id
 from workstreams.release_master_ledger.identity import canonical_json, sha256_text
 from workstreams.release_master_ledger.generate import (
-    _attach_terminal_exclusions,
+    _attach_terminal_exclusions as _attach_terminal_exclusions_impl,
     _manifest_payload,
     DiscoveredExclusionEvent,
     discover_exclusion_events,
@@ -35,6 +36,40 @@ from workstreams.release_master_ledger.tests.test_exclusions import (
 RECORD_ID = "LEDGER_" + "A" * 64
 IDENTITY_SHA256 = "B" * 64
 PROFILE_SHA256 = "C" * 64
+RELEASE_MODES = ("vanilla", "sbbf", "bcb", "external")
+
+
+def _mode_scope(terminal_state="NONTERMINAL", advertised=True):
+    return {
+        mode: {"advertised": advertised, "terminal_state": terminal_state}
+        for mode in RELEASE_MODES
+    }
+
+
+def _terminal_exclusions():
+    return {mode: None for mode in RELEASE_MODES}
+
+
+def _attach_terminal_exclusions(records, events, evidence, **kwargs):
+    kwargs.setdefault("independent_provider_claims", {})
+    kwargs.setdefault("independent_package_claims", {})
+    return _attach_terminal_exclusions_impl(
+        records, events, evidence, **kwargs
+    )
+
+
+def _zero_claim_route():
+    return {
+        "behavior": "OUT_OF_SCOPE_WITH_PROOF",
+        "target_vrs": [],
+        "target_paths": [],
+        "payload_hashes": [],
+        "provider_id": "NO_PROVIDER",
+        "provenance": "NO_PROVENANCE",
+        "static_status": "NOT_APPLICABLE_OUT_OF_SCOPE",
+        "gameplay_status": "NOT_APPLICABLE_OUT_OF_SCOPE",
+        "save_reload_status": "NOT_APPLICABLE_OUT_OF_SCOPE",
+    }
 
 
 def _record() -> LedgerRecord:
@@ -48,20 +83,28 @@ def _record() -> LedgerRecord:
         },
         permission={}, creation_path={}, classification={"effective_slot": "Underwear"},
         body_tuple={"race": "Human", "sex": "Female", "body_type": "BT1"},
-        source_route={}, mode_routes={}, protected_relations={}, transformation={}, gates={},
+        source_route={},
+        mode_routes={mode: _zero_claim_route() for mode in RELEASE_MODES},
+        protected_relations={
+            "registry_ids": [], "protected_consumers": [],
+            "shared_assets": [], "forbidden_targets": [],
+        },
+        transformation={}, gates={},
+        mode_scope=_mode_scope(),
         evidence_paths=(), evidence_hashes=(), disposition="DEFERRED_WITH_CAUSE",
         blocker_codes=("SOURCE_ROUTE_UNRESOLVED",), release_blocking=True,
         next_admissible_action="Recover source.",
         acceptance_event_id="UNKNOWN_ACCEPTANCE_EVENT",
         shipped_package_id="UNKNOWN_SHIPPED_PACKAGE",
+        terminal_exclusion=_terminal_exclusions(),
     )
 
 
-def _event() -> dict[str, object]:
+def _event(mode="sbbf") -> dict[str, object]:
     event: dict[str, object] = {
         "schema": "clothmorph.terminal-exclusion", "schema_version": 1,
         "record_id": RECORD_ID, "identity_sha256": IDENTITY_SHA256,
-        "source_profile_id": "SYNTHETIC_PROFILE", "mode": "sbbf",
+        "source_profile_id": "SYNTHETIC_PROFILE", "mode": mode,
         "reason": "SOURCE_ABSENT_EXACT_PROFILE",
         "reason_proof": {
             "exact_profile": {"id": "SYNTHETIC_PROFILE", "version": "1", "sha256": PROFILE_SHA256},
@@ -72,7 +115,10 @@ def _event() -> dict[str, object]:
         "scope_statement": "Exclude only the synthetic SBBF route.",
         "attempted_architectures": [], "fixed_acceptance_gates": {},
         "evidence": [{"path": "evidence/source-audit.json", "sha256": "D" * 64, "claim": "source audit"}],
-        "protected_impact": {"registry_ids": [], "shared_consumers": [], "forbidden_targets": [], "result": "NO_PROTECTED_MUTATION"},
+        "protected_impact": {
+            "registry_ids": [], "shared_consumers": [], "shared_assets": [],
+            "forbidden_targets": [], "result": "NO_PROTECTED_MUTATION",
+        },
         "next_project_if_reopened": "Recover the exact source profile.",
         "approved_by": "Alan", "approved_reason": "fix every outstanding element or declare it unfixable and excluded",
         "created_utc": "2026-09-01T12:00:00Z",
@@ -91,7 +137,9 @@ def _write_json(path: Path, payload: object) -> str:
 def _full_record() -> LedgerRecord:
     data = complete_record_fixture()
     data["record_id"] = RECORD_ID
-    data["terminal_exclusion"] = None
+    data["mode_scope"] = _mode_scope()
+    data["terminal_exclusion"] = _terminal_exclusions()
+    data["mode_routes"]["sbbf"] = _zero_claim_route()
     return LedgerRecord(**data)
 
 
@@ -109,6 +157,13 @@ def _event_for_record(record: LedgerRecord) -> dict[str, object]:
         "id": record.source_module["folder"],
         "version": record.source_module["version64"],
         "sha256": record.source_module["profile_digest"],
+    }
+    event["protected_impact"] = {
+        "registry_ids": list(record.protected_relations["registry_ids"]),
+        "shared_consumers": list(record.protected_relations["protected_consumers"]),
+        "shared_assets": list(record.protected_relations["shared_assets"]),
+        "forbidden_targets": list(record.protected_relations["forbidden_targets"]),
+        "result": "NO_PROTECTED_MUTATION",
     }
     event["event_id"] = exclusion_event_id(event)
     return event
@@ -151,6 +206,54 @@ def test_configuration_refuses_an_exclusion_directory_outside_the_local_boundary
         load_local_configuration()
 
 
+def test_configuration_requires_the_exact_canonical_exclusion_events_directory(
+    tmp_path, monkeypatch,
+):
+    from workstreams.release_master_ledger import configuration
+
+    root = tmp_path / "release_master_ledger"
+    local = root / "local"
+    local.mkdir(parents=True)
+    evidence = local / "evidence.json"
+    digest = _write_json(evidence, {"records": []})
+    (local / "config.json").write_text(json.dumps({
+        "inputs": [{
+            "input_id": "fixture", "kind": "COVERAGE", "path": "evidence.json",
+            "expected_sha256": digest,
+        }],
+        "output_path": "generated/ledger.json",
+        "exclusion_events_dir": "nested/exclusion_events",
+    }), encoding="utf-8")
+    monkeypatch.setattr(configuration, "WORKSTREAM_ROOT", root)
+
+    with pytest.raises(ConfigurationError, match="EXCLUSION_EVENTS_NOT_CANONICAL"):
+        load_local_configuration()
+
+
+def test_configuration_defaults_to_the_exact_canonical_exclusion_events_directory(
+    tmp_path, monkeypatch,
+):
+    from workstreams.release_master_ledger import configuration
+
+    root = tmp_path / "release_master_ledger"
+    local = root / "local"
+    local.mkdir(parents=True)
+    evidence = local / "evidence.json"
+    digest = _write_json(evidence, {"records": []})
+    (local / "config.json").write_text(json.dumps({
+        "inputs": [{
+            "input_id": "fixture", "kind": "COVERAGE", "path": "evidence.json",
+            "expected_sha256": digest,
+        }],
+        "output_path": "generated/ledger.json",
+    }), encoding="utf-8")
+    monkeypatch.setattr(configuration, "WORKSTREAM_ROOT", root)
+
+    config = load_local_configuration()
+
+    assert config.exclusion_events_dir == local / "exclusion_events"
+
+
 def test_discovery_hashes_files_before_parsing_and_uses_normalized_path_order(tmp_path):
     events = tmp_path / "local" / "exclusion_events"
     _write_json(events / "z.json", _event())
@@ -188,12 +291,12 @@ def test_invalid_event_is_not_attached_or_allowed_to_change_blocking_state():
         (_record(),), (_discovered(invalid),), {"evidence/source-audit.json": "D" * 64},
     )
 
-    assert attached[0].terminal_exclusion is None
+    assert attached[0].terminal_exclusion == _terminal_exclusions()
     assert attached[0].release_blocking is True
     assert attached[0].disposition == "DEFERRED_WITH_CAUSE"
 
 
-def test_selected_valid_event_attaches_a_summary_and_makes_only_that_route_nonblocking():
+def test_one_of_four_valid_events_attaches_only_that_mode_and_record_stays_blocking():
     event = _event()
     discovered = _discovered(event)
 
@@ -202,15 +305,134 @@ def test_selected_valid_event_attaches_a_summary_and_makes_only_that_route_nonbl
     )
 
     record = attached[0]
+    assert record.release_blocking is True
+    assert record.disposition == "DEFERRED_WITH_CAUSE"
+    assert record.blocker_codes == ("SOURCE_ROUTE_UNRESOLVED",)
+    assert record.mode_scope["sbbf"] == {
+        "advertised": False,
+        "terminal_state": "OUT_OF_SCOPE_WITH_PROOF",
+    }
+    assert all(
+        record.mode_scope[mode] == {
+            "advertised": True,
+            "terminal_state": "NONTERMINAL",
+        }
+        for mode in ("vanilla", "bcb", "external")
+    )
+    assert record.terminal_exclusion["sbbf"]["event"] == event
+    assert record.terminal_exclusion["sbbf"]["event_file"]["relative_path"] == "history/synthetic.json"
+    assert record.terminal_exclusion["sbbf"]["event_file"]["sha256"] == discovered.sha256
+    assert record.mode_routes["sbbf"] == {
+        "behavior": "OUT_OF_SCOPE_WITH_PROOF",
+        "target_vrs": [],
+        "target_paths": [],
+        "payload_hashes": [],
+        "provider_id": "NO_PROVIDER",
+        "provenance": "NO_PROVENANCE",
+        "static_status": "NOT_APPLICABLE_OUT_OF_SCOPE",
+        "gameplay_status": "NOT_APPLICABLE_OUT_OF_SCOPE",
+        "save_reload_status": "NOT_APPLICABLE_OUT_OF_SCOPE",
+    }
+    manifest = _manifest_payload(
+        [], discovered_events=(discovered,),
+        independent_provider_claims={}, independent_package_claims={},
+    )
+    assert manifest["exclusion_event_files"] == [{
+        "relative_path": "history/synthetic.json", "sha256": discovered.sha256,
+    }]
+    assert manifest["terminal_exclusion_validation_trace"][
+        "verified_zero_claim_modes"
+    ] == [f"{RECORD_ID}:sbbf"]
+
+
+@pytest.mark.parametrize(
+    ("mutation", "expected_state"),
+    [
+        (
+            lambda record: record.mode_routes["sbbf"].update(
+                {"provider_id": "CLAIMED_PROVIDER"}
+            ),
+            "provider-claim",
+        ),
+        (
+            lambda record: replace(
+                record, shipped_package_id="PACKAGE_SHA256:" + "7" * 64
+            ),
+            "package-claim",
+        ),
+    ],
+)
+def test_attachment_refuses_an_excluded_mode_with_any_provider_or_package_claim(
+    mutation, expected_state,
+):
+    record = _record()
+    mutated = mutation(record)
+    if mutated is not None:
+        record = mutated
+
+    attached = _attach_terminal_exclusions(
+        (record,), (_discovered(_event()),),
+        {"evidence/source-audit.json": "D" * 64},
+    )
+
+    assert attached[0].terminal_exclusion == _terminal_exclusions(), expected_state
+    assert attached[0].release_blocking is True
+
+
+@pytest.mark.parametrize(
+    "claim_kind", ["provider", "package"],
+)
+def test_attachment_requires_independent_zero_claim_registries(claim_kind):
+    claims = {(RECORD_ID, "sbbf"): ("CLAIM",)}
+    kwargs = {
+        "independent_provider_claims": (
+            claims if claim_kind == "provider" else {}
+        ),
+        "independent_package_claims": (
+            claims if claim_kind == "package" else {}
+        ),
+    }
+
+    attached = _attach_terminal_exclusions(
+        (_record(),), (_discovered(_event()),),
+        {"evidence/source-audit.json": "D" * 64}, **kwargs,
+    )
+
+    assert attached[0].terminal_exclusion == _terminal_exclusions()
+    assert attached[0].release_blocking is True
+
+
+def test_all_four_modes_must_be_independently_terminal_before_record_closes():
+    events = tuple(
+        _discovered(_event(mode), path=f"{mode}.json") for mode in RELEASE_MODES
+    )
+
+    attached = _attach_terminal_exclusions(
+        (_record(),), events, {"evidence/source-audit.json": "D" * 64},
+        independent_provider_claims={}, independent_package_claims={},
+    )
+
+    record = attached[0]
     assert record.release_blocking is False
     assert record.disposition == "OUT_OF_SCOPE_WITH_PROOF"
     assert record.blocker_codes == ()
-    assert record.terminal_exclusion["event"] == event
-    assert record.terminal_exclusion["event_file"]["relative_path"] == "history/synthetic.json"
-    assert record.terminal_exclusion["event_file"]["sha256"] == discovered.sha256
-    assert _manifest_payload([], discovered_events=(discovered,))["exclusion_event_files"] == [{
-        "relative_path": "history/synthetic.json", "sha256": discovered.sha256,
-    }]
+    assert all(
+        record.mode_scope[mode]["terminal_state"] == "OUT_OF_SCOPE_WITH_PROOF"
+        and record.terminal_exclusion[mode]["event"]["mode"] == mode
+        for mode in RELEASE_MODES
+    )
+
+
+def test_source_mode_event_does_not_attach_to_a_four_mode_record():
+    event = _event("source")
+
+    attached = _attach_terminal_exclusions(
+        (_record(),), (_discovered(event),),
+        {"evidence/source-audit.json": "D" * 64},
+    )
+
+    assert attached[0].terminal_exclusion == _terminal_exclusions()
+    assert attached[0].release_blocking is True
 
 
 def test_malformed_mode_sibling_preflights_the_whole_claimed_record_history():
@@ -222,7 +444,7 @@ def test_malformed_mode_sibling_preflights_the_whole_claimed_record_history():
         (_record(),), (_discovered(valid), _discovered(malformed, path="history/malformed.json")), {"evidence/source-audit.json": "D" * 64},
     )
 
-    assert attached[0].terminal_exclusion is None
+    assert attached[0].terminal_exclusion == _terminal_exclusions()
     assert attached[0].release_blocking is True
 
 
@@ -242,7 +464,7 @@ def test_valid_exclusion_with_unresolved_markers_attaches_and_validates_end_to_e
         "records": [attached[0].to_dict()],
     }
 
-    assert attached[0].blocker_codes == ()
+    assert attached[0].blocker_codes == ["SYNTHETIC_BLOCKER"]
     assert "RECORD[0]:MISSING_TERMINAL_EXCLUSION_VALIDATION_CONTEXT" in validate_generated_ledger(document)
     assert validate_generated_ledger(
         document,
@@ -255,13 +477,18 @@ def test_valid_exclusion_with_unresolved_markers_attaches_and_validates_end_to_e
     ("target", "expected"),
     [
         pytest.param(
-            "summary",
+            "mode-map",
             "RECORD[0]:TERMINAL_EXCLUSION_SCHEMA:terminal_exclusion:UNEXPECTED:unexpected",
+            id="terminal-exclusion-mode-map",
+        ),
+        pytest.param(
+            "summary",
+            "RECORD[0]:TERMINAL_EXCLUSION_SCHEMA:terminal_exclusion.sbbf:UNEXPECTED:unexpected",
             id="terminal-exclusion-summary",
         ),
         pytest.param(
             "event_file",
-            "RECORD[0]:TERMINAL_EXCLUSION_SCHEMA:terminal_exclusion.event_file:UNEXPECTED:unexpected",
+            "RECORD[0]:TERMINAL_EXCLUSION_SCHEMA:terminal_exclusion.sbbf.event_file:UNEXPECTED:unexpected",
             id="event-file-provenance",
         ),
     ],
@@ -281,8 +508,11 @@ def test_generated_validation_rejects_unexpected_enclosing_exclusion_keys(
         "blockers": [],
         "records": [attached[0].to_dict()],
     }
-    terminal_exclusion = document["records"][0]["terminal_exclusion"]
-    if target == "summary":
+    terminal_map = document["records"][0]["terminal_exclusion"]
+    terminal_exclusion = terminal_map["sbbf"]
+    if target == "mode-map":
+        terminal_map["unexpected"] = "forbidden"
+    elif target == "summary":
         terminal_exclusion["unexpected"] = "forbidden"
     else:
         terminal_exclusion["event_file"]["unexpected"] = "forbidden"
@@ -309,18 +539,55 @@ def test_coordinated_event_or_file_provenance_forgery_fails_against_independent_
         "discovered_event_files": {discovered.relative_path: discovered.sha256},
     }
     event_forgery = deepcopy(document)
-    forged_event = event_forgery["records"][0]["terminal_exclusion"]["event"]
+    forged_event = event_forgery["records"][0]["terminal_exclusion"]["sbbf"]["event"]
     forged_event["evidence"][0]["sha256"] = "E" * 64
     forged_event["reason_proof"]["complete_source_inventory"]["evidence_sha256"] = "E" * 64
     forged_event["reason_proof"]["zero_route_result"]["evidence_sha256"] = "E" * 64
     forged_event["reason_proof"]["anti_omission"]["evidence_sha256"] = "E" * 64
     forged_event["event_id"] = exclusion_event_id(forged_event)
-    event_forgery["records"][0]["terminal_exclusion"]["event_file"]["canonical_event_sha256"] = sha256_text(canonical_json(forged_event))
+    event_forgery["records"][0]["terminal_exclusion"]["sbbf"]["event_file"]["canonical_event_sha256"] = sha256_text(canonical_json(forged_event))
     file_forgery = deepcopy(document)
-    file_forgery["records"][0]["terminal_exclusion"]["event_file"]["sha256"] = "E" * 64
+    file_forgery["records"][0]["terminal_exclusion"]["sbbf"]["event_file"]["sha256"] = "E" * 64
 
     assert any(error.startswith("RECORD[0]:TERMINAL_EXCLUSION") for error in validate_generated_ledger(event_forgery, **context))
     assert any(error.startswith("RECORD[0]:TERMINAL_EXCLUSION") for error in validate_generated_ledger(file_forgery, **context))
+
+
+@pytest.mark.parametrize(
+    "mutate",
+    [
+        lambda record: record["mode_routes"]["sbbf"].update(
+            {"target_paths": ["Public/Synthetic/Forged.GR2"]}
+        ),
+        lambda record: record.update(
+            {"shipped_package_id": "PACKAGE_SHA256:" + "7" * 64}
+        ),
+    ],
+)
+def test_generated_validation_rechecks_zero_claims_for_each_attached_mode(mutate):
+    full_record = _full_record()
+    event = _event_for_record(full_record)
+    discovered = _discovered(event)
+    attached = _attach_terminal_exclusions(
+        (full_record,), (discovered,), {"evidence/source-audit.json": "D" * 64},
+    )
+    record = attached[0].to_dict()
+    mutate(record)
+    document = {
+        "schema_version": 1, "summary": {"record_count": 1},
+        "blockers": [], "records": [record],
+    }
+
+    errors = validate_generated_ledger(
+        document,
+        verified_evidence={"evidence/source-audit.json": "D" * 64},
+        discovered_event_files={discovered.relative_path: discovered.sha256},
+    )
+
+    assert any(
+        "TERMINAL_EXCLUSION_EVENT_INVALID:EXCLUDED_MODE_" in error
+        for error in errors
+    )
 
 
 @pytest.mark.parametrize(
@@ -343,10 +610,10 @@ def test_terminal_schema_contract_rejects_unconstrained_nested_values(mutate):
         (full_record,), (discovered,), {"evidence/source-audit.json": "D" * 64},
     )
     document = {"schema_version": 1, "summary": {"record_count": 1}, "blockers": [], "records": [attached[0].to_dict()]}
-    terminal_event = document["records"][0]["terminal_exclusion"]["event"]
+    terminal_event = document["records"][0]["terminal_exclusion"]["sbbf"]["event"]
     mutate(terminal_event)
     terminal_event["event_id"] = exclusion_event_id(terminal_event)
-    document["records"][0]["terminal_exclusion"]["event_file"]["canonical_event_sha256"] = sha256_text(canonical_json(terminal_event))
+    document["records"][0]["terminal_exclusion"]["sbbf"]["event_file"]["canonical_event_sha256"] = sha256_text(canonical_json(terminal_event))
 
     errors = validate_generated_ledger(
         document,
@@ -602,7 +869,7 @@ def test_forged_attached_event_data_fails_generated_validation(path, value):
         {"evidence/source-audit.json": "D" * 64},
     )
     record = attached[0].to_dict()
-    cursor = record["terminal_exclusion"]
+    cursor = record["terminal_exclusion"]["sbbf"]
     for key in path[:-1]:
         cursor = cursor[key]
     cursor[path[-1]] = value

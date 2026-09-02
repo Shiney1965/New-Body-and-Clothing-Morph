@@ -2,7 +2,7 @@
 
 ## TL/DR
 
-The current hash-locked offline evidence generates deterministically into `3,173` observations and `3,173` master-ledger records. The generated audit reports `source_complete=false` and `release_complete=false`: all `14` required source profiles are missing, five prior-evidence inputs are not yet joined to concrete records, `208` emitted records have no independently inventoried source observation, and all `3,173` records remain release-blocking/nonterminal. There are currently no approved exclusion events: `excluded_with_proof=0`, `exclusion_validation_failures=0`, and `excluded_but_packaged=0`.
+The current hash-locked offline evidence generates deterministically into `3,173` observations and `3,173` master-ledger records. The generated audit reports `source_complete=false` and `release_complete=false`: all `14` required source profiles are missing, five prior-evidence inputs are not yet joined to concrete records, `208` emitted records have no independently inventoried source observation, and all `3,173` records remain release-blocking/nonterminal. There are currently no approved exclusion events: `excluded_modes_with_proof=0`, `excluded_with_proof=0`, `exclusion_validation_failures=0`, `exclusion_history_failures=0`, and `excluded_but_packaged=0`. Every record's four-mode scope remains advertised/nonterminal and every per-mode exclusion attachment is `null`.
 
 The protected registry reconciles exactly `32` immutable controls: `25` `GAMEPLAY_PASS`, `1` `USER_ACCEPTED_RESIDUAL`, `2` `PROTECTED_SOURCE_NATIVE`, and `4` `PROTECTED_SOURCE_NATIVE_PACKAGE_ONLY`. The four package-only Recluse controls remain gameplay-unproven and were not promoted.
 
@@ -12,9 +12,9 @@ These artifacts are local evidence outputs under ignored `workstreams/release_ma
 
 | Artifact | Bytes | SHA-256 |
 |---|---:|---|
-| `REMAINING_TARGET_MASTER_LEDGER.json` | `24,176,138` | `EDD9FA04CA7717C24B1F6D2885F6ECB53AC85920DD6C8701E137CB7C1A90867C` |
+| `REMAINING_TARGET_MASTER_LEDGER.json` | `25,883,212` | `CF4867DBD38B2AC5320553C67FCF3E346FF03DD755280D36C34C4FCFEDF6A38C` |
 | `REMAINING_TARGET_MASTER_LEDGER.md` | `579` | `A8DF93F5DE4FC5BC804AE01220571B7A80F40984ABA089A809CCD78AF99DFEFB` |
-| `RELEASE_LEDGER_COMPLETENESS_AUDIT.json` | `790,135` | `5EADC427478A8559CE0260488211E52CCC8068AE0486EAADAD496630193C834A` |
+| `RELEASE_LEDGER_COMPLETENESS_AUDIT.json` | `790,206` | `AF4C156B6DF3DB6A4BC1B98451785277861AEAC4F7FA3E1FCBCC6717AB21BC5C` |
 | `EVIDENCE_INPUT_MANIFEST.json` | `7,057` | `E3E65616A94D4B9AB961CA4AF3013721878232548F3571CE018F97F67DF68631` |
 
 Two consecutive CLI generations produced these same four hashes.
@@ -36,8 +36,10 @@ Two consecutive CLI generations produced these same four hashes.
 - `packaged_without_ledger`: `0`.
 - `ledger_without_source`: `208`.
 - `in_scope_nonterminal`: `3,173`.
+- `excluded_modes_with_proof`: `0`.
 - `excluded_with_proof`: `0`.
 - `exclusion_validation_failures`: `0`.
+- `exclusion_history_failures`: `0`.
 - `excluded_but_packaged`: `0`.
 - Required source profiles: `14`.
 - Complete source profiles: `0`.
@@ -68,10 +70,10 @@ The protected hash manifest is reconciled one-to-one by registry ID/path/bytes/S
 | `bard_findings` | `9,180` | `2C7324F0198115906C49B3584F95D780A209B5FBEE1B42A448CFC0044F2262FB` |
 | `source_profile_inventory` | `20,044` | `9CB045CD9850867FEDFA9A98587096C953360F47D81BD074B1A5E8C050AE5E00` |
 
-Every input is hashed before parsing. Paths merely named inside retained JSON— including live/AppData source-PAK, profile, log, and mod paths—were not dereferenced.
+Every input is hashed before parsing. The exclusion history is restricted to the exact canonical ignored path `workstreams/release_master_ledger/local/exclusion_events`; it currently contains zero event files. Paths merely named inside retained JSON— including live/AppData source-PAK, profile, log, and mod paths—were not dereferenced.
 
 ## Release-blocking boundary
 
-The generated ledger contains `12` stable blocker codes. Its numeric `schema_version` is `1`, and the full generated envelope plus every emitted record passes the standard-library generated-document validator. Each blocker entry includes evidence pointers, an owner, a next admissible action, affected record IDs, and a `release_blocking` flag.
+The generated ledger contains `12` stable blocker codes. Its numeric `schema_version` is `1`, and the full generated envelope plus every emitted record passes the standard-library generated-document validator. Terminal exclusion is closed and per mode: one event cannot close a four-mode record, excluded modes must carry zero provider/target/payload/provenance/package claims, and unmatched or orphan history is emitted under stable audit codes. Each blocker entry includes evidence pointers, an owner, a next admissible action, affected record IDs, and a `release_blocking` flag.
 
 This checkpoint is offline evidence only. It does not prove gameplay, fresh package/profile construction, advertised combined-profile behavior, installer/restore behavior, save safety, or release readiness.

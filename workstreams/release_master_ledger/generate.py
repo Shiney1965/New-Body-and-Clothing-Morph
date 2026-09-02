@@ -17,7 +17,11 @@ from .configuration import (
     load_local_configuration,
     verify_evidence_inputs,
 )
-from .exclusions import EXCLUSION_MODES, select_current_exclusion
+from .exclusions import (
+    RELEASE_MODES,
+    ZERO_CLAIM_MODE_ROUTE,
+    select_current_exclusion,
+)
 from .identity import canonical_json, sha256_text
 from .models import LedgerRecord, Observation
 from .inventory import (
@@ -126,12 +130,31 @@ def _terminal_exclusion_summary(event_file: DiscoveredExclusionEvent) -> dict[st
     }
 
 
+def _has_independent_claim(
+    claims: Mapping[object, object] | None, record_id: str, mode: str,
+) -> bool:
+    if not isinstance(claims, Mapping):
+        return False
+    candidates = (
+        claims.get((record_id, mode)),
+        claims.get(f"{record_id}:{mode}"),
+        claims.get(mode),
+    )
+    nested = claims.get(record_id)
+    if isinstance(nested, Mapping):
+        candidates += (nested.get(mode),)
+    return any(bool(value) for value in candidates)
+
+
 def _attach_terminal_exclusions(
     records: tuple[LedgerRecord, ...],
     events: Iterable[DiscoveredExclusionEvent],
     verified_evidence: Mapping[str, str],
+    *,
+    independent_provider_claims: Mapping[object, object],
+    independent_package_claims: Mapping[object, object],
 ) -> tuple[LedgerRecord, ...]:
-    """Attach only one valid selected event; invalid histories leave records untouched."""
+    """Attach valid per-mode events; any invalid sibling leaves the record untouched."""
     history = tuple(events)
     event_history = tuple(item.event for item in history)
     attached: list[LedgerRecord] = []
@@ -142,38 +165,120 @@ def _attach_terminal_exclusions(
         )
         if any(
             not isinstance(item.event.get("mode"), str)
-            or item.event["mode"] not in EXCLUSION_MODES
+            or item.event["mode"] not in RELEASE_MODES
             for item in claimed_history
         ):
             attached.append(record)
             continue
-        modes = sorted({item.event["mode"] for item in claimed_history})
-        selections = [
-            select_current_exclusion(
+        modes = tuple(
+            mode for mode in RELEASE_MODES
+            if any(item.event["mode"] == mode for item in claimed_history)
+        )
+        selections = {
+            mode: select_current_exclusion(
                 event_history, record.record_id, mode,
                 ledger_record=record_data, evidence_hashes=verified_evidence,
             )
             for mode in modes
-        ]
-        selected = [selection.event for selection in selections if selection.event is not None]
-        if len(selected) != 1 or any(selection.errors for selection in selections):
+        }
+        if (
+            any(selection.errors for selection in selections.values())
+            or any(
+                _has_independent_claim(
+                    independent_provider_claims, record.record_id, mode,
+                )
+                or _has_independent_claim(
+                    independent_package_claims, record.record_id, mode,
+                )
+                for mode in modes
+            )
+        ):
             attached.append(record)
             continue
-        event = selected[0]
-        assert event is not None
-        selected_files = [item for item in claimed_history if item.event is event]
-        if len(selected_files) != 1:
+        selected_events = {
+            mode: selection.event
+            for mode, selection in selections.items()
+            if selection.event is not None
+        }
+        if set(selected_events) != set(modes):
             attached.append(record)
             continue
+        selected_files: dict[str, DiscoveredExclusionEvent] = {}
+        ambiguous = False
+        for mode, event in selected_events.items():
+            matches = [item for item in claimed_history if item.event is event]
+            if len(matches) != 1:
+                ambiguous = True
+                break
+            selected_files[mode] = matches[0]
+        if ambiguous:
+            attached.append(record)
+            continue
+        mode_scope = {
+            mode: dict(record.mode_scope[mode]) for mode in RELEASE_MODES
+        }
+        terminal_exclusion = {
+            mode: record.terminal_exclusion.get(mode) for mode in RELEASE_MODES
+        }
+        mode_routes = {
+            mode: dict(record.mode_routes[mode]) for mode in RELEASE_MODES
+        }
+        for mode, event in selected_events.items():
+            mode_scope[mode] = {
+                "advertised": False,
+                "terminal_state": "OUT_OF_SCOPE_WITH_PROOF",
+            }
+            terminal_exclusion[mode] = _terminal_exclusion_summary(
+                selected_files[mode]
+            )
+            mode_routes[mode] = dict(ZERO_CLAIM_MODE_ROUTE)
+        record_closed = all(
+            mode_scope[mode]["terminal_state"] == "OUT_OF_SCOPE_WITH_PROOF"
+            and terminal_exclusion[mode] is not None
+            for mode in RELEASE_MODES
+        )
+        next_action = record.next_admissible_action
+        if record_closed:
+            next_action = str(selected_events[RELEASE_MODES[0]]["next_project_if_reopened"])
         attached.append(replace(
             record,
-            disposition="OUT_OF_SCOPE_WITH_PROOF",
-            blocker_codes=(),
-            release_blocking=False,
-            next_admissible_action=str(event["next_project_if_reopened"]),
-            terminal_exclusion=_terminal_exclusion_summary(selected_files[0]),
+            mode_scope=mode_scope,
+            mode_routes=mode_routes,
+            terminal_exclusion=terminal_exclusion,
+            disposition=(
+                "OUT_OF_SCOPE_WITH_PROOF" if record_closed else record.disposition
+            ),
+            blocker_codes=() if record_closed else record.blocker_codes,
+            release_blocking=False if record_closed else record.release_blocking,
+            next_admissible_action=next_action,
         ))
     return tuple(attached)
+
+
+def _independent_provider_claims(
+    records: Iterable[LedgerRecord],
+) -> dict[tuple[str, str], tuple[str, ...]]:
+    """Snapshot pre-attachment provider/target/payload/provenance claims."""
+    claims: dict[tuple[str, str], tuple[str, ...]] = {}
+    for record in records:
+        for mode in RELEASE_MODES:
+            route = record.mode_routes.get(mode)
+            if not isinstance(route, Mapping):
+                claims[(record.record_id, mode)] = ("MISSING_MODE_ROUTE",)
+                continue
+            fields = tuple(
+                field for field, value, zero in (
+                    ("target_vrs", route.get("target_vrs"), []),
+                    ("target_paths", route.get("target_paths"), []),
+                    ("payload_hashes", route.get("payload_hashes"), []),
+                    ("provider_id", route.get("provider_id"), "NO_PROVIDER"),
+                    ("provenance", route.get("provenance"), "NO_PROVENANCE"),
+                )
+                if value != zero
+            )
+            if fields:
+                claims[(record.record_id, mode)] = fields
+    return claims
 
 
 def _write(path: Path, content: bytes) -> str:
@@ -282,6 +387,8 @@ def _manifest_payload(
     verified_inputs: list[VerifiedInput], *,
     discovered_events: Iterable[DiscoveredExclusionEvent] = (),
     verified_evidence: Mapping[str, str] = {},
+    independent_provider_claims: Mapping[object, object] | None = None,
+    independent_package_claims: Mapping[object, object] | None = None,
 ) -> dict[str, object]:
     payload: dict[str, object] = {
         "inputs": [
@@ -308,6 +415,22 @@ def _manifest_payload(
                 item["relative_path"]: item["sha256"] for item in event_files
             },
             "verified_evidence": dict(sorted(verified_evidence.items())),
+            "verified_zero_claim_modes": sorted({
+                f"{item.event['record_id']}:{item.event['mode']}"
+                for item in events
+                if isinstance(item.event.get("record_id"), str)
+                and item.event.get("mode") in RELEASE_MODES
+                and isinstance(independent_provider_claims, Mapping)
+                and isinstance(independent_package_claims, Mapping)
+                and not _has_independent_claim(
+                    independent_provider_claims,
+                    str(item.event["record_id"]), str(item.event["mode"]),
+                )
+                and not _has_independent_claim(
+                    independent_package_claims,
+                    str(item.event["record_id"]), str(item.event["mode"]),
+                )
+            }),
         }
     return payload
 
@@ -398,10 +521,21 @@ def generate(config: LocalConfiguration) -> GenerationResult:
     discovered_event_files = {
         item.relative_path: item.sha256 for item in discovered_events
     }
+    independent_provider_claims = _independent_provider_claims(
+        reconciliation.records
+    )
+    independent_package_claims = {
+        (record.record_id, mode): (record.shipped_package_id,)
+        for record in reconciliation.records
+        for mode in RELEASE_MODES
+        if record.shipped_package_id in inventories.packaged_records
+    }
     records = _attach_terminal_exclusions(
         reconciliation.records,
         discovered_events,
         verified_exclusion_evidence,
+        independent_provider_claims=independent_provider_claims,
+        independent_package_claims=independent_package_claims,
     )
     supporting_input_ids = sorted(
         input_.input_id
@@ -414,6 +548,8 @@ def generate(config: LocalConfiguration) -> GenerationResult:
         exclusion_events=tuple(item.event for item in discovered_events),
         verified_evidence=verified_exclusion_evidence,
         discovered_event_files=discovered_event_files,
+        independent_provider_claims=independent_provider_claims,
+        independent_package_claims=independent_package_claims,
     )
     audit["registered_inventories"] = {
         "packaged_records": sorted(inventories.packaged_records),
@@ -424,7 +560,9 @@ def generate(config: LocalConfiguration) -> GenerationResult:
     for name in (
         "missing_from_ledger", "duplicate_identity", "unreferenced_prior_evidence",
         "packaged_without_ledger", "ledger_without_source", "in_scope_nonterminal",
-        "excluded_with_proof", "exclusion_validation_failures", "excluded_but_packaged",
+        "excluded_modes_with_proof", "excluded_with_proof",
+        "exclusion_validation_failures", "exclusion_history_failures",
+        "excluded_but_packaged",
     ):
         audit[name] = sorted(audit[name])
     ledger = _ledger_payload(records, observations, verified_inputs)
@@ -439,6 +577,8 @@ def generate(config: LocalConfiguration) -> GenerationResult:
         verified_inputs,
         discovered_events=discovered_events,
         verified_evidence=verified_exclusion_evidence,
+        independent_provider_claims=independent_provider_claims,
+        independent_package_claims=independent_package_claims,
     )
 
     output_dir = config.output_path.parent

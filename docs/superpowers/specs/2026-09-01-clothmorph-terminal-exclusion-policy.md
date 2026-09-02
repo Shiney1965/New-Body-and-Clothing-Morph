@@ -31,6 +31,15 @@ The following remain nonterminal:
 - `DEFERRED_WITH_CAUSE`
 - any record with an invalid, missing, superseded, or contradictory exclusion event
 
+Terminal exclusion is evaluated per advertised release mode. Every record emits
+closed `mode_scope` and `terminal_exclusion` maps for exactly `vanilla`, `sbbf`,
+`bcb`, and `external`. One event can terminally exclude only its exact mode; it
+cannot clear the whole record. Record-level `OUT_OF_SCOPE_WITH_PROOF` and
+`release_blocking=false` are allowed only after all four release modes are
+independently terminal. A `source` event is valid policy vocabulary for a source
+audit, but it is not a requested release mode and cannot close a four-mode
+release record.
+
 ## 2. Allowed exclusion reasons
 
 Every exclusion event uses exactly one primary reason:
@@ -72,6 +81,7 @@ Each event is append-only and contains:
   "protected_impact": {
     "registry_ids": [],
     "shared_consumers": [],
+    "shared_assets": [],
     "forbidden_targets": [],
     "result": "NO_PROTECTED_MUTATION"
   },
@@ -83,6 +93,12 @@ Each event is append-only and contains:
 ```
 
 The event digest binds the canonical JSON excluding `event_id`; `event_id` is `EXCLUSION_` plus that digest.
+
+`approved_by` and `approved_reason` bind exactly to `Alan` and the approved
+directive shown above. The four protected-impact arrays bind exactly to the
+record-derived protected relations; unknown or unresolved relation markers are
+not evidence of no impact. Event discovery is permitted only at the canonical
+`workstreams/release_master_ledger/local/exclusion_events` path.
 
 ## 4. Geometry exhaustion rule
 
@@ -98,7 +114,11 @@ The event digest binds the canonical JSON excluding `event_id`; `event_id` is `E
 
 - at least three materially distinct safe architectures have been tested, or the parent findings already establish three failed architectures and the declared final materially different architecture is tested;
 - every architecture uses the same predeclared nontriviality, topology, component, material, skin, clearance, silhouette, and deterministic-readback gates;
+- the proof binds the exact ordered component set and component-contract digest
+  from the ledger record, and every architecture repeats that same digest and
+  complete component set;
 - failures are recorded per component and do not rely on subjective labels alone;
+- every component carries the complete identical fixed-gate result set;
 - parameter tuning within one architecture does not count as a distinct architecture;
 - no passing component is emitted when the route contract requires an atomic multi-component pair; and
 - the final report states `UNFIXABLE_WITH_AVAILABLE_SAFE_TOOLING`, not mathematically impossible.
@@ -143,6 +163,13 @@ The completion audit treats `OUT_OF_SCOPE_WITH_PROOF` as terminal only when:
 - the record's advertised-scope flag is false for the excluded behavior;
 - `release_blocking=false`; and
 - no packaged provider route still claims the excluded behavior.
+
+For each excluded mode, provider ID and provenance must be the exact no-claim
+sentinels, target VR/path and payload-hash arrays must be empty, and neither the
+record nor the independent provider/package inventories may claim that mode.
+Unmatched record histories, invalid mode histories, orphan revocations,
+conflicts, and invalid attachments remain globally visible under deterministic
+stable audit codes; they are never silently ignored.
 
 Invalid exclusions remain in `in_scope_nonterminal` and produce stable audit codes. The audit emits exact sets for excluded record IDs and exclusion-validation failures.
 

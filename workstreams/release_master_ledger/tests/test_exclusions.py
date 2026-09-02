@@ -21,6 +21,8 @@ PROFILE_SHA256 = "C" * 64
 SOURCE_SHA256 = "D" * 64
 PERMISSION_SHA256 = "E" * 64
 GEOMETRY_SHA256 = "F" * 64
+COMPONENT_CONTRACT_SHA256 = "9" * 64
+RELEASE_MODES = ("vanilla", "sbbf", "bcb", "external")
 TIEFLING_PAK_SHA256 = "01E96CF236607F5A4B9E4DD2D7A6BE2CA8A9013456706000DC3248543390F141"
 VERIFIED_EVIDENCE = {
     "evidence/alternate-artifact.json": SOURCE_SHA256,
@@ -32,6 +34,20 @@ VERIFIED_EVIDENCE = {
     "implementations/skinning.py": "3" * 64,
     "Public/Synthetic/Protected.GR2": SOURCE_SHA256,
 }
+
+
+def zero_claim_route():
+    return {
+        "behavior": "OUT_OF_SCOPE_WITH_PROOF",
+        "target_vrs": [],
+        "target_paths": [],
+        "payload_hashes": [],
+        "provider_id": "NO_PROVIDER",
+        "provenance": "NO_PROVENANCE",
+        "static_status": "NOT_APPLICABLE_OUT_OF_SCOPE",
+        "gameplay_status": "NOT_APPLICABLE_OUT_OF_SCOPE",
+        "save_reload_status": "NOT_APPLICABLE_OUT_OF_SCOPE",
+    }
 
 
 def ledger_record(**overrides):
@@ -49,16 +65,23 @@ def ledger_record(**overrides):
         "source_route": {
             "ordered_paths": ["Public/Synthetic/Protected.GR2"],
             "ordered_file_hashes": [SOURCE_SHA256],
+            "component_contract_digest": COMPONENT_CONTRACT_SHA256,
         },
+        "mode_routes": {mode: zero_claim_route() for mode in RELEASE_MODES},
         "protected_relations": {
             "registry_ids": [], "protected_consumers": [],
             "shared_assets": ["Public/Synthetic/Protected.GR2"],
             "forbidden_targets": ["EMBEDDED_BODY_DATA"],
         },
         "transformation": {
-            "allowed_components": ["GARMENT"], "allowed_channels": ["GEOMETRY"],
+            "allowed_components": ["garment-a"], "allowed_channels": ["GEOMETRY"],
+        },
+        "mode_scope": {
+            mode: {"advertised": True, "terminal_state": "NONTERMINAL"}
+            for mode in RELEASE_MODES
         },
         "disposition": "DEFERRED_WITH_CAUSE", "acceptance_event_id": "UNKNOWN_ACCEPTANCE_EVENT",
+        "shipped_package_id": "UNKNOWN_SHIPPED_PACKAGE",
     }
     record.update(overrides)
     return record
@@ -166,17 +189,22 @@ def proof_for(reason):
             "alternate_artifact": {"path": "evidence/alternate-artifact.json", "sha256": SOURCE_SHA256},
         }
     if reason == "NO_SAFE_GEOMETRY_AVAILABLE":
-        component = [{"component_id": "garment-a", "status": "FAIL", **evidence_link("evidence/geometry.json")}]
-        architectures = [
-            {"method_id": "projection-v1", "method_family": "surface-projection", "implementation_path": "implementations/projection.py", "implementation_sha256": "1" * 64, "candidate_count": 1, "status": "FAILED_FIXED_GATES", "components": component},
-            {"method_id": "cage-v1", "method_family": "cage-deformation", "implementation_path": "implementations/cage.py", "implementation_sha256": "2" * 64, "candidate_count": 1, "status": "FAILED_FIXED_GATES", "components": component},
-            {"method_id": "skinning-v1", "method_family": "skinning-transfer", "implementation_path": "implementations/skinning.py", "implementation_sha256": "3" * 64, "candidate_count": 1, "status": "FAILED_FIXED_GATES", "components": component},
-        ]
         gates = {
             gate: {"result": "FAIL", **evidence_link("evidence/geometry.json")}
             for gate in ("topology", "component", "material", "skin", "clearance", "silhouette", "deterministic_readback", "nontriviality")
         }
+        component = [{
+            "component_id": "garment-a", "status": "FAIL",
+            "fixed_gates": gates, **evidence_link("evidence/geometry.json"),
+        }]
+        architectures = [
+            {"method_id": "projection-v1", "method_family": "surface-projection", "implementation_path": "implementations/projection.py", "implementation_sha256": "1" * 64, "candidate_count": 1, "status": "FAILED_FIXED_GATES", "component_contract_digest": COMPONENT_CONTRACT_SHA256, "components": component},
+            {"method_id": "cage-v1", "method_family": "cage-deformation", "implementation_path": "implementations/cage.py", "implementation_sha256": "2" * 64, "candidate_count": 1, "status": "FAILED_FIXED_GATES", "component_contract_digest": COMPONENT_CONTRACT_SHA256, "components": component},
+            {"method_id": "skinning-v1", "method_family": "skinning-transfer", "implementation_path": "implementations/skinning.py", "implementation_sha256": "3" * 64, "candidate_count": 1, "status": "FAILED_FIXED_GATES", "component_contract_digest": COMPONENT_CONTRACT_SHA256, "components": component},
+        ]
         return {
+            "expected_components": ["garment-a"],
+            "component_contract_digest": COMPONENT_CONTRACT_SHA256,
             "architecture_results": architectures, "fixed_gates": gates,
             "final_available_safe_tooling_failure": {
                 "result": "UNFIXABLE_WITH_AVAILABLE_SAFE_TOOLING", **evidence_link("evidence/geometry.json")
@@ -194,7 +222,12 @@ def exclusion_fixture(**overrides):
         "scope_statement": "Exclude only the exact synthetic SBBF route.",
         "attempted_architectures": [], "fixed_acceptance_gates": {},
         "evidence": evidence("evidence/source-audit.json"),
-        "protected_impact": {"registry_ids": [], "shared_consumers": [], "forbidden_targets": [], "result": "NO_PROTECTED_MUTATION"},
+        "protected_impact": {
+            "registry_ids": [], "shared_consumers": [],
+            "shared_assets": ["Public/Synthetic/Protected.GR2"],
+            "forbidden_targets": ["EMBEDDED_BODY_DATA"],
+            "result": "NO_PROTECTED_MUTATION",
+        },
         "next_project_if_reopened": "Recover an exact source profile.",
         "approved_by": "Alan", "approved_reason": "fix every outstanding element or declare it unfixable and excluded",
         "created_utc": "2026-09-01T12:00:00Z",
@@ -251,6 +284,119 @@ def test_event_id_changes_when_a_bound_payload_field_changes():
     )
 
 
+@pytest.mark.parametrize(
+    ("field", "value", "expected"),
+    [
+        ("approved_by", "Alan Smith", "APPROVED_BY_MISMATCH"),
+        (
+            "approved_reason",
+            "fix everything or exclude it",
+            "APPROVED_REASON_MISMATCH",
+        ),
+    ],
+)
+def test_approval_binds_the_exact_approved_actor_and_directive(field, value, expected):
+    event = signed_event(**{field: value})
+
+    assert expected in validate(event)
+
+
+def test_event_mode_must_name_an_explicit_advertised_record_mode():
+    record = ledger_record()
+    record["mode_scope"]["bcb"] = {
+        "advertised": False,
+        "terminal_state": "NONTERMINAL",
+    }
+    event = signed_event(mode="bcb")
+
+    assert "EXCLUSION_MODE_NOT_ADVERTISED:bcb" in validate(event, record)
+
+
+def test_source_mode_cannot_clear_a_four_mode_release_record():
+    event = signed_event(mode="source")
+
+    assert "EXCLUSION_MODE_NOT_REQUESTED:source" in validate(event)
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "expected"),
+    [
+        ("target_vrs", ["VR_CLAIM"], "EXCLUDED_MODE_CLAIM_PRESENT:target_vrs"),
+        ("target_paths", ["Public/Synthetic/Claim.GR2"], "EXCLUDED_MODE_CLAIM_PRESENT:target_paths"),
+        ("payload_hashes", ["7" * 64], "EXCLUDED_MODE_CLAIM_PRESENT:payload_hashes"),
+        ("provider_id", "CLAIMED_PROVIDER", "EXCLUDED_MODE_CLAIM_PRESENT:provider_id"),
+        ("provenance", "CLAIMED_PROVENANCE", "EXCLUDED_MODE_CLAIM_PRESENT:provenance"),
+    ],
+)
+def test_excluded_mode_requires_zero_provider_target_payload_and_provenance_claims(
+    field, value, expected,
+):
+    record = ledger_record()
+    record["mode_routes"]["sbbf"][field] = value
+
+    assert expected in validate(signed_event(), record)
+
+
+def test_excluded_mode_requires_zero_record_package_claim():
+    record = ledger_record(shipped_package_id="PACKAGE_SHA256:" + "7" * 64)
+
+    assert "EXCLUDED_MODE_PACKAGE_CLAIM_PRESENT" in validate(
+        signed_event(), record
+    )
+
+
+def test_selector_uses_the_same_closed_event_contract_as_generated_validation():
+    event = signed_event(unexpected="forbidden")
+
+    selection = select([event])
+
+    assert selection.event is None
+    assert any(
+        error.endswith("SCHEMA_CONTRACT:event:UNEXPECTED:unexpected")
+        for error in selection.errors
+    )
+
+
+def test_protected_impact_exactly_reconciles_record_derived_relations():
+    assert validate(signed_event()) == []
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("shared_assets", []),
+        ("forbidden_targets", []),
+        ("registry_ids", ["UNRELATED_REGISTRY"]),
+        ("shared_consumers", ["UNRELATED_CONSUMER"]),
+    ],
+)
+def test_protected_impact_cannot_claim_empty_or_unrelated_record_relations(field, value):
+    event = exclusion_fixture()
+    event["protected_impact"][field] = value
+    event["event_id"] = exclusion_event_id(event)
+
+    assert f"PROTECTED_IMPACT_MISMATCH:{field}" in validate(event)
+
+
+def test_unknown_protected_relations_are_not_proof_of_no_impact():
+    record = ledger_record(protected_relations={
+        "registry_ids": ["UNKNOWN_PROTECTED_REGISTRY"],
+        "protected_consumers": [],
+        "shared_assets": [],
+        "forbidden_targets": [],
+    })
+    event = exclusion_fixture(protected_impact={
+        "registry_ids": ["UNKNOWN_PROTECTED_REGISTRY"],
+        "shared_consumers": [],
+        "shared_assets": [],
+        "forbidden_targets": [],
+        "result": "NO_PROTECTED_MUTATION",
+    })
+    event["event_id"] = exclusion_event_id(event)
+
+    assert "PROTECTED_RELATIONS_UNRESOLVED" in validate(event, record)
+
+
 @pytest.mark.parametrize("reason", [
     "SOURCE_ABSENT_EXACT_PROFILE", "NO_RELEASE_PERMISSION", "NON_WEARABLE_OR_UNSUPPORTED_BODY_TUPLE",
     "PROTECTED_NATIVE_ONLY", "UNRESOLVED_SOURCE_CONTRACT_AFTER_EXHAUSTIVE_AUDIT",
@@ -295,6 +441,61 @@ def test_geometry_requires_distinct_architecture_component_results_all_fixed_gat
     event = geometry_event()
 
     assert validate(event) == []
+
+
+@pytest.mark.parametrize(
+    ("mutation", "expected"),
+    [
+        (
+            lambda proof: proof["architecture_results"][0].update(
+                {"components": []}
+            ),
+            "GEOMETRY_COMPONENT_SET_MISMATCH:projection-v1",
+        ),
+        (
+            lambda proof: proof["architecture_results"][1].update(
+                {"component_contract_digest": "8" * 64}
+            ),
+            "GEOMETRY_COMPONENT_CONTRACT_MISMATCH:cage-v1",
+        ),
+        (
+            lambda proof: proof["architecture_results"][2]["components"][0].pop(
+                "fixed_gates"
+            ),
+            "INVALID_ARCHITECTURE_COMPONENT_GATES:skinning-v1:garment-a",
+        ),
+    ],
+)
+def test_geometry_binds_every_architecture_to_the_complete_component_contract(
+    mutation, expected,
+):
+    proof = proof_for("NO_SAFE_GEOMETRY_AVAILABLE")
+    mutation(proof)
+
+    assert expected in validate(geometry_event(proof))
+
+
+def test_geometry_rejects_an_omitted_member_of_an_atomic_component_pair():
+    record = ledger_record(
+        transformation={
+            "allowed_components": ["garment-a", "garment-b"],
+            "allowed_channels": ["GEOMETRY"],
+        }
+    )
+
+    assert "EXPECTED_COMPONENT_SET_MISMATCH" in validate(geometry_event(), record)
+
+
+def test_geometry_rejects_a_wrong_record_component_contract_digest():
+    record = ledger_record(source_route={
+        "ordered_paths": ["Public/Synthetic/Protected.GR2"],
+        "ordered_file_hashes": [SOURCE_SHA256],
+        "component_contract_digest": "8" * 64,
+    })
+
+    assert "EXPECTED_COMPONENT_CONTRACT_MISMATCH" in validate(
+        geometry_event(), record
+    )
 
 
 @pytest.mark.parametrize("mutation,expected", [

@@ -81,11 +81,14 @@ def validate_output_path(path: Path, workstream_root: Path) -> Path:
 
 
 def validate_exclusion_events_dir(path: Path, workstream_root: Path) -> Path:
-    """Resolve an event history directory only when it stays below local/."""
+    """Resolve only the canonical local/exclusion_events history directory."""
     local_root = _local_root(workstream_root).resolve(strict=False)
     resolved = path.resolve(strict=False)
     if resolved == local_root or local_root not in resolved.parents:
         raise ConfigurationError("EXCLUSION_EVENTS_OUTSIDE_LOCAL")
+    canonical = (local_root / "exclusion_events").resolve(strict=False)
+    if resolved != canonical:
+        raise ConfigurationError("EXCLUSION_EVENTS_NOT_CANONICAL")
     return resolved
 
 
@@ -131,7 +134,9 @@ def load_local_configuration() -> LocalConfiguration:
         _resolve_config_path(config_path, _required_text(payload, "output_path")),
         WORKSTREAM_ROOT,
     )
-    exclusion_events_dir = None
+    exclusion_events_dir = validate_exclusion_events_dir(
+        _local_root(WORKSTREAM_ROOT) / "exclusion_events", WORKSTREAM_ROOT,
+    )
     if "exclusion_events_dir" in payload:
         exclusion_events_dir = validate_exclusion_events_dir(
             _resolve_config_path(
