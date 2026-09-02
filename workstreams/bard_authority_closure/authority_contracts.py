@@ -167,6 +167,7 @@ class AuthoritySourceSnapshot:
     required_aliases: tuple[str, ...]
     unresolved_retained_evidence_files: tuple[str, ...]
     fresh_source_audit: dict[str, object] | None = None
+    source_gap_audit: dict[str, object] | None = None
 
 
 @dataclass(frozen=True)
@@ -397,6 +398,25 @@ def resolve_authority_contract(snapshot: AuthoritySourceSnapshot) -> AuthorityRe
     forbidden_ids = tuple(
         geometry_id for geometry_id in UNRESOLVED_GEOMETRY_IDS if geometry_id in set(forbidden)
     )
+    if snapshot.source_gap_audit is not None:
+        from .authority_gap_audit import source_audit_disposition
+        gap_result = snapshot.source_gap_audit
+        disposition = source_audit_disposition(gap_result.get("gaps", []))
+        if (not disposition["source_audit_complete"] or snapshot.unresolved_retained_evidence_files
+                or gap_result.get("geometry_admitted") is not False
+                or gap_result.get("geometry_methods_tested") != []
+                or gap_result.get("exclusion_event_input") is not None):
+            raise ContractAdmissionError("AUTHORITY_GAP_AUDIT_STATE_INVALID")
+        for gap in gap_result["gaps"]:
+            if _hash_file(Path(gap["path"])) != gap["evidence"]["source_sha256"]:
+                raise ContractAdmissionError("AUTHORITY_GAP_SOURCE_HASH_MISMATCH")
+        # Source inspection resolves source identities, not garment fit or an
+        # admissible nine-object replacement. No exhaustion/event follows.
+        return AuthorityResolution(
+            status="SOURCE_AUDIT_COMPLETE_GEOMETRY_UNASSESSED", geometry_admitted=False,
+            unresolved_geometry_ids=(), forbidden_substitute_ids=forbidden_ids,
+            replacement_routes=0, protected_mutations=0, exclusion_event_input=None,
+        )
     audit_complete = _audit_complete(snapshot)
     if unresolved_ids:
         if not audit_complete:
@@ -832,8 +852,8 @@ def audit_frozen_scantily(root: Path) -> dict[str, object]:
     }
 
 
-def load_current_authority_snapshot() -> AuthoritySourceSnapshot:
-    """Load and independently validate the exact retained Authority evidence set."""
+def load_current_authority_snapshot(*, include_gap_audit: bool = False) -> AuthoritySourceSnapshot:
+    """Load base evidence; opt in to the complete eleven-gap semantic audit."""
     verified = _load_verified_authority_inputs()
     aliases = _validate_real_evidence(verified)
     routes = _routes_from_item_contracts(verified["authority_item_contracts"].path)
@@ -868,7 +888,7 @@ def load_current_authority_snapshot() -> AuthoritySourceSnapshot:
     unreviewed.update(fresh["unresolved_retained_evidence_files"])
     unreviewed.update(str(verified[input_id].path) for input_id in (
         "authority_geometry_inventory", "scantily_separator_pak", "sco_addon_pak", "sbbf_sco_patch_zip"))
-    return AuthoritySourceSnapshot(
+    snapshot = AuthoritySourceSnapshot(
         source_module_uuid=SOURCE_MODULE_UUID,
         source_pak_sha256=SOURCE_PAK_SHA256,
         routes=routes,
@@ -878,11 +898,26 @@ def load_current_authority_snapshot() -> AuthoritySourceSnapshot:
         unresolved_retained_evidence_files=tuple(sorted(unreviewed)),
         fresh_source_audit=fresh,
     )
+    if include_gap_audit:
+        from .authority_gap_audit import build_current_gap_audit
+        gap_audit = build_current_gap_audit(snapshot)
+        refreshed = dict(fresh)
+        refreshed["unresolved_retained_evidence_files"] = []
+        refreshed["geometry_records"] = [
+            dict(record,
+                 binary_geometry_readback="SOURCE_SEMANTICS_READ_BACK_GEOMETRY_UNASSESSED",
+                 physical_mesh_count=gap_audit["geometry"][Path(record["source_file"]).stem]["gr2"]["mesh_count"],
+                 converted_glb_sha256=gap_audit["geometry"][Path(record["source_file"]).stem]["glb"]["glb_sha256"])
+            for record in fresh["geometry_records"]
+        ]
+        return replace(snapshot, unresolved_retained_evidence_files=(), source_gap_audit=gap_audit,
+                       fresh_source_audit=refreshed)
+    return snapshot
 
 
 def build_current_authority_resolution() -> AuthorityResolution:
     """Resolve the exact hash-pinned retained Authority evidence set."""
-    return resolve_authority_contract(load_current_authority_snapshot())
+    return resolve_authority_contract(load_current_authority_snapshot(include_gap_audit=True))
 
 
 def write_current_authority_exclusion_input(output_directory: Path) -> Path:
@@ -903,7 +938,7 @@ def write_current_authority_exclusion_input(output_directory: Path) -> Path:
 
 def write_current_authority_evidence(output_directory: Path) -> Path:
     """Write a deterministic, noncanonical evidence packet, including blockers."""
-    snapshot = load_current_authority_snapshot()
+    snapshot = load_current_authority_snapshot(include_gap_audit=True)
     resolution = resolve_authority_contract(snapshot)
     payload = {
         "schema": "clothmorph.authority-source-audit-evidence", "schema_version": 1,
@@ -913,15 +948,11 @@ def write_current_authority_evidence(output_directory: Path) -> Path:
         "source_module_uuid": snapshot.source_module_uuid,
         "source_pak_sha256": snapshot.source_pak_sha256,
         "fresh_source_audit": snapshot.fresh_source_audit,
+        "source_gap_audit": snapshot.source_gap_audit,
         "unresolved_geometry_ids": list(resolution.unresolved_geometry_ids),
         "forbidden_substitute_ids": list(resolution.forbidden_substitute_ids),
         "unresolved_retained_evidence_files": list(snapshot.unresolved_retained_evidence_files),
-        "blockers": [
-            "Formerly missing SCO bytes are present, but packed VisualBank contracts have ten objects including Netherstone; no nine-object replacement admitted.",
-            "Fresh GR2 binary readback and exact defect localization have not been completed. Byte hashes and metadata are not geometry acceptance.",
-            "Legacy geometry inventory and unmatched retained alias hits require reconciliation; other retained dependency packages have listing-only coverage here.",
-            "Independent anti-omission verification and canonical release-ledger identity binding are not supplied by this Task-4 packet.",
-        ],
+        "blockers": snapshot.source_gap_audit["remaining_admission_conditions"],
         "evidence": [record.__dict__ for record in snapshot.evidence],
         "routes": [
             {"item_uuid": route.item_uuid, "variant": route.variant, "race_uuid": route.race_uuid,

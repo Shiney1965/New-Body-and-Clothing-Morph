@@ -309,9 +309,9 @@ def test_exclusion_event_input_is_canonical_and_binds_every_evidence_hash():
 def test_real_sources_do_not_exclude_available_geometry_using_old_partial_inventory():
     resolution = build_current_authority_resolution()
 
-    assert resolution.status == "BLOCKED_SOURCE_AUDIT_INCOMPLETE"
+    assert resolution.status == "SOURCE_AUDIT_COMPLETE_GEOMETRY_UNASSESSED"
     assert resolution.geometry_admitted is False
-    assert resolution.unresolved_geometry_ids == MISSING_GEOMETRY_IDS
+    assert resolution.unresolved_geometry_ids == ()
     assert resolution.forbidden_substitute_ids == MISSING_GEOMETRY_IDS
     assert resolution.replacement_routes == 0
     assert resolution.protected_mutations == 0
@@ -414,17 +414,21 @@ def test_wrong_family_cannot_impersonate_exact_bcb_component():
         resolve_authority_contract(replace(snapshot, routes=routes))
 
 
-def test_blocked_evidence_packet_is_deterministic_nonattachable_and_nonoverwriting(tmp_path: Path):
+def test_source_complete_evidence_packet_remains_nonattachable_and_nonoverwriting(tmp_path: Path):
     assert hasattr(authority_module, "write_current_authority_evidence")
     first = authority_module.write_current_authority_evidence(tmp_path / "first")
     second = authority_module.write_current_authority_evidence(tmp_path / "second")
     assert first.read_bytes() == second.read_bytes()
     payload = json.loads(first.read_bytes())
-    assert payload["status"] == "BLOCKED_SOURCE_AUDIT_INCOMPLETE"
+    assert payload["status"] == "SOURCE_AUDIT_COMPLETE_GEOMETRY_UNASSESSED"
     assert payload["ready_for_attachment"] is False
     assert payload["geometry_admitted"] is False
     assert payload["release_blocking"] is True
-    assert payload["unresolved_retained_evidence_files"]
+    assert payload["unresolved_retained_evidence_files"] == []
+    assert payload["source_gap_audit"]["geometry_methods_tested"] == []
+    assert payload["fresh_source_audit"]["unresolved_retained_evidence_files"] == []
+    assert all(record["binary_geometry_readback"] == "SOURCE_SEMANTICS_READ_BACK_GEOMETRY_UNASSESSED"
+               for record in payload["fresh_source_audit"]["geometry_records"])
     assert payload["fresh_source_audit"]["file_count"] == 955
     assert payload["exclusion_event_input"] is None
     assert not {"source_profile_id", "identity_sha256", "record_id", "event_id", "approved_by"} & payload.keys()

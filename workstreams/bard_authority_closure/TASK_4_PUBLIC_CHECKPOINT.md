@@ -2,7 +2,56 @@
 
 ## TL/DR
 
-The current result is `BLOCKED_SOURCE_AUDIT_INCOMPLETE`, not an exhaustive source exclusion and not geometry admission. All four formerly missing SCO GR2 paths are present in the newly frozen full Scantily package, while the packed VisualBank readback binds each to a ten-object contract containing Netherstone; those contracts cannot substitute for the protected nine-object BCBScantily main.
+The current bounded result is `SOURCE_AUDIT_COMPLETE_GEOMETRY_UNASSESSED`: all eleven previously named retained-source gaps have been examined and evidence-bound, but Task 4's geometry work remains incomplete. No defect region is invented, no conditional geometry is admitted, and no terminal exclusion event or release claim follows from source-audit completion.
+
+## Current continuation — exact eleven-gap source audit
+
+The retained add-on and separator were freshly extracted into new ignored directories, and the SBBF patch archive was freshly expanded without overwriting originals. Complete listing/path/size/hash checks passed for 71 add-on files, 630 separator files, and 16 SBBF files (39 ZIP entries including directories). Every packed LSF in the add-on/separator was decoded: ten resources total. The four formerly missing HFL/TIF_FS sources, two SBBF Human alternatives, raw SCO Human normal/Alt, and protected BCB main/optional skirt were read-only converted to GLB: ten conversions total.
+
+The same pinned `LSLib.dll` used by the converter was also used for direct GR2 model/mesh-binding inspection. This confirms that metadata object slots and physical mesh bindings are different source facts, not interchangeable counts:
+
+| Exact source family / component | VisualBank object slots | Direct GR2 physical meshes | Inspection boundary |
+|---|---:|---:|---|
+| BCBScantily Human main | 9 | 8 | Preserve the declared main and its source bytes; do not invent a ninth physical mesh. |
+| BCBScantily optional skirt | 1 | 1 | Separate, item-specific optional component. |
+| SCO HFL normal / TIF_FS normal | 10 each | 9 each | Both contain a physical Stone mesh; neither is a BCB nine-slot substitute. |
+| SCO HFL Alt / TIF_FS Alt | 10 each | 10 each | Distinct Alt physical topology, including skirt. |
+| Raw SCO Human normal / Alt | 10 each | 9 / 10 | Distinct from the BCB overlay. |
+| SBBF loose Human normal / Alt | 10 source SCO slots each | 8 / 9 | Loose geometry overrides do not define a new exact BCB item contract. |
+
+Every inspected mesh skin has 82 joints. Direct GR2 reads report no root material definitions; converted GLBs contain a `Dummy` material. Exact runtime material UUIDs therefore remain bound to packed VisualBank objects, not inferred from that GLB placeholder. Actual accessor/topology/non-POSITION hashes, node/skin bindings, source flags, and per-mesh counts are retained in the evidence packet. These are source-semantic inspections, not fit tests or byte-preserving GR2 round trips.
+
+The raw SCO Human Alt route uses `ed682802-b196-4c63-ac48-ed6ff2aad31c`; the BCB overlay Human Alt uses main `aec60cfa-c6a1-4a77-8148-b2fa01e4d988` plus optional skirt `122d5812-e27d-4638-905d-5e520cc26202`. The seven exact BCB item/race/variant entries remain separately bound. Raw SCO's additional race routes are recorded, not silently promoted into this seven-route contract.
+
+### Resolution of the original eleven gaps
+
+| Gap | Source-audit result |
+|---|---|
+| 01 — retained class findings | Complete document read and hash-bound. Its Authority paragraph preserves the nine-slot/optional-skirt boundary but supplies no exact defect coordinates or correction candidate. |
+| 02 — legacy geometry inventory | All 63 records parsed and fingerprinted; all are BCB-source records. The old generator used a limited add-on `HUM_F_*` extraction, so the omitted SCO files were outside its input coverage. |
+| 03 — older Stats | Entire file parsed into 131 entries and byte-identical to the frozen current copy. Normal/Alt entries and exact RootTemplate references are retained. |
+| 04 — older VisualBank | All 828 parsed VisualResource field contracts equal the packed frozen readback; no added, missing, or changed IDs. |
+| 05 — add-on package | Complete fresh inventory and all packed-resource decodes/searches. No original Authority identity supplied by this dependency. |
+| 06 — HFL normal GR2 | Direct GR2 and converted semantic readback complete; physical nine-mesh source and ten metadata slots recorded separately. |
+| 07 — HFL Alt GR2 | Direct GR2 and converted semantic readback complete; physical ten-mesh Alt topology retained separately. |
+| 08 — TIF_FS normal GR2 | Direct GR2 and converted semantic readback complete; physical nine-mesh source and ten metadata slots recorded separately. |
+| 09 — TIF_FS Alt GR2 | Direct GR2 and converted semantic readback complete; physical ten-mesh Alt topology retained separately. |
+| 10 — SBBF archive | Complete fresh archive inventory; both exact loose Human Authority variants decoded and compared without assuming BCB compatibility. |
+| 11 — separator package | Complete fresh inventory and all packed-resource decodes/searches; its split components/own identities do not replace the original combined contract. |
+
+The nine original item/main/skirt/four-geometry UUID aliases have zero text hits in the fully decoded add-on and separator metadata. Full query evidence contains 55 aliases across 37 text inputs, plus dependency path hits, with exact hit counts and line text. All 22 XML documents in the dependency source/readback set were fully parsed. Readable binary textures/localization payloads are hash-inventoried; they are not mislabeled as decoded garment geometry.
+
+Two source-audit packets at `local/task-4-gap-audit-output-20260902/run-1/authority-eleven-gap-audit.json` and `run-2/authority-eleven-gap-audit.json` are byte-identical: 1728433 bytes, SHA-256 `34EF05B54D2EBF045B94F1AFC22217BF932D21538268501EB7D5734273E9B9BB`. The twenty retained derived-output path/size/hash records are pinned by `18DBCDC1A52BCAFB37C28003BDC7B10C604E311096BA22D1920BC42D86571D6D`.
+
+Current integrated packets at `local/task-4-integrated-source-output-20260902/run-2/authority-source-audit-evidence.json` and `run-3/authority-source-audit-evidence.json` are byte-identical: 1945736 bytes, SHA-256 `1499C9FF02482F6AB6CB399CC16C8D7A10A65ED0CF7F943E73A2E5F18FD743AD`. These refresh the earlier-stage readback labels and supersede the preserved run-1 integrated packet. The corrected reporting-consistency regression passed: 1 passed, 25 deselected in 43.06s.
+
+Final continuation verification: `python -m pytest workstreams/bard_authority_closure/tests -q` passed 104 tests in 167.63s. Python compilation and staged `git diff --check` passed. Self-review covered the exact gap-set anti-substitution gate, complete source/derived hash pins, runtime-material versus exporter-placeholder distinction, metadata-slot versus physical-mesh distinction, per-item/race/variant bindings, and the absence of geometry/event admission. Independent review remains separate.
+
+This resolves only the original eleven source gaps. A source-bound defect region, exact conditional-geometry admission, geometry-method testing, independent anti-omission review, and any later canonical release-ledger/terminal-policy binding remain outstanding. The current result has no unresolved *source identities* in that audited set, but has `geometry_admitted=false`, no tested geometry methods, `exclusion_event_input=null`, `ready_for_attachment=false`, and `release_blocking=true`. No GR2/PAK was created, and no protected/live/save mutation occurred.
+
+## Historical first-pass checkpoint
+
+The following sections preserve the earlier blocked audit and its exact inputs/history. Their eleven-gap list and old evidence packets are superseded by the continuation above; they are not the current source-audit disposition.
 
 ## Scope and preserved state
 
