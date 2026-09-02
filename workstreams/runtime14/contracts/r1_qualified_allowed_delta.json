@@ -1,0 +1,80 @@
+{
+  "schema": 1,
+  "revision": "R1_QUALIFICATION_V1_IN_PROGRESS",
+  "files": [
+    {
+      "path": "Mods/ClothMorphRuntime/MCM_blueprint.json",
+      "bytes": 8298,
+      "sha256": "2D3B7316E2F6DAFCE76A2E93ACC25591C3C537624A1D56BC67E2F0A29B71369C"
+    },
+    {
+      "path": "Mods/ClothMorphRuntime/ScriptExtender/Lua/BodyFamilyEquipRace.lua",
+      "bytes": 12944,
+      "sha256": "41DBCC2D5EA782784278405B7C9590FB8BC84708A0F63AA86FBE97F3603EF81A"
+    },
+    {
+      "path": "Mods/ClothMorphRuntime/ScriptExtender/Lua/BootstrapClient.lua",
+      "bytes": 14564,
+      "sha256": "0EBDDE2F18218605C43F74126CCA79F89915A334E37A248809632855DD129819"
+    },
+    {
+      "path": "Mods/ClothMorphRuntime/ScriptExtender/Lua/BootstrapServer.lua",
+      "bytes": 114341,
+      "sha256": "32F94455E9AC7627D3F4AACAFF6E5F5A3DF3C604A4ECC28E86D04761FBB4F73A"
+    },
+    {
+      "path": "Mods/ClothMorphRuntime/ScriptExtender/Lua/EquipRace.lua",
+      "bytes": 226079,
+      "sha256": "387949212FC0E68D7AF9D7F0654C0E7395E7AEE94D118C97CAAF2D43F27D86A3"
+    },
+    {
+      "path": "Mods/ClothMorphRuntime/ScriptExtender/Lua/MasterState.lua",
+      "bytes": 20265,
+      "sha256": "747B50BC87732A620329718A9BFF11A78ED1D43BF461E1B1679A73AB34F3CAC3"
+    },
+    {
+      "path": "Mods/ClothMorphRuntime/ScriptExtender/Lua/MCMIntegration.lua",
+      "bytes": 11250,
+      "sha256": "7AB716F5BB341E27854F02E56A37862122143F3F2CA5C3AA83CDA5F51D746E40"
+    },
+    {
+      "path": "Mods/ClothMorphRuntime/ScriptExtender/Lua/OwnershipLedger.lua",
+      "bytes": 8502,
+      "sha256": "CB856295822E7190BF17D0B84812F51589BADAD09CD647FE9DDFBC0474AA0CF0"
+    },
+    {
+      "path": "Mods/ClothMorphRuntime/ScriptExtender/Lua/PassThroughState.lua",
+      "bytes": 1777,
+      "sha256": "DD9B908A2E41740F9C5D1130B96D55A954CA376639D9B5C24E8E905BC77B95FC"
+    },
+    {
+      "path": "Mods/ClothMorphRuntime/ScriptExtender/Lua/ProviderRegistry.lua",
+      "bytes": 18372,
+      "sha256": "E082A31EDC2DFFE27D782586B3BA216C888ABBD806DABE2E86F1F60EF7CFCB11"
+    },
+    {
+      "path": "Mods/ClothMorphRuntime/ScriptExtender/Lua/R1Foundation.lua",
+      "bytes": 7854,
+      "sha256": "028049DD57FD0D434F78C7BD0CAB5201F338F2D8077F0B70F4AF221793CC78E1"
+    },
+    {
+      "path": "Mods/ClothMorphRuntime/ScriptExtender/Lua/StateSchema7.lua",
+      "bytes": 12689,
+      "sha256": "18ED3F105BE18CCCA4001A8CF5E94688C3244D4115B79728B4BCAA6E468F958B"
+    }
+  ],
+  "allowedPaths": [
+    "Mods/ClothMorphRuntime/MCM_blueprint.json",
+    "Mods/ClothMorphRuntime/ScriptExtender/Lua/BodyFamilyEquipRace.lua",
+    "Mods/ClothMorphRuntime/ScriptExtender/Lua/BootstrapClient.lua",
+    "Mods/ClothMorphRuntime/ScriptExtender/Lua/BootstrapServer.lua",
+    "Mods/ClothMorphRuntime/ScriptExtender/Lua/EquipRace.lua",
+    "Mods/ClothMorphRuntime/ScriptExtender/Lua/MCMIntegration.lua",
+    "Mods/ClothMorphRuntime/ScriptExtender/Lua/MasterState.lua",
+    "Mods/ClothMorphRuntime/ScriptExtender/Lua/OwnershipLedger.lua",
+    "Mods/ClothMorphRuntime/ScriptExtender/Lua/PassThroughState.lua",
+    "Mods/ClothMorphRuntime/ScriptExtender/Lua/ProviderRegistry.lua",
+    "Mods/ClothMorphRuntime/ScriptExtender/Lua/R1Foundation.lua",
+    "Mods/ClothMorphRuntime/ScriptExtender/Lua/StateSchema7.lua"
+  ]
+}

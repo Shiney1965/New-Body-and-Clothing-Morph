@@ -2,3 +2,9 @@
 /runtime/r0_reference/*.lua -text
 /runtime/r0_reference/accepted_tiefling_bootstrap.lua whitespace=-blank-at-eof
 /contracts/lineage.json text eol=lf
+/runtime/r1_qualified_delta/** -text
+/tests/lua/bootstrap_fixture.lua -text
+/tests/lua/run_task2a.lua -text
+/tests/lua/test_bootstrap_wiring.lua -text
+/tests/lua/test_support.lua -text
+/tests/lua/test_task2b_bootstrap.lua -text

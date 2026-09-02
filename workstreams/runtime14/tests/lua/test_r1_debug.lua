@@ -1,0 +1,42 @@
+local script=debug.getinfo(1,'S').source:sub(2):gsub('\\','/')
+local F=dofile(script:match('^(.*)/[^/]+$')..'/production_engine.lua')
+local root=assert(arg[1],'explicit Runtime stage required')
+local tests={}
+local function test(name,fn) tests[#tests+1]={name,fn} end
+local CCSV='a22009cd-b9e9-55b1-8295-f89a0ede1bf6'
+test('known-valid managed CCSV debug command applies and owns exact fallback',function()
+    local w=F.Boot(root)
+    local ok=w.console.cm_applyccsv('cm_applyccsv',CCSV,F.ids.a)
+    assert(ok==true,'known CCSV debug path disabled')
+    local rec=w.state.Bodies[F.ids.a]
+    assert(rec.Choice=='sbbf' and rec.AppliedCcsv==CCSV and rec.OwnedCcsvs[CCSV],'known CCSV ownership not bound')
+    assert(w.entities[F.ids.a].CharacterCreationAppearance.Visuals[1]==F.ids.external,'external visual lost')
+end)
+test('known-valid managed recovery ER command writes original and verifies',function()
+    local w=F.Boot(root)
+    assert(w.console.cm_seterace('cm_seterace',F.ids.er,F.ids.a)==true,'known recovery path disabled')
+    assert(w.state.Bodies[F.ids.a].OrigEquipRace==F.ids.er,'known recovery original missing')
+    assert(w.entities[F.ids.a].ServerCharacter.Template.EquipmentRace==F.ids.er,'recovery live ER mismatch')
+end)
+test('unknown CCSV and minted or wrong-family recovery ER fail without writes',function()
+    local w=F.Boot(root);w.resetSpies()
+    assert(w.console.cm_applyccsv('cm_applyccsv',F.ids.external,F.ids.a)~=true)
+    assert(w.console.cm_seterace('cm_seterace','c7a11e5e-0001-4b0d-9e57-5bbf00000001',F.ids.a)~=true)
+    assert(w.console.cm_seterace('cm_seterace','7d73f501-f65e-46af-a13b-2cacf3985d05',F.ids.a)~=true)
+    assert(#w.writes==0,'untrusted debug request wrote gameplay')
+end)
+test('debug CCSV no-op engine write gains no ownership claim',function()
+    local w=F.Boot(root,{addNoop=true})
+    assert(w.console.cm_applyccsv('cm_applyccsv',CCSV,F.ids.a)~=true)
+    assert(w.state.Bodies[F.ids.a].OwnedCcsvs[CCSV]==nil,'failed CCSV write gained ownership')
+end)
+test('External debug mutators reject before gameplay reads',function()
+    local w=F.Boot(root);assert(w.mod.SetDesiredBody(F.ids.a,'external'));w.resetSpies()
+    assert(w.console.cm_applyccsv('cm_applyccsv',CCSV,F.ids.a)~=true)
+    assert(w.console.cm_seterace('cm_seterace',F.ids.er,F.ids.a)~=true)
+    assert(#w.reads==0 and #w.writes==0,'External debug request touched gameplay')
+end)
+local failed=0
+for _,row in ipairs(tests) do local ok,why=pcall(row[2]);if ok then print('PASS '..row[1]) else failed=failed+1;print('FAIL '..row[1]..' '..tostring(why)) end end
+print(('R1_DEBUG_RESULT %d/%d'):format(#tests-failed,#tests))
+if failed>0 then os.exit(1) end

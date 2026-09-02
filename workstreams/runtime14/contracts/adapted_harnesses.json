@@ -1,0 +1,30 @@
+{
+  "kind": "CURRENT_ADAPTED_HARNESSES_NOT_HISTORICAL_SOURCE",
+  "files": [
+    {
+      "path": "tests/lua/bootstrap_fixture.lua",
+      "bytes": 15759,
+      "sha256": "8F980DEFC11035400472409E418198A57131FC815921049E0DEEE39E28F756E2"
+    },
+    {
+      "path": "tests/lua/run_task2a.lua",
+      "bytes": 20360,
+      "sha256": "47F8FFC152B2F47B2967E8A4028CE7C2DD013D67DD8685DB9F70F5D107D43834"
+    },
+    {
+      "path": "tests/lua/test_bootstrap_wiring.lua",
+      "bytes": 19926,
+      "sha256": "2F56EBEA536FD77666261630F03937A48ECBD365CADEB76C2A828F8289F31BF0"
+    },
+    {
+      "path": "tests/lua/test_support.lua",
+      "bytes": 2514,
+      "sha256": "8FC168236E544E7912B63C275676534D83EE2EDDA7428BF501FAACCBDEFD5EF5"
+    },
+    {
+      "path": "tests/lua/test_task2b_bootstrap.lua",
+      "bytes": 16912,
+      "sha256": "F74C80410E237066026DF42F5133E212C293F728B4DB27204E78391AACF406DA"
+    }
+  ]
+}
