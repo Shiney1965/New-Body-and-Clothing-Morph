@@ -36,6 +36,8 @@ EXPECTED_GATE_KEYS = {
     "fixed_vertex_moves",
     "active_vertices_below_clearance",
     "active_surface_ambiguities",
+    "moved_roi_vertices_below_clearance",
+    "moved_roi_surface_ambiguities",
     "fixed_cohort_coverage_loss",
     "flipped_faces",
     "new_zero_area_faces",

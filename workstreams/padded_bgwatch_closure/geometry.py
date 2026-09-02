@@ -13,6 +13,7 @@ import xml.etree.ElementTree as ET
 import numpy as np
 
 from .configuration import VerifiedInput
+from .surface import exact_closest_points
 
 
 COLLADA_NS = "http://www.collada.org/2005/11/COLLADASchema"
@@ -79,6 +80,53 @@ class ParsedGlbSurface(TriangleMesh):
         normals = normals / lengths[:, None]
         normals.setflags(write=False)
         object.__setattr__(self, "vertex_normals", normals)
+
+
+@dataclass(frozen=True)
+class SignedClearanceQuery:
+    """Retained closest-triangle query signed by stored BCB vertex normals."""
+
+    closest_points: np.ndarray
+    face_ids: np.ndarray
+    barycentric: np.ndarray
+    distances: np.ndarray
+    ambiguous: np.ndarray
+    interpolated_normals: np.ndarray
+    signed_clearances: np.ndarray
+    vertex_normals_sha256: str
+
+
+def _float64_digest(values: object) -> str:
+    return hashlib.sha256(
+        np.asarray(values, dtype="<f8").tobytes(order="C"),
+    ).hexdigest().upper()
+
+
+def query_signed_clearance(points: object, body: ParsedGlbSurface) -> SignedClearanceQuery:
+    """Use the retained stored-normal BCB oracle for every requested garment point."""
+    if not isinstance(body, ParsedGlbSurface):
+        raise TypeError("STORED_BCB_VERTEX_NORMAL_ORACLE_REQUIRED")
+    checked_points = np.asarray(points, dtype=np.float64)
+    if checked_points.ndim != 2 or checked_points.shape[1] != 3 or not np.all(np.isfinite(checked_points)):
+        raise ValueError("CLEARANCE_QUERY_POINTS_MUST_BE_FINITE_N_BY_3")
+    exact = exact_closest_points(checked_points, body.positions, body.faces)
+    face_vertex_ids = body.faces[exact.face_ids]
+    interpolated = np.einsum("ni,nij->nj", exact.barycentric, body.vertex_normals[face_vertex_ids])
+    lengths = np.linalg.norm(interpolated, axis=1)
+    if np.any(lengths <= 1e-15):
+        raise ValueError("STORED_BCB_NORMAL_INTERPOLATION_ZERO_LENGTH")
+    interpolated /= lengths[:, None]
+    signed = np.einsum("ij,ij->i", checked_points - exact.closest_points, interpolated)
+    return SignedClearanceQuery(
+        closest_points=_readonly(exact.closest_points, np.float64),
+        face_ids=_readonly(exact.face_ids, np.int64),
+        barycentric=_readonly(exact.barycentric, np.float64),
+        distances=_readonly(exact.distances, np.float64),
+        ambiguous=_readonly(exact.ambiguous, bool),
+        interpolated_normals=_readonly(interpolated, np.float64),
+        signed_clearances=_readonly(signed, np.float64),
+        vertex_normals_sha256=_float64_digest(body.vertex_normals),
+    )
 
 
 @dataclass(frozen=True)
@@ -678,8 +726,17 @@ def build_surface_constraints(
     if not isinstance(body_mesh, TriangleMesh):
         raise TypeError("body_mesh must be a TriangleMesh")
     points = base[np.asarray(active, dtype=np.int64)]
-    closest, normals, face_ids, barycentric, _distances, ambiguous = _closest_points(points, body_mesh)
-    signed = np.einsum("ij,ij->i", points - closest, normals)
+    if isinstance(body_mesh, ParsedGlbSurface):
+        query = query_signed_clearance(points, body_mesh)
+        closest = query.closest_points
+        normals = query.interpolated_normals
+        face_ids = query.face_ids
+        barycentric = query.barycentric
+        ambiguous = query.ambiguous
+        signed = query.signed_clearances
+    else:
+        closest, normals, face_ids, barycentric, _distances, ambiguous = _closest_points(points, body_mesh)
+        signed = np.einsum("ij,ij->i", points - closest, normals)
     targets = closest + TARGET_CLEARANCE_M * normals
     return SurfaceConstraints(
         active, closest, normals, signed, targets, face_ids, barycentric, ambiguous,

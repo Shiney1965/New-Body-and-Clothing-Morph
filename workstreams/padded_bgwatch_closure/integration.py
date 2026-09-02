@@ -53,8 +53,10 @@ class PreparedClosure:
     """All hash-verified real geometry and immutable production gates."""
 
     verified_source: VerifiedInput
+    verified_body: VerifiedInput
     source: ParsedColladaGeometry
     body: ParsedGlbSurface
+    body_vertex_normals_sha256: str
     active_ids: tuple[int, ...]
     coverage: FixedCoverageEvidence
     contract: CandidateContract
@@ -127,8 +129,12 @@ def prepare_real_closure(workstream_root=WORKSTREAM_ROOT) -> PreparedClosure:
     contract = CandidateContract(roi, constraints, fixed_cohort=coverage.contract)
     return PreparedClosure(
         verified_source=verified_source,
+        verified_body=verified_body,
         source=source,
         body=body,
+        body_vertex_normals_sha256=hashlib.sha256(
+            np.asarray(body.vertex_normals, dtype="<f8").tobytes(order="C"),
+        ).hexdigest().upper(),
         active_ids=active_ids,
         coverage=coverage,
         contract=contract,

@@ -117,8 +117,12 @@ def _failure_reasons(candidate: Candidate, report: GateReport) -> tuple[str, ...
         reasons.append("FIXED_VERTEX_MOVES")
     if report.active_surface_ambiguities:
         reasons.append("ACTIVE_SURFACE_AMBIGUITY")
+    if report.moved_roi_surface_ambiguities:
+        reasons.append("MOVED_ROI_SURFACE_AMBIGUITY")
     if report.active_vertices_below_clearance:
         reasons.append("ACTIVE_CLEARANCE_NOT_MET")
+    if report.moved_roi_vertices_below_clearance:
+        reasons.append("MOVED_ROI_CLEARANCE_NOT_MET")
     if report.fixed_cohort_coverage_loss:
         reasons.append("FIXED_COHORT_COVERAGE_LOSS")
     if report.flipped_faces:

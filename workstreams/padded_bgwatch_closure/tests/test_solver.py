@@ -19,6 +19,7 @@ from workstreams.padded_bgwatch_closure.geometry import (
     derive_minimal_roi,
     parse_collada_geometry,
     parse_glb_surface,
+    query_signed_clearance,
 )
 from workstreams.padded_bgwatch_closure.integration import (
     derive_fixed_coverage_contract,
@@ -113,6 +114,27 @@ def test_original_active_ids_use_interpolated_body_normals_and_pin_every_penetra
     active = derive_original_active_ids(source_positions, body)
 
     assert active == (0, 1)
+
+
+def test_clearance_oracle_uses_barycentric_stored_bcb_normals_not_geometric_face_normals():
+    """Catches final evaluation replacing the retained BCB stored-normal oracle."""
+    body = ParsedGlbSurface(
+        positions=np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0]], dtype=float),
+        faces=np.array([[0, 1, 2]], dtype=int),
+        vertex_normals=np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]], dtype=float),
+    )
+    query = query_signed_clearance(np.array([[0.25, 0.25, 0.2]], dtype=float), body)
+
+    np.testing.assert_allclose(query.closest_points, [[0.25, 0.25, 0.0]], atol=1e-12)
+    np.testing.assert_allclose(
+        query.interpolated_normals,
+        [[0.8164965809277261, 0.4082482904638631, 0.4082482904638631]],
+        atol=1e-12,
+    )
+    np.testing.assert_allclose(query.signed_clearances, [0.08164965809277262], atol=1e-12)
+    assert query.vertex_normals_sha256 == hashlib.sha256(
+        np.asarray(body.vertex_normals, dtype="<f8").tobytes(order="C")
+    ).hexdigest().upper()
 
 
 def test_fixed_coverage_contract_uses_only_pristine_outward_body_samples_within_five_cm():

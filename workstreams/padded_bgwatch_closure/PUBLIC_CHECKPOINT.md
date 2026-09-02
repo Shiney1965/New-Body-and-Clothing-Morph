@@ -34,12 +34,15 @@ readiness.
 - Passing cases: `0/160`
 - Selected candidate: none
 - Candidate DAE: none emitted
-- Full search evidence SHA-256: `6BD170B5738192C1C79355E351AD1CEFC42C80E0DD89DF88482275B9FBC25D58`
-- Closure manifest SHA-256: `BD06D4A539B29A1F0F6A7C632CBB40ED636086057B6DE4EC7699F5744D69AEEE`
+- Current restored-oracle run: `local/generated/runs/oracle-restored-r1/`
+- Full search evidence SHA-256: `8C0E60533969E1BE492211E3F292D05890BD642E005FCFE750A6734B61998681`
+- Pending non-attachable packet SHA-256: `31A881DAEEA757D3FC57FB3AFF4522FEF60972CA96E8D45A86A0179B7BCEDE24`
+- Stored BCB vertex-normal array SHA-256: `533C492F576BDDD539DC5E7D696661A2E912C2E7E3901FFCCE7F018EB65979C0`
 
-All 160 records fail `ACTIVE_CLEARANCE_NOT_MET`; record indices `2`, `3`,
-`50`, `66`, `67`, `98`, and `115` additionally fail
-`ACTIVE_SURFACE_AMBIGUITY`. The ignored evidence file
+All 160 records fail `ACTIVE_CLEARANCE_NOT_MET`; record indices `37`, `38`,
+`39`, `50`, `66`, `70`, `71`, `76`, `77`, `78`, `79`, `98`, `99`, `115`,
+`134`, `135`, `150`, `151`, `156`, `157`, `158`, and `159` additionally fail
+`ACTIVE_SURFACE_AMBIGUITY`. No record fails a moved-ROI ambiguity gate. The ignored evidence file
 `local/generated/position_only_search.json` retains every per-case parameter,
 serialized POSITION digest, and gate result.
 
@@ -66,6 +69,16 @@ path rather than deleting or overwriting it, so that stale file is not a
 current artifact and has no attachment or terminal-disposition implication.
 The new writer must be run against a fresh empty generated-output directory to
 produce its pending packet.
+
+## Final oracle correction
+
+The current run replaces the earlier geometric-face-normal evaluation with the
+retained closest-triangle oracle: signs use barycentrically interpolated stored
+BCB vertex normals. The source and BCB local inputs were materialized and
+hash-verified before parsing. The literal 160-case grid remains fixed in the
+declared order; the two complete runs were byte-identical. These are current
+offline findings only. Historical RED evidence for this post-hoc hardening is
+unavailable; the regression tests were added after the prior implementation.
 
 No GR2, PAK, VisualBank, Lua, profile, installation, save, or gameplay action
 was created, read for mutation, or changed by this closure.

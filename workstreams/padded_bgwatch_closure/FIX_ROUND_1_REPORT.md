@@ -64,3 +64,21 @@ No GR2, PAK, VisualBank, Lua, profile, installation, save, live game file, or
 protected route was read for mutation or changed. The pre-existing ignored
 event-style file was deliberately neither deleted nor overwritten; a fresh
 empty ignored output directory is required for a later real run of this writer.
+
+## Final fix wave correction
+
+The final writer run used the retained stored-BCB-vertex-normal closest-triangle
+oracle, not geometric face normals. It completed two literal 160-case searches
+with byte-identical JSON and selected-hash fields in
+`local/generated/runs/oracle-restored-r1/`. The resulting status remains
+`POSITION_ONLY_UNFIXABLE_UNDER_CURRENT_TOPOLOGY` with `0/160` passes; no
+candidate was emitted. The search SHA-256 is
+`8C0E60533969E1BE492211E3F292D05890BD642E005FCFE750A6734B61998681`, and
+the non-attachable pending packet SHA-256 is
+`31A881DAEEA757D3FC57FB3AFF4522FEF60972CA96E8D45A86A0179B7BCEDE24`.
+
+This run's stored BCB vertex-normal array SHA-256 is
+`533C492F576BDDD539DC5E7D696661A2E912C2E7E3901FFCCE7F018EB65979C0`.
+The old ignored event-shaped file remains obsolete, not canonical, and not
+attachable. Historical RED evidence for these post-hoc final-hardening tests is
+not available; the fresh focused/full results below are current evidence only.

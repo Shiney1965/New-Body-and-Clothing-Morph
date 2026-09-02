@@ -9,6 +9,7 @@ import numpy as np
 
 from .geometry import (
     ParsedColladaGeometry,
+    ParsedGlbSurface,
     RoiContract,
     SurfaceConstraints,
     TARGET_CLEARANCE_M,
@@ -187,6 +188,8 @@ class GateReport:
     fixed_vertex_moves: int
     active_vertices_below_clearance: int
     active_surface_ambiguities: int
+    moved_roi_vertices_below_clearance: int
+    moved_roi_surface_ambiguities: int
     fixed_cohort_coverage_loss: int
     flipped_faces: int
     new_zero_area_faces: int
@@ -392,6 +395,39 @@ def _active_clearance_loss(candidate: np.ndarray, constraints: SurfaceConstraint
     return int(np.count_nonzero(below)), int(np.count_nonzero(ambiguous))
 
 
+def _clearance_losses(
+    base: np.ndarray,
+    candidate: np.ndarray,
+    contract: CandidateContract | SyntheticCandidateContract,
+) -> tuple[int, int, int, int]:
+    """Check fixed active vertices and every moved ROI connector with one oracle."""
+    active_ids = np.asarray(contract.constraints.active_ids, dtype=np.int64)
+    if isinstance(contract.constraints.body_mesh, ParsedGlbSurface):
+        from .geometry import query_signed_clearance
+
+        movable = np.asarray(contract.roi.movable_ids, dtype=np.int64)
+        moved_connectors = movable[
+            np.linalg.norm(candidate[movable] - base[movable], axis=1) > 0.0
+        ]
+        active_set = set(int(value) for value in active_ids)
+        connector_ids = np.asarray(
+            [int(value) for value in moved_connectors if int(value) not in active_set],
+            dtype=np.int64,
+        )
+        checked_ids = np.concatenate((active_ids, connector_ids))
+        query = query_signed_clearance(candidate[checked_ids], contract.constraints.body_mesh)
+        below = (query.signed_clearances < TARGET_CLEARANCE_M - 1e-12) | query.ambiguous
+        active_count = len(active_ids)
+        return (
+            int(np.count_nonzero(below[:active_count])),
+            int(np.count_nonzero(query.ambiguous[:active_count])),
+            int(np.count_nonzero(below[active_count:])),
+            int(np.count_nonzero(query.ambiguous[active_count:])),
+        )
+    active_below, active_ambiguous = _active_clearance_loss(candidate, contract.constraints)
+    return active_below, active_ambiguous, 0, 0
+
+
 def _coverage_loss(candidate: np.ndarray, faces: np.ndarray, contract: CoverageContract | None) -> int:
     if contract is None or len(contract.points) == 0:
         return 0
@@ -435,8 +471,8 @@ def evaluate_candidate(
     fixed_moves = int(np.count_nonzero(
         np.linalg.norm(candidate.positions[fixed_ids] - base[fixed_ids], axis=1) > 0.0
     )) if len(fixed_ids) else 0
-    clearance_loss, surface_ambiguities = _active_clearance_loss(
-        candidate.positions, contract.constraints,
+    clearance_loss, surface_ambiguities, moved_roi_clearance_loss, moved_roi_ambiguities = _clearance_losses(
+        base, candidate.positions, contract,
     )
     coverage_loss = _coverage_loss(candidate.positions, faces, contract.fixed_cohort)
     passed = (
@@ -446,6 +482,7 @@ def evaluate_candidate(
         and count_equal
         and fixed_moves == 0
         and clearance_loss == 0
+        and moved_roi_clearance_loss == 0
         and coverage_loss == 0
         and metrics.internal_passed
         and metrics.faces_below_published_area == 0
@@ -468,6 +505,8 @@ def evaluate_candidate(
         fixed_vertex_moves=fixed_moves,
         active_vertices_below_clearance=clearance_loss,
         active_surface_ambiguities=surface_ambiguities,
+        moved_roi_vertices_below_clearance=moved_roi_clearance_loss,
+        moved_roi_surface_ambiguities=moved_roi_ambiguities,
         fixed_cohort_coverage_loss=coverage_loss,
         flipped_faces=metrics.flipped_faces,
         new_zero_area_faces=metrics.new_zero_area_faces,

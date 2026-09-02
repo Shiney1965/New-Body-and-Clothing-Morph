@@ -32,6 +32,7 @@ from workstreams.padded_bgwatch_closure.search import (
     OFFLINE_CANDIDATE,
     POSITION_ONLY_UNFIXABLE,
     SearchResult,
+    run_position_only_search,
 )
 from workstreams.padded_bgwatch_closure.solver import Candidate, CandidateContract, CoverageContract
 from workstreams.release_master_ledger.validation import validate_record
@@ -171,8 +172,16 @@ def _prepared_fixture() -> PreparedClosure:
     )
     return PreparedClosure(
         verified_source=verified,
+        verified_body=VerifiedInput(
+            "bcb_body_glb", b"synthetic body bytes", len(b"synthetic body bytes"),
+            hashlib.sha256(b"synthetic body bytes").hexdigest().upper(),
+            hashlib.sha256(b"synthetic body bytes").hexdigest().upper(),
+        ),
         source=source,
         body=body,
+        body_vertex_normals_sha256=hashlib.sha256(
+            np.asarray(body.vertex_normals, dtype="<f8").tobytes(order="C"),
+        ).hexdigest().upper(),
         active_ids=active,
         coverage=cohort,
         contract=CandidateContract(roi, constraints, fixed_cohort=cohort.contract),
@@ -181,33 +190,24 @@ def _prepared_fixture() -> PreparedClosure:
 
 def _repeated_fixture(*, passing: bool) -> RepeatedClosure:
     prepared = _prepared_fixture()
-    if passing:
-        candidate = Candidate.from_positions(
-            prepared.source.positions,
-            prepared.source.faces,
-            prepared.source.positions,
-            status="CANDIDATE",
-            source_non_position_sha256=prepared.source.non_position_sha256,
+    if not passing:
+        restrictive_coverage = CoverageContract(
+            points=prepared.coverage.contract.points,
+            normals=prepared.coverage.contract.normals,
+            maximum_distance=1e-9,
         )
-        first = SearchResult(
-            status=OFFLINE_CANDIDATE,
-            records=(),
-            passing_count=1,
-            selected_record_index=0,
-            selected_position_sha256="A" * 64,
-            selected_candidate=candidate,
-            json_bytes=b'{"status":"OFFLINE_POSITION_ONLY_CANDIDATE"}',
+        prepared = replace(
+            prepared,
+            coverage=FixedCoverageEvidence(prepared.coverage.body_vertex_ids, restrictive_coverage),
+            contract=CandidateContract(prepared.contract.roi, prepared.contract.constraints, restrictive_coverage),
         )
-    else:
-        first = SearchResult(
-            status=POSITION_ONLY_UNFIXABLE,
-            records=(),
-            passing_count=0,
-            selected_record_index=None,
-            selected_position_sha256=None,
-            selected_candidate=None,
-            json_bytes=b'{"status":"POSITION_ONLY_UNFIXABLE_UNDER_CURRENT_TOPOLOGY"}',
-        )
+    first = run_position_only_search(
+        prepared.source, prepared.contract,
+        candidate_roundtrip=lambda candidate: roundtrip_candidate(
+            prepared.verified_source, prepared.source, candidate,
+        ),
+    )
+    assert (first.status == OFFLINE_CANDIDATE) is passing
     return RepeatedClosure(prepared=prepared, first=first, second=first)
 
 

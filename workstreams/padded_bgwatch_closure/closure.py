@@ -9,6 +9,7 @@ from functools import partial
 import hashlib
 import json
 from pathlib import Path
+import re
 
 import numpy as np
 
@@ -19,6 +20,9 @@ from .search import (
     OFFLINE_CANDIDATE,
     POSITION_ONLY_UNFIXABLE,
     SearchResult,
+    _position_sha256,
+    _serialize_result,
+    build_parameter_grid,
     run_position_only_search,
 )
 
@@ -238,6 +242,77 @@ def _validate_repeated_closure(repeated: RepeatedClosure) -> None:
         raise RuntimeError("REPEATED_CLOSURE_SELECTION_MISMATCH")
     if repeated.first.status != repeated.second.status:
         raise RuntimeError("REPEATED_CLOSURE_STATUS_MISMATCH")
+    _validate_prepared_closure(repeated.prepared)
+    _validate_search_result(repeated.first, repeated.prepared)
+    _validate_search_result(repeated.second, repeated.prepared)
+
+
+def _validate_verified_input(value: object, input_id: str, code: str) -> None:
+    if not hasattr(value, "input_id") or value.input_id != input_id:
+        raise RuntimeError(f"PREPARED_{code}_INPUT_ID_INVALID")
+    actual = _sha256_bytes(value.content)
+    if value.byte_count != len(value.content) or actual != value.actual_sha256 or actual != value.expected_sha256:
+        raise RuntimeError(f"PREPARED_{code}_DIGEST_INVALID")
+
+
+def _validate_prepared_closure(prepared: PreparedClosure) -> None:
+    """Revalidate both verified bytes and the stored BCB normal oracle identity."""
+    _validate_verified_input(prepared.verified_source, "pristine_source_dae", "SOURCE")
+    _validate_verified_input(prepared.verified_body, "bcb_body_glb", "BODY")
+    if prepared.source.content_sha256 != prepared.verified_source.actual_sha256:
+        raise RuntimeError("PREPARED_SOURCE_PARSED_DIGEST_MISMATCH")
+    normal_sha256 = _sha256_bytes(np.asarray(
+        prepared.body.vertex_normals, dtype="<f8",
+    ).tobytes(order="C"))
+    if normal_sha256 != prepared.body_vertex_normals_sha256:
+        raise RuntimeError("PREPARED_BCB_NORMAL_ORACLE_DIGEST_MISMATCH")
+    if prepared.contract.constraints.body_mesh is not prepared.body:
+        raise RuntimeError("PREPARED_CONSTRAINT_ORACLE_MISMATCH")
+
+
+def _validate_search_result(result: SearchResult, prepared: PreparedClosure) -> None:
+    """Reject hand-constructed search evidence that cannot be a literal 160-case run."""
+    grid = build_parameter_grid()
+    if len(result.records) != len(grid):
+        raise RuntimeError("SEARCH_RESULT_RECORD_COUNT_INVALID")
+    if any(record.index != index or record.parameters != parameters for index, (record, parameters) in enumerate(zip(result.records, grid))):
+        raise RuntimeError("SEARCH_RESULT_LITERAL_GRID_INVALID")
+    actual_passing = tuple(record.index for record in result.records if record.gates.production_passed)
+    if result.passing_count != len(actual_passing):
+        raise RuntimeError("SEARCH_RESULT_PASSING_COUNT_INVALID")
+    expected_bytes = _serialize_result(
+        result.status, result.records, result.passing_count,
+        result.selected_record_index, result.selected_position_sha256,
+    )
+    try:
+        parsed = json.loads(result.json_bytes.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise RuntimeError("SEARCH_RESULT_JSON_INVALID") from error
+    if result.json_bytes != expected_bytes or parsed != json.loads(expected_bytes.decode("utf-8")):
+        raise RuntimeError("SEARCH_RESULT_JSON_FIELDS_MISMATCH")
+    if result.passing_count == 0:
+        if (
+            result.status != POSITION_ONLY_UNFIXABLE
+            or result.selected_record_index is not None
+            or result.selected_position_sha256 is not None
+            or result.selected_candidate is not None
+        ):
+            raise RuntimeError("SEARCH_RESULT_ZERO_BRANCH_INVALID")
+        return
+    if result.status != OFFLINE_CANDIDATE or result.selected_candidate is None:
+        raise RuntimeError("SEARCH_RESULT_PASS_BRANCH_INVALID")
+    if result.selected_record_index != actual_passing[0]:
+        raise RuntimeError("SEARCH_RESULT_SELECTED_INDEX_INVALID")
+    selected_record = result.records[result.selected_record_index]
+    actual_sha256 = _position_sha256(result.selected_candidate)
+    readback = roundtrip_candidate(prepared.verified_source, prepared.source, result.selected_candidate)
+    readback_sha256 = _position_sha256(readback)
+    if (
+        result.selected_position_sha256 != actual_sha256
+        or actual_sha256 != readback_sha256
+        or selected_record.candidate_position_sha256 != actual_sha256
+    ):
+        raise RuntimeError("SEARCH_RESULT_SELECTED_HASH_INVALID")
 
 
 def _refuse_existing_artifacts(paths: tuple[Path, ...]) -> None:
@@ -261,10 +336,15 @@ def write_real_closure_artifacts(
     *,
     workstream_root: Path = WORKSTREAM_ROOT,
     created_utc: str,
+    run_id: str | None = None,
 ) -> dict[str, object]:
     """Write a fresh offline packet only after revalidating determinism and paths."""
     _validate_repeated_closure(repeated)
     generated = generated_output_path(workstream_root, "position_only_search.json").parent
+    if run_id is not None:
+        if re.fullmatch(r"[a-z0-9][a-z0-9_-]{0,63}", run_id) is None:
+            raise ValueError("CLOSURE_RUN_ID_INVALID")
+        generated = generated / "runs" / run_id
     search_path = generated / "position_only_search.json"
     search_sha256 = _sha256_bytes(repeated.first.json_bytes)
     candidate_path = generated / "HUM_F_ARM_BG_Watch_Leather_A_Body_CMcover_candidate.dae"
@@ -308,8 +388,9 @@ def write_real_closure_artifacts(
         "candidate_dae_sha256": candidate_sha256,
         "input_sha256": {
             "pristine_source_dae": repeated.prepared.verified_source.actual_sha256,
-            "bcb_body_glb": repeated.prepared.body and "51D4D723EB945CD16E0EF99296CFBD8050013D6FA74D863C5A7ACF962746328C",
+            "bcb_body_glb": repeated.prepared.verified_body.actual_sha256,
         },
+        "bcb_vertex_normals_sha256": repeated.prepared.body_vertex_normals_sha256,
         "source_vertex_count": len(repeated.prepared.source.positions),
         "source_face_count": len(repeated.prepared.source.faces),
         "active_vertex_count": len(repeated.prepared.active_ids),
@@ -346,10 +427,13 @@ def write_real_closure_artifacts(
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run the hash-locked Padded position-only closure twice")
     parser.add_argument("--created-utc")
+    parser.add_argument("--run-id", required=True)
     args = parser.parse_args()
     created_utc = args.created_utc or datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     repeated = run_real_closure_twice()
-    manifest = write_real_closure_artifacts(repeated, created_utc=created_utc)
+    manifest = write_real_closure_artifacts(
+        repeated, created_utc=created_utc, run_id=args.run_id,
+    )
     print(json.dumps(manifest, indent=2, sort_keys=True))
     return 0
 
