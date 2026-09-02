@@ -318,3 +318,21 @@ def test_duplicate_geometry_identifier_cannot_confuse_masked_position_identity()
     assert content != inputs.candidate.content
     with pytest.raises(ValueError, match="GEOMETRY_SELECTION_NONUNIQUE_IDS"):
         evaluate(replace(inputs, candidate=receipt(content, "candidate.dae")))
+
+
+def test_effective_coverage_distance_cannot_drift_from_frozen_profile(monkeypatch):
+    """Catches the helper silently weakening coverage while preserving cohort IDs."""
+    module = api()
+    def lift(points):
+        points[:, 2] += 0.1
+        return points
+    inputs = fixture(lift)
+    baseline = evaluate(inputs)
+    assert baseline["measurements"]["fixed_cohort_coverage_loss"]["ids"] == [0, 1, 2]
+    original = module.derive_fixed_coverage_contract
+    def weakened(*args, **kwargs):
+        fixed = original(*args, **kwargs)
+        return replace(fixed, contract=replace(fixed.contract, maximum_distance=0.5))
+    monkeypatch.setattr(module, "derive_fixed_coverage_contract", weakened)
+    with pytest.raises(ValueError, match="PROFILE_EFFECTIVE_COVERAGE_DISTANCE_MISMATCH"):
+        evaluate(inputs)

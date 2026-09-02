@@ -341,6 +341,8 @@ def _evaluate_once(inputs: ReadbackInputs, profile: ReadbackProfile) -> dict:
     body = geometry.parse_glb_surface(_verified(inputs.body, "bcb_body_glb"))
     active = derive_original_active_ids(source.positions, body)
     cohort = derive_fixed_coverage_contract(source.positions, source.faces, body)
+    if cohort.contract.maximum_distance != doc["gates"]["coverage_maximum_distance_m"]:
+        raise ValueError("PROFILE_EFFECTIVE_COVERAGE_DISTANCE_MISMATCH")
     _canonical_bindings(inputs, doc, source, body, active, cohort)
     roi = geometry.derive_minimal_roi(source.positions, source.faces, active)
     historical = doc["candidates"][inputs.candidate_name]
