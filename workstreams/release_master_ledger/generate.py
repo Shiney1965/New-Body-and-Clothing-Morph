@@ -543,7 +543,7 @@ def generate(config: LocalConfiguration) -> GenerationResult:
     supporting_input_ids = sorted(
         input_.input_id
         for input_ in verified_inputs
-        if input_.kind.upper() == "SUPPORTING_EVIDENCE"
+        if str(input_.path) in inventories.prior_evidence
     )
     audit = build_completeness_audit(
         replace(reconciliation, records=records),

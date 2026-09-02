@@ -1,6 +1,8 @@
 import hashlib
 import importlib
 import json
+from copy import deepcopy
+from dataclasses import replace
 from pathlib import Path
 import time
 
@@ -214,6 +216,141 @@ def test_generate_production_lifecycle_uses_empty_raw_claim_inventories(tmp_path
     assert audit["excluded_with_proof"] == [record_id]
     assert audit["exclusion_validation_failures"] == []
     assert audit["in_scope_nonterminal"] == []
+
+
+@pytest.mark.parametrize("history_case", [
+    "superseded", "revoked-older", "revoked-newer-fallback",
+])
+def test_generate_valid_history_closes_ledger_and_audit_consistently(tmp_path, history_case):
+    config, record_id = lifecycle_generate_fixture(tmp_path)
+    event_root = config.exclusion_events_dir
+    current = json.loads((event_root / "sbbf.json").read_text(encoding="utf-8"))
+    older = deepcopy(current)
+    older["created_utc"] = "2026-09-02T11:00:00Z"
+    older["event_id"] = exclusion_event_id(older)
+    _write_json(event_root / "z-sbbf-older.json", older)
+    selected = older if history_case == "revoked-newer-fallback" else current
+    if history_case != "superseded":
+        target = current if history_case == "revoked-newer-fallback" else older
+        _write_json(event_root / "sbbf-revocation.json", {
+            "event_type": "REVOCATION", "record_id": record_id, "mode": "sbbf",
+            "revokes_event_id": target["event_id"],
+            "created_utc": "2026-09-02T13:00:00Z",
+        })
+
+    result = generate(config)
+    ledger = json.loads(result.ledger_path.read_text(encoding="utf-8"))
+    audit = json.loads(result.audit_path.read_text(encoding="utf-8"))
+
+    assert ledger["summary"]["record_count"] == 1
+    record = ledger["records"][0]
+    assert record["terminal_exclusion"]["sbbf"]["event"] == selected
+    assert record["disposition"] == "OUT_OF_SCOPE_WITH_PROOF"
+    assert record["release_blocking"] is False
+    assert audit["excluded_with_proof"] == [record_id]
+    assert audit["in_scope_nonterminal"] == []
+    assert audit["exclusion_validation_failures"] == []
+    assert audit["exclusion_history_failures"] == []
+
+
+@pytest.mark.parametrize(("history_case", "expected_code"), [
+    ("conflicting", "CONFLICTING_EXCLUSION_EVENTS"),
+    ("invalid-current", "MISSING_REASON_PROOF:exact_profile"),
+    ("invalid-older", "MISSING_REASON_PROOF:exact_profile"),
+    ("unsigned-older", "EVENT_ID_MISMATCH"),
+    ("unapproved-older", "APPROVED_BY_MISMATCH"),
+    ("wrong-identity-older", "IDENTITY_SHA256_MISMATCH"),
+    ("revoked-current", "EXCLUSION_ATTACHMENT_MISSING"),
+])
+def test_generate_invalid_or_revoked_history_stays_blocking(tmp_path, history_case, expected_code):
+    config, record_id = lifecycle_generate_fixture(tmp_path)
+    event_root = config.exclusion_events_dir
+    current = json.loads((event_root / "sbbf.json").read_text(encoding="utf-8"))
+    sibling = deepcopy(current)
+    sibling["created_utc"] = "2026-09-02T11:00:00Z"
+    if history_case == "conflicting":
+        sibling["created_utc"] = current["created_utc"]
+        sibling["scope_statement"] = "Conflicting same-time exclusion."
+    elif history_case in {"invalid-current", "invalid-older"}:
+        sibling["reason_proof"] = {}
+        if history_case == "invalid-current":
+            sibling["created_utc"] = "2026-09-02T13:00:00Z"
+    elif history_case == "unapproved-older":
+        sibling["approved_by"] = "Not Alan"
+    elif history_case == "wrong-identity-older":
+        sibling["identity_sha256"] = "0" * 64
+    sibling["event_id"] = exclusion_event_id(sibling)
+    if history_case == "unsigned-older":
+        sibling["scope_statement"] = "Changed after signing."
+    if history_case == "revoked-current":
+        sibling = {
+            "event_type": "REVOCATION", "record_id": record_id, "mode": "sbbf",
+            "revokes_event_id": current["event_id"],
+            "created_utc": "2026-09-02T13:00:00Z",
+        }
+    _write_json(event_root / "sbbf-sibling.json", sibling)
+
+    result = generate(config)
+    ledger = json.loads(result.ledger_path.read_text(encoding="utf-8"))
+    audit = json.loads(result.audit_path.read_text(encoding="utf-8"))
+
+    assert ledger["records"][0]["disposition"] == "DEFERRED_WITH_CAUSE"
+    assert ledger["records"][0]["release_blocking"] is True
+    assert ledger["records"][0]["terminal_exclusion"]["sbbf"] is None
+    assert audit["excluded_with_proof"] == []
+    assert audit["in_scope_nonterminal"] == [record_id]
+    assert audit["exclusion_validation_failures"] == [record_id]
+    assert any(expected_code in code for code in audit["exclusion_history_failures"])
+
+
+@pytest.mark.parametrize("discovery_form", ["kind", "input-id", "schema", "schema-coverage"])
+@pytest.mark.parametrize("with_claim", [False, True])
+def test_generate_authority_discovery_forms_are_non_record_evidence(
+    tmp_path, discovery_form, with_claim,
+):
+    config, record_id = lifecycle_generate_fixture(
+        tmp_path,
+        provider_routes=([{
+            "record_id": "$RECORD_ID", "mode": "sbbf", "provider_id": "provider-a",
+        }] if with_claim else ()),
+        package_routes=([{
+            "record_id": "$RECORD_ID", "mode": "bcb", "package_ids": ["PACKAGE_SHA256:" + "A" * 64],
+        }] if with_claim else ()),
+    )
+    baseline = generate(config)
+    expected_ledger = json.loads(baseline.ledger_path.read_text(encoding="utf-8"))
+    expected_audit = json.loads(baseline.audit_path.read_text(encoding="utf-8"))
+    inputs = []
+    for input_ in config.inputs:
+        if input_.input_id in {"provider_claim_inventory", "package_claim_inventory"}:
+            if discovery_form == "kind":
+                input_ = replace(input_, kind=input_.input_id.upper())
+            elif discovery_form == "input-id":
+                input_ = replace(input_, kind="PACKAGE")
+            else:
+                input_ = replace(
+                    input_, input_id="schema-" + input_.input_id,
+                    kind="COVERAGE" if discovery_form == "schema-coverage" else "PACKAGE",
+                )
+        inputs.append(input_)
+
+    result = generate(replace(config, inputs=tuple(inputs)))
+    ledger = json.loads(result.ledger_path.read_text(encoding="utf-8"))
+    audit = json.loads(result.audit_path.read_text(encoding="utf-8"))
+
+    assert ledger["summary"]["record_count"] == 1
+    assert ledger["summary"]["observation_count"] == 1
+    assert ledger["records"] == expected_ledger["records"]
+    authority_ids = [input_.input_id for input_ in inputs if "claim_inventory" in input_.input_id]
+    assert audit["registered_inventories"]["prior_evidence"] == sorted([
+        "input:source_audit", *(f"input:{input_id}" for input_id in authority_ids),
+    ])
+    for name in ("in_scope_nonterminal", "excluded_modes_with_proof", "excluded_with_proof",
+                 "exclusion_validation_failures", "exclusion_history_failures",
+                 "excluded_but_packaged", "packaged_without_ledger", "ledger_without_source",
+                 "missing_from_ledger"):
+        assert audit[name] == expected_audit[name]
+    assert audit["in_scope_nonterminal"] == ([record_id] if with_claim else [])
 
 
 @pytest.mark.parametrize(

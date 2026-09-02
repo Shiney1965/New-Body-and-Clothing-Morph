@@ -82,6 +82,7 @@ def extract_independent_inventories(
         str(input_.path)
         for input_ in verified_inputs
         if input_.kind.upper() == "SUPPORTING_EVIDENCE"
+        or is_claim_authority(input_, payloads[input_.input_id])
     }
     packaged_records: set[str] = set()
     required_profiles: set[str] = {BASE_GAME_SOURCE_PROFILE_UNRESOLVED}
@@ -89,6 +90,8 @@ def extract_independent_inventories(
 
     for input_ in verified_inputs:
         payload = payloads[input_.input_id]
+        if is_claim_authority(input_, payload):
+            continue
         if input_.kind.upper() in {
             "PROTECTED_REGISTRY", "COVERAGE", "TRUE_UNDERWEAR", "VANITYBODY", "BCBSCANTILY",
         }:
@@ -116,21 +119,28 @@ def extract_independent_inventories(
     )
 
 
+def is_claim_authority(
+    input_: VerifiedInput, payload: object, role: str | None = None,
+) -> bool:
+    """Recognize authority evidence using the same ID, kind, and schema contract."""
+    return any(
+        input_.input_id == f"{candidate}_claim_inventory"
+        or input_.kind.upper() == f"{candidate.upper()}_CLAIM_INVENTORY"
+        or (
+            isinstance(payload, Mapping)
+            and payload.get("schema") == f"clothmorph.{candidate}-claim-inventory"
+        )
+        for candidate in ((role,) if role is not None else ("provider", "package"))
+    )
+
+
 def _claim_authority_inputs(
     verified_inputs: list[VerifiedInput], payloads: Mapping[str, object], role: str,
 ) -> list[VerifiedInput]:
-    expected_input_id = f"{role}_claim_inventory"
-    expected_kind = f"{role.upper()}_CLAIM_INVENTORY"
-    expected_schema = f"clothmorph.{role}-claim-inventory"
     return [
         input_
         for input_ in verified_inputs
-        if input_.input_id == expected_input_id
-        or input_.kind.upper() == expected_kind
-        or (
-            isinstance(payloads[input_.input_id], Mapping)
-            and payloads[input_.input_id].get("schema") == expected_schema
-        )
+        if is_claim_authority(input_, payloads[input_.input_id], role)
     ]
 
 

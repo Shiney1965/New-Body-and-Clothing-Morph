@@ -11,6 +11,7 @@ from typing import Any, Callable
 
 from .configuration import VerifiedInput
 from .identity import canonical_json, sha256_text
+from .inventory import is_claim_authority
 from .models import CanonicalIdentityFields, Observation
 from .validation import validate_record
 
@@ -588,7 +589,10 @@ def read_observations(verified_input: VerifiedInput) -> list[Observation]:
         or content_sha256 != verified_input.actual_sha256
     ):
         raise ValueError(f"EVIDENCE_INPUT_HASH_MISMATCH:{verified_input.input_id}")
-    if verified_input.kind.upper() == "SUPPORTING_EVIDENCE":
+    if (
+        verified_input.kind.upper() == "SUPPORTING_EVIDENCE"
+        or is_claim_authority(verified_input, None)
+    ):
         return []
     if verified_input.kind.upper() == "NAMED_TARGET" and verified_input.path.suffix.lower() == ".md":
         try:
@@ -604,4 +608,6 @@ def read_observations(verified_input: VerifiedInput) -> list[Observation]:
         records = json.loads(content.decode("utf-8-sig"))
     except (UnicodeDecodeError, json.JSONDecodeError) as error:
         raise ValueError(f"EVIDENCE_JSON_INVALID:{verified_input.input_id}") from error
+    if is_claim_authority(verified_input, records):
+        return []
     return _adapter_for(verified_input)(records, verified_input)

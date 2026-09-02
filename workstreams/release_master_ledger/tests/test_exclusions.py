@@ -449,6 +449,18 @@ def test_geometry_requires_distinct_architecture_component_results_all_fixed_gat
         "UNKNOWN_ALLOWED_COMPONENT",
         "UNRESOLVED_COMPONENT",
         "UNASSESSED_COMPONENT",
+        "MISSING_COMPONENT",
+        "BLOCKED_COMPONENT",
+        "COMPONENT_UNKNOWN",
+        "COMPONENT_UNRESOLVED",
+        "COMPONENT_UNASSESSED",
+        "COMPONENT_MISSING",
+        "COMPONENT_BLOCKED",
+        "UNKNOWN",
+        "UNRESOLVED",
+        "UNASSESSED",
+        "MISSING",
+        "BLOCKED",
     ],
 )
 def test_geometry_rejects_consistent_unresolved_component_markers(marker):

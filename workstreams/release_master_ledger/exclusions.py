@@ -567,9 +567,11 @@ def _contains_unresolved_marker(value: object) -> bool:
     if not isinstance(value, str):
         return False
     upper = value.upper()
+    markers = ("UNKNOWN", "UNRESOLVED", "UNASSESSED", "MISSING", "BLOCKED")
     return (
-        upper.startswith(("UNKNOWN_", "UNRESOLVED_", "UNASSESSED_", "MISSING_", "BLOCKED_"))
-        or upper.endswith(("_UNKNOWN", "_UNRESOLVED", "_UNASSESSED", "_MISSING"))
+        upper in markers
+        or upper.startswith(tuple(f"{marker}_" for marker in markers))
+        or upper.endswith(tuple(f"_{marker}" for marker in markers))
     )
 
 
@@ -733,7 +735,7 @@ def _validate_protected_impact(
         errors.append("PROTECTED_MUTATION_RESULT")
 
 
-def validate_exclusion_event(
+def _validate_exclusion_history_event(
     event: Mapping[str, object], *, ledger_record: object, evidence_hashes: object,
     lifecycle: Literal["pre_attachment", "attached"] | None = None,
     independent_provider_claims: Mapping[object, object] | None = None,
@@ -743,7 +745,7 @@ def validate_exclusion_event(
     package_authority_present: bool | None = None,
     package_authority_complete: bool | None = None,
 ) -> list[str]:
-    """Return stable errors for one event against one record and verified evidence map."""
+    """Validate immutable event content and authority without current attachment state."""
     if not isinstance(event, Mapping):
         return ["INVALID:event"]
     record = _record_mapping(ledger_record)
@@ -788,7 +790,6 @@ def validate_exclusion_event(
     _validate_protected_impact(event, record, errors)
     if lifecycle not in {None, "pre_attachment", "attached"}:
         errors.append(f"INVALID_EXCLUSION_LIFECYCLE:{lifecycle}")
-    _validate_mode_binding_and_claims(event, record, errors, lifecycle)
     if lifecycle is not None:
         _validate_independent_claims(
             event,
@@ -811,6 +812,33 @@ def validate_exclusion_event(
         errors.append("EXCLUSION_FORBIDDEN_PROTECTED_OR_ACCEPTED_RECORD")
     if _is_accepted_tiefling(record):
         errors.append("EXCLUSION_FORBIDDEN_ACCEPTED_TIEFLING")
+    return errors
+
+
+def validate_exclusion_event(
+    event: Mapping[str, object], *, ledger_record: object, evidence_hashes: object,
+    lifecycle: Literal["pre_attachment", "attached"] | None = None,
+    independent_provider_claims: Mapping[object, object] | None = None,
+    independent_package_claims: Mapping[object, object] | None = None,
+    provider_authority_present: bool | None = None,
+    provider_authority_complete: bool | None = None,
+    package_authority_present: bool | None = None,
+    package_authority_complete: bool | None = None,
+) -> list[str]:
+    """Validate one current event, including its exact lifecycle state and claims."""
+    errors = _validate_exclusion_history_event(
+        event, ledger_record=ledger_record, evidence_hashes=evidence_hashes,
+        lifecycle=lifecycle,
+        independent_provider_claims=independent_provider_claims,
+        independent_package_claims=independent_package_claims,
+        provider_authority_present=provider_authority_present,
+        provider_authority_complete=provider_authority_complete,
+        package_authority_present=package_authority_present,
+        package_authority_complete=package_authority_complete,
+    )
+    record = _record_mapping(ledger_record)
+    if isinstance(event, Mapping) and record is not None:
+        _validate_mode_binding_and_claims(event, record, errors, lifecycle)
     return errors
 
 
@@ -837,7 +865,7 @@ def select_current_exclusion(
     validation_errors = [
         f"INVALID_EVENT:{index}:{error}"
         for index, _, event in normal
-        for error in validate_exclusion_event(
+        for error in _validate_exclusion_history_event(
             event,
             ledger_record=ledger_record,
             evidence_hashes=evidence_hashes,
@@ -875,5 +903,18 @@ def select_current_exclusion(
             revoked.add(target)
         else:
             return ExclusionSelection(None, ("INVALID_EVENT_TYPE",))
-    active = [(stamp, event) for _, stamp, event in normal if event.get("event_id") not in revoked]
-    return ExclusionSelection(active[-1][1]) if active else ExclusionSelection(None)
+    active = [(index, stamp, event) for index, stamp, event in normal if event.get("event_id") not in revoked]
+    if not active:
+        return ExclusionSelection(None)
+    index, _, current = max(active, key=lambda item: item[1])
+    # Superseded/revoked events must remain valid evidence, but only the selected
+    # current event can be bound to the record's present attachment state.
+    current_errors: list[str] = []
+    _validate_mode_binding_and_claims(
+        current, _record_mapping(ledger_record), current_errors, lifecycle,
+    )
+    if current_errors:
+        return ExclusionSelection(None, tuple(
+            f"INVALID_EVENT:{index}:{error}" for error in current_errors
+        ))
+    return ExclusionSelection(current)
