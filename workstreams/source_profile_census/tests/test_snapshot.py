@@ -276,6 +276,18 @@ def test_no_conversion_does_not_claim_binary_bank_complete(fixture):
     assert snapshot.conversions == ()
 
 
+@pytest.mark.parametrize("role", ["source", "garment_source", "provider", "runtime", "dependency"])
+def test_explicit_neutral_source_and_existing_roles_do_not_change_source_bytes(fixture, role):
+    config, _ = fixture
+    before = load_snapshot(config)
+    config["role"] = role
+    observed = load_snapshot(config)
+    assert observed.role == role
+    assert observed.files == before.files
+    assert observed.module == before.module
+    assert observed.package == before.package
+
+
 def test_unknown_role_cannot_be_filename_inferred(fixture):
     config, _ = fixture
     config["role"] = "guess-from-pak"

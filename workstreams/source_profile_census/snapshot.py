@@ -1,7 +1,7 @@
 """Read explicitly configured, hash-pinned source evidence without source mutation.
 
 Configuration has ``root`` (an explicitly chosen local directory), ``profile_id``,
-``role`` (garment_source/provider/runtime/dependency), ``module`` with exact uuid,
+``role`` (source/garment_source/provider/runtime/dependency), ``module`` with exact uuid,
 folder, name and version64, ``metadata_path`` relative to the extraction, and:
 
 * package: {path, sha256, recorded_path}
@@ -14,6 +14,8 @@ folder, name and version64, ``metadata_path`` relative to the extraction, and:
 All ``path`` values are canonical relative paths below root. ``recorded_path``
 values are provenance labels from the frozen evidence, not paths to open. This
 permits relocation without following an old machine's absolute/live paths. The
+neutral ``source`` role nominates source evidence without asserting garment
+content. Neither source role grants route eligibility or release authority. The
 role is an explicit declaration bound to the expected module identity; a file
 name or Add-On metadata type cannot establish garment/provider semantics.
 
@@ -424,7 +426,7 @@ def load_snapshot(configuration: Mapping[str, object]) -> FrozenSnapshot:
         _fail("CONFIG_INVALID", "root must be a directory")
     profile_id = _text(config.get("profile_id"))
     role = _text(config.get("role"))
-    if role not in ("garment_source", "provider", "runtime", "dependency"):
+    if role not in ("source", "garment_source", "provider", "runtime", "dependency"):
         _fail("CONFIG_INVALID", "Unknown explicit package role")
     tool = _digest(config.get("tool_sha256"))
     expected_module = _mapping(config.get("module"))
