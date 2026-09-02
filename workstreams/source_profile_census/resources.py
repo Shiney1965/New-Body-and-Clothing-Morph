@@ -17,11 +17,12 @@ from dataclasses import dataclass
 from hashlib import sha256
 import json
 import re
+from typing import get_args, get_origin
 import xml.etree.ElementTree as ET
 
 from . import snapshot as snapshots
 from .snapshot import (
-    ConversionSnapshot, FileSnapshot, FrozenSnapshot, ModuleMetadata, PackageIdentity,
+    ConversionSnapshot, DependencyMetadata, FileSnapshot, FrozenSnapshot, ModuleMetadata, PackageIdentity,
 )
 
 
@@ -139,6 +140,32 @@ def _inconsistent(detail):
     raise ValueError("SNAPSHOT_INCONSISTENT: " + detail)
 
 
+_SNAPSHOT_MEMBERS = {kind: kind.__annotations__ for kind in (
+    FrozenSnapshot, FileSnapshot, ConversionSnapshot, ModuleMetadata, DependencyMetadata, PackageIdentity,
+)}
+
+
+def _immutable_member(value, expected, locator):
+    """Enforce the complete declared immutable graph, not duck-typed members."""
+    if get_origin(expected) is tuple:
+        if type(value) is not tuple:
+            _inconsistent(f"Expected immutable tuple at {locator}")
+        arguments = get_args(expected)
+        if len(arguments) == 2 and arguments[1] is Ellipsis:
+            members = (arguments[0],) * len(value)
+        else:
+            members = arguments
+            if len(value) != len(members):
+                _inconsistent(f"Wrong tuple shape at {locator}")
+        for index, (member, member_type) in enumerate(zip(value, members)):
+            _immutable_member(member, member_type, f"{locator}[{index}]")
+    elif type(value) is not expected:
+        _inconsistent(f"Expected exact immutable {expected.__name__} at {locator}")
+    elif expected in _SNAPSHOT_MEMBERS:
+        for field, field_type in _SNAPSHOT_MEMBERS[expected].items():
+            _immutable_member(getattr(value, field), field_type, f"{locator}.{field}")
+
+
 def _verified_snapshot(snapshot):
     """Defend the typed boundary against altered dataclass copies, without I/O.
 
@@ -149,9 +176,7 @@ def _verified_snapshot(snapshot):
     if not isinstance(snapshot, FrozenSnapshot):
         raise TypeError("parse_resources requires a FrozenSnapshot from load_snapshot")
     try:
-        if any(type(value) is not tuple for value in (snapshot.files, snapshot.conversions,
-                snapshot.conversion_manifests, snapshot.unconverted_binary_paths)):
-            _inconsistent("Snapshot sequences must be immutable tuples")
+        _immutable_member(snapshot, FrozenSnapshot, "snapshot")
         artifacts = (snapshot.content_manifest, snapshot.listing, *snapshot.files,
                      *snapshot.conversion_manifests, *(c.inspection for c in snapshot.conversions))
         for file in artifacts:
@@ -160,7 +185,7 @@ def _verified_snapshot(snapshot):
         manifest = snapshots._json(snapshot.content_manifest, "clothmorph.source-content-manifest")
         rows = manifest["files"]
         snapshots._paths_unique(f.relative_path for f in snapshot.files)
-        expected = tuple((r["relative_path"], r["bytes"], r["sha256"]) for r in rows)
+        expected = tuple((r["relative_path"], r["bytes"], snapshots._digest(r["sha256"])) for r in rows)
         actual = tuple((f.relative_path, f.size, f.sha256) for f in snapshot.files)
         if expected != actual or manifest["file_count"] != len(actual):
             _inconsistent("Retained source files differ from their content manifest")
@@ -185,8 +210,8 @@ def _verified_snapshot(snapshot):
             if (source.relative_path in converted_paths or not source.relative_path.lower().endswith(".lsf")
                     or source.sha256 != converted.source_sha256
                     or snapshots._label_relative(row["source"], manifest["extract_root"]) != source.relative_path
-                    or row["source_sha256"] != source.sha256
-                    or row["inspection_sha256"] != converted.inspection.sha256
+                    or snapshots._digest(row["source_sha256"]) != source.sha256
+                    or snapshots._digest(row["inspection_sha256"]) != converted.inspection.sha256
                     or not row["inspection"].replace("\\", "/").endswith("/" + converted.inspection.relative_path)
                     or proof["tool"]["sha256"] != converted.tool_sha256
                     or converted.tool_sha256 != manifest["tool_sha256"]
@@ -249,6 +274,30 @@ def _issue(issues, source, code, locator, detail, ids=()):
     issues.append(ResourceIssue(code, source.original.relative_path, locator, detail, ids))
 
 
+_XML_CHILDREN = {
+    "save": ("version", "region"), "region": ("node",),
+    "node": ("attribute", "children"), "children": ("node",),
+    "attribute": (), "version": (),
+}
+
+
+def _xml_structure(node, source, issues):
+    """Validate structural tags/placements without restricting property IDs."""
+    if node.text and node.text.strip():
+        _issue(issues, source, "XML_STRUCTURE_UNSUPPORTED", node.locator + "/text()",
+               "Non-whitespace text is not supported in LSX structural elements")
+    for child in node.children:
+        if child.tail and child.tail.strip():
+            _issue(issues, source, "XML_STRUCTURE_UNSUPPORTED", child.locator + "/tail()",
+                   "Non-whitespace text after an LSX element is unsupported")
+        if child.tag.startswith("#"):
+            continue
+        if child.tag not in _XML_CHILDREN.get(node.tag, ()):
+            _issue(issues, source, "XML_STRUCTURE_UNSUPPORTED", child.locator,
+                   f"Unsupported {child.tag} inside {node.tag}")
+        _xml_structure(child, source, issues)
+
+
 def _xml(snapshot, source, issues):
     data = source.inspection.data if source.inspection else source.original.data
     # Decode first so UTF-16 cannot conceal a DTD. XML's byte declaration is
@@ -269,6 +318,7 @@ def _xml(snapshot, source, issues):
         return None, []
     document = _tree(element, f"/{_tag(element)}[1]")
     definitions = []
+    _xml_structure(document, source, issues)
     if document.tag != "save":
         _issue(issues, source, "XML_STRUCTURE_UNSUPPORTED", document.locator, "Expected save document")
         return document, definitions
@@ -396,8 +446,8 @@ def _stats(snapshot, source, issues):
 def _semantic_node(node):
     # Ignore indentation only; all attributes, ordered children, mixed text,
     # tails and comments remain part of the conservative content comparison.
-    return (node.tag, node.attributes, (node.text or "").strip() or None,
-            (node.tail or "").strip() or None,
+    return (node.tag, node.attributes, node.text if node.text and node.text.strip() else None,
+            node.tail if node.tail and node.tail.strip() else None,
             tuple(_semantic_node(child) for child in node.children))
 
 

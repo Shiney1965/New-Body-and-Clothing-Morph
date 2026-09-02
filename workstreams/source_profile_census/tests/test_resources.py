@@ -5,6 +5,7 @@ import importlib
 import importlib.util
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -20,7 +21,7 @@ def parser():
     return importlib.import_module(name)
 
 
-def frozen(root, files, converted=None):
+def frozen(root, files, converted=None, lowercase_hashes=()):
     """Real portable evidence files; never construct a success-flag snapshot."""
     files = {META_PATH: META, **files}
     package = write(root, "source.pak", b"synthetic archive boundary")
@@ -34,6 +35,8 @@ def frozen(root, files, converted=None):
         "file_count": len(files),
         "files": [{"relative_path": p, "bytes": len(b), "sha256": digest(b)} for p, b in files.items()],
     }
+    if "content" in lowercase_hashes:
+        manifest["files"][-1]["sha256"] = manifest["files"][-1]["sha256"].lower()
     config = {
         "root": root, "profile_id": "exact-example", "role": "garment_source",
         "module": MODULE, "metadata_path": META_PATH, "package": package,
@@ -55,6 +58,10 @@ def frozen(root, files, converted=None):
                                                          "-d", "{inspection}", "-i", "lsf", "-o", "lsx"]},
             "conversions": rows,
         }
+        if "conversion" in lowercase_hashes:
+            for row in rows:
+                row["source_sha256"] = row["source_sha256"].lower()
+                row["inspection_sha256"] = row["inspection_sha256"].lower()
         config["conversions"] = [{"manifest": write_json(root, "conversion.json", conversion),
                                   "inspection_root": {"path": "inspection", "recorded_path": "Z:/frozen/inspection"}}]
     return load_snapshot(config)
@@ -438,3 +445,121 @@ def test_ambiguous_parent_declaration_does_not_hide_cycle_or_missing_parent(tmp_
     census = parser().parse_resources(frozen(tmp_path, {"Public/Example/Stats/Data.txt": data}))
     assert {"STATS_PARENT_DECLARATION_AMBIGUOUS", "STATS_INHERITANCE_CYCLE", "STATS_PARENT_MISSING"} <= codes(census)
     assert tuple(r.parent_observation_ids for r in census.inheritances) == ((census.definitions[0].observation_id,), ())
+
+
+@pytest.mark.parametrize("member", ["original", "inspection", "conversion", "content_manifest", "listing",
+                                    "conversion_manifest", "module", "package", "dependency", "attribute_pairs",
+                                    "tool_arguments", "package_hash", "file_bytes"])
+def test_mutable_snapshot_members_cannot_escape_through_frozen_outer_dataclass(tmp_path, member):
+    snapshot = frozen(tmp_path, {"bank.lsf": b"binary"}, {"bank.lsf": VISUAL})
+
+    def mutable(obj):
+        extra = {"size": obj.size} if hasattr(obj, "data") else {}
+        return SimpleNamespace(**vars(obj), **extra)
+
+    if member == "original":
+        snapshot = replace(snapshot, files=(snapshot.files[0], mutable(snapshot.files[1])))
+    elif member == "inspection":
+        snapshot = replace(snapshot, conversions=(replace(snapshot.conversions[0], inspection=mutable(snapshot.conversions[0].inspection)),))
+    elif member == "conversion":
+        snapshot = replace(snapshot, conversions=(mutable(snapshot.conversions[0]),))
+    elif member in ("content_manifest", "listing", "module", "package"):
+        snapshot = replace(snapshot, **{member: mutable(getattr(snapshot, member))})
+    elif member == "conversion_manifest":
+        snapshot = replace(snapshot, conversion_manifests=(mutable(snapshot.conversion_manifests[0]),))
+    elif member == "dependency":
+        deps = snapshot.module.dependencies
+        snapshot = replace(snapshot, module=replace(snapshot.module, dependencies=(mutable(deps[0]), *deps[1:])))
+    elif member == "attribute_pairs":
+        snapshot = replace(snapshot, module=replace(snapshot.module, attributes=tuple(list(pair) for pair in snapshot.module.attributes)))
+    elif member == "tool_arguments":
+        snapshot = replace(snapshot, conversions=(replace(snapshot.conversions[0], tool_arguments=list(snapshot.conversions[0].tool_arguments)),))
+    elif member == "package_hash":
+        class MutableString(str):
+            pass
+        snapshot = replace(snapshot, package=replace(snapshot.package, sha256=MutableString(snapshot.package.sha256)))
+    else:
+        snapshot = replace(snapshot, files=(snapshot.files[0], replace(snapshot.files[1], data=bytearray(snapshot.files[1].data))))
+    with pytest.raises(ValueError, match="SNAPSHOT_INCONSISTENT"):
+        parser().parse_resources(snapshot)
+
+
+@pytest.mark.parametrize("lowercase_hashes", [("content",), ("conversion",), ("content", "conversion")])
+def test_loader_accepted_lowercase_manifest_hashes_parse_without_changing_raw_evidence(tmp_path, lowercase_hashes):
+    snapshot = frozen(tmp_path, {"bank.lsf": b"binary"}, {"bank.lsf": VISUAL}, lowercase_hashes)
+    # The real loader normalized digest values but retained exact manifest bytes.
+    assert snapshot.files[-1].sha256 == digest(b"binary")
+    if "content" in lowercase_hashes:
+        assert json.loads(snapshot.content_manifest.data)["files"][-1]["sha256"] == digest(b"binary").lower()
+    if "conversion" in lowercase_hashes:
+        row = json.loads(snapshot.conversion_manifests[0].data)["conversions"][0]
+        assert row["source_sha256"] == digest(b"binary").lower()
+        assert row["inspection_sha256"] == digest(VISUAL).lower()
+    original_manifest_bytes = snapshot.content_manifest.data
+    conversion_manifest_bytes = snapshot.conversion_manifests[0].data
+    census = parser().parse_resources(snapshot)
+    assert census.definitions[0].resource_id == "vr-one"
+    assert census.snapshot.content_manifest.data == original_manifest_bytes
+    assert census.snapshot.conversion_manifests[0].data == conversion_manifest_bytes
+    assert not census.issues
+
+
+@pytest.mark.parametrize("location", ["save", "region", "wrapper", "children", "record", "attribute",
+                                      "version_tail", "comment_tail", "record_tail"])
+def test_nonwhitespace_xml_structural_text_is_explicitly_unsupported(tmp_path, location):
+    marker, replacement = {
+        "save": (b"<save>", b"<save>unexpected"),
+        "region": (b'<region id="VisualBank">', b'<region id="VisualBank">unexpected'),
+        "wrapper": (b'<node id="VisualBank">', b'<node id="VisualBank">unexpected'),
+        "children": (b"<children>", b"<children>unexpected"),
+        "record": (b'<node id="Resource" custom="kept">', b'<node id="Resource" custom="kept">unexpected'),
+        "attribute": (b'<attribute id="ID" type="FixedString" value="vr-one"/>', b'<attribute id="ID" type="FixedString" value="vr-one">unexpected</attribute>'),
+        "version_tail": (b'<version major="4"/>', b'<version major="4"/>unexpected'),
+        "comment_tail": (b"<children>", b"<children><!-- retained -->unexpected"),
+        "record_tail": (b"</node></children></node></region>", b"</node>unexpected</children></node></region>"),
+    }[location]
+    data = VISUAL.replace(marker, replacement, 1)
+    assert data != VISUAL
+    census = parser().parse_resources(frozen(tmp_path, {"bank.lsx": data}))
+    assert census.files[1].status == "UNSUPPORTED"
+    assert "XML_STRUCTURE_UNSUPPORTED" in codes(census)
+    assert not census.definition_parse_complete
+    assert census.files[1].source.original.data == data
+    assert census.definitions[0].resource_id == "vr-one"
+
+
+@pytest.mark.parametrize("injection", [
+    '<unexpected><node id="Resource"><attribute id="ID" value="hidden"/></node></unexpected>',
+    '<node id="DirectWithoutChildren"><attribute id="NewProperty" value="kept"/></node>',
+    '<attribute id="NewProperty"><node id="NestedInAttribute"/></attribute>',
+    '<children><attribute id="Misplaced" value="kept"/></children>',
+])
+def test_unknown_or_misplaced_xml_structural_tags_inside_record_block_completeness(tmp_path, injection):
+    data = VISUAL.replace(b'<children><node id="Objects">', injection.encode() + b'<children><node id="Objects">', 1)
+    census = parser().parse_resources(frozen(tmp_path, {"bank.lsx": data}))
+    assert "XML_STRUCTURE_UNSUPPORTED" in codes(census)
+    assert census.files[1].status == "UNSUPPORTED"
+    assert not census.definition_parse_complete
+    assert census.definitions[0].resource_id == "vr-one"
+    assert census.files[1].source.original.data == data
+
+
+def test_unknown_attribute_and_property_node_names_with_valid_structure_are_not_banned(tmp_path):
+    data = bank("VisualBank", '<node id="Resource"><attribute id="ID" value="vr-one"/><attribute id="FutureAttribute" value="kept"/><children><node id="FutureProperty"><attribute id="FutureValue" value="42"/><children><node id="YetAnotherProperty"/></children></node></children></node>')
+    census = parser().parse_resources(frozen(tmp_path, {"bank.lsx": data}))
+    assert not census.issues
+    assert values(census.definitions[0].node, "FutureAttribute") == ("kept",)
+    assert children(census.definitions[0].node)[0].attributes == (("id", "FutureProperty"),)
+
+
+@pytest.mark.parametrize("location", ["text", "tail"])
+def test_meaningful_xml_mixed_whitespace_is_not_normalized_in_conflict_comparison(tmp_path, location):
+    if location == "text":
+        first = VISUAL.replace(b'<children><node id="Objects">', b'<children> exact <node id="Objects">', 1)
+        second = first.replace(b"> exact <", b">exact<", 1)
+    else:
+        first = VISUAL.replace(b'<children><node id="Objects">', b'<children><node id="Hint"/> exact <node id="Objects">', 1)
+        second = first.replace(b"/> exact <", b"/>exact<", 1)
+    census = parser().parse_resources(frozen(tmp_path, {"a.lsx": first, "b.lsx": second}))
+    assert census.conflicts[0].content_equal is False
+    assert "DUPLICATE_DEFINITION_CONFLICT" in codes(census)
