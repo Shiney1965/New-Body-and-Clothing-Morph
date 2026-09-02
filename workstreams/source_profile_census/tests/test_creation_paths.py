@@ -500,3 +500,44 @@ def test_retained_bytes_only_and_tampered_census_rejected(tmp_path, monkeypatch)
         resolve(replace(src, definitions=()), ())
     with pytest.raises(TypeError, match="ResourceCensus"):
         resolve({"verified": True}, ())
+
+
+def discovery_api():
+    module = importlib.import_module("workstreams.source_profile_census.creation_paths")
+    assert hasattr(module, "discover_creation_paths"), "Independent source creation discovery is not implemented"
+    return module
+
+
+def test_independent_discovery_preserves_unresolved_repeated_route_locators_without_emission(tmp_path, monkeypatch):
+    src = census(tmp_path, root(extra=attr("VisualTemplate", "absent"), children=mapped()),
+        b'new entry "Child"\ntype "Armor"\nusing "MissingParent"\ndata "RootTemplate" "root"\n')
+    module = discovery_api()
+    def forbidden(*args, **kwargs):
+        raise AssertionError("Discovery must not invoke observation or route emission")
+    for name in ("run", "observe", "garment", "character_creation", "routes"):
+        monkeypatch.setattr(module._Resolver, name, forbidden)
+    result = module.discover_creation_paths(src, ())
+    assert [r.kind for r in result] == ["ROOT_TEMPLATE", "BODY_FAMILY", "BODY_FAMILY", "BODY_FAMILY",
+        "NAMED_STATS", "INHERITED_SPAWN", "BODY_FAMILY", "BODY_FAMILY", "BODY_FAMILY"]
+    root_bodies = result[1:4]
+    assert root_bodies[0].declaration_locators[0].endswith("/attribute[2]")
+    assert len(root_bodies[2].declaration_locators) == 3
+    assert root_bodies[2].declaration_locators[1] != root_bodies[2].declaration_locators[2]
+    assert root_bodies[1].observation_id != root_bodies[2].observation_id
+
+
+def test_independent_discovery_keeps_missing_root_and_repeated_accessory_declarations(tmp_path):
+    src = census(tmp_path, stats=b'new entry "Child"\ntype "Armor"\nusing "Missing"\ndata "RootTemplate" "Absent"\n', extras={
+        "sets.lsx": bank("CharacterCreationAccessorySets", node("CharacterCreationAccessorySet", attr("UUID", "set") + attr("SlotName", "Piercing"),
+            node("VisualUUIDs", attr("Object", "absent")) + node("VisualUUIDs", attr("Object", "absent"))), "root")})
+    result = discovery_api().discover_creation_paths(src, ())
+    assert [r.kind for r in result] == ["NAMED_STATS", "INHERITED_SPAWN", "CHARACTER_CREATION_ACCESSORY_SET"]
+    assert "line:4" in result[0].declaration_locators
+    assert len(result[2].declaration_locators) == 3
+    assert result[2].declaration_locators[1] != result[2].declaration_locators[2]
+
+
+def test_independent_discovery_requires_verified_definitions(tmp_path):
+    src = census(tmp_path, root())
+    with pytest.raises(ValueError, match="CENSUS_INCONSISTENT"):
+        discovery_api().discover_creation_paths(replace(src, definitions=()), ())

@@ -6,11 +6,14 @@ outputs, or change files. Portable runs skip only this local evidence fixture.
 """
 
 from collections import Counter
+from dataclasses import replace
 import filecmp
 from hashlib import sha256
 import json
 import os
 from pathlib import Path
+import shutil
+from uuid import uuid4
 
 import pytest
 
@@ -91,6 +94,9 @@ def test_raw_definitions_match_file_discoveries_and_creation_owners(runs):
     assert len(paths) == 6681
     assert all(row["source_observation_id"] in observed for row in paths)
     assert len({row["row_id"] for row in paths}) == len(paths)
+    inventory = read(runs[0], "CREATION_DISCOVERY.json")
+    assert Counter(row["observation_id"] for row in inventory) == Counter(row["observation_id"] for row in paths)
+    assert all(row["declarations"] for row in inventory)
 
 
 def test_sco_old_registry_population_never_replaces_fresh_packed_population(runs):
@@ -138,3 +144,27 @@ def test_all_input_hashes_still_match_frozen_evidence_and_code(runs):
             for chunk in iter(lambda: stream.read(1024 * 1024), b""):
                 hasher.update(chunk)
         assert hasher.hexdigest().upper() == row["sha256"], str(path)
+
+
+def test_real_source_removed_creation_observation_is_reported_by_generator(runs, monkeypatch):
+    from workstreams.source_profile_census import generate
+    manifest = read(runs[0], "INPUT_MANIFEST.json")
+    first = manifest["configuration"]["sources"][0]
+    output = Path(generate.__file__).resolve().parent / "local/generated" / ("real-omission-test-" + uuid4().hex)
+    original = generate.resolve_creation_paths
+    removed = []
+    def omit_one(*args):
+        census = original(*args)
+        removed.append("creation:" + census.observations[0].observation_id)
+        return replace(census, observations=census.observations[1:])
+    monkeypatch.setattr(generate, "resolve_creation_paths", omit_one)
+    try:
+        result = generate.generate_census(generate.CensusConfiguration(sources=(first,), output_directory=output))
+        assert result.audit["raw_coverage"]["missing_from_census"] == removed
+        assert not result.audit["raw_coverage"]["complete"]
+        assert "CREATION_CENSUS_COVERAGE_MISMATCH" in result.candidates[0]["blockers"]
+    finally:
+        if output.exists():
+            assert output.parent == Path(generate.__file__).resolve().parent / "local/generated"
+            assert output.name.startswith("real-omission-test-")
+            shutil.rmtree(output)

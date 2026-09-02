@@ -20,7 +20,7 @@ import xml.etree.ElementTree as ET
 from . import snapshot as boundary
 from .snapshot import FileSnapshot, load_snapshot
 from .resources import parse_resources
-from .creation_paths import resolve_creation_paths
+from .creation_paths import discover_creation_paths, resolve_creation_paths
 
 
 @dataclass(frozen=True)
@@ -123,13 +123,24 @@ def _output_path(configuration):
     output = Path(configuration.output_directory)
     if not output.is_absolute():
         raise ValueError("CONFIG_INVALID: output_directory must be absolute")
+    # The application code owns this boundary. Neither a configuration field
+    # nor an input's declared root can authorize a live/frozen/protected write.
+    approved = Path(__file__).absolute().parent / "local" / "generated"
     # Never follow junctions, even above an otherwise ordinary output leaf.
     for component in (*reversed(output.parents), output):
         if component.exists() or component.is_symlink():
             boundary._check_link(component)
+    for component in (*reversed(approved.parents), approved):
+        if component.exists() or component.is_symlink():
+            boundary._check_link(component)
+    resolved = output.resolve()
+    if resolved == approved.resolve() or not resolved.is_relative_to(approved.resolve()):
+        raise ValueError("OUTPUT_OUTSIDE_APPROVED_ROOT: " + str(output))
+    if resolved.parent != approved.resolve():
+        raise ValueError("OUTPUT_NOT_DIRECT_CHILD: " + str(output))
     if output.exists():
         raise FileExistsError(output)
-    output = output.resolve()
+    output = resolved
     for source in configuration.sources:
         root = Path(source["root"])
         guarded = [root / source["extract_root"]["path"]]
@@ -294,11 +305,13 @@ def generate_census(config: CensusConfiguration) -> CensusResult:
         raise ValueError("CONFIG_INVALID: contract without configured source")
     snapshots = tuple(load_snapshot(s) for s in config.sources)
     censuses = tuple(parse_resources(s) for s in snapshots)
-    paths = tuple(resolve_creation_paths(c, _dependencies(c, censuses)) for c in censuses)
+    dependencies = tuple(_dependencies(c, censuses) for c in censuses)
+    inventories = tuple(discover_creation_paths(c, deps) for c, deps in zip(censuses, dependencies))
+    paths = tuple(resolve_creation_paths(c, deps) for c, deps in zip(censuses, dependencies))
     inputs, candidates, profiles = [], [], []
     raw_files, definitions, observations = [], [], []
     discovered = []
-    for census, creation in zip(censuses, paths):
+    for census, creation, inventory in zip(censuses, paths, inventories):
         snap = census.snapshot
         profile = snap.profile_id
         inputs.append({"role": "package", "discovery_profile_id": profile,
@@ -310,12 +323,19 @@ def generate_census(config: CensusConfiguration) -> CensusResult:
         supplied = _read_evidence(config.profile_contracts[profile]) if profile in config.profile_contracts else None
         if supplied:
             inputs.append(_input(supplied, "supplied_contract", profile))
-        candidates.append(_candidate(census, creation, supplied))
+        candidate = _candidate(census, creation, supplied)
+        creation_coverage = audit_coverage((d.observation_id for d in inventory),
+                                           (o.observation_id for o in creation.observations))
+        if not creation_coverage["complete"]:
+            candidate["blockers"] = sorted({*candidate["blockers"], "CREATION_CENSUS_COVERAGE_MISMATCH"})
+            candidate["creation_paths_complete"] = False
+        candidate["creation_coverage"] = creation_coverage
+        candidates.append(candidate)
         profiles.append({"discovery_profile_id": profile, "module": _plain(snap.module), "package": _plain(snap.package),
                          "counts": _counts(census, creation)})
         discovered.extend(f"file:{profile}:{f.relative_path}" for f in snap.files)
         discovered.extend("definition:" + d.observation_id for d in census.definitions)
-        discovered.extend("creation:" + o.observation_id for o in creation.observations)
+        discovered.extend("creation:" + d.observation_id for d in inventory)
         raw_files.extend({"row_id": f"file:{profile}:{f.source.original.relative_path}", **_plain(f)} for f in census.files)
         definitions.extend({"row_id": "definition:" + d.observation_id, **_plain(d)} for d in census.definitions)
         observations.extend({"row_id": "creation:" + o.observation_id, **_plain(o)} for o in creation.observations)
@@ -343,6 +363,7 @@ def generate_census(config: CensusConfiguration) -> CensusResult:
     normalized_config = _plain(config)
     del normalized_config["output_directory"]
     artifacts = {"SOURCE_SNAPSHOTS.json": _plain(snapshots), "RAW_FILES.json": raw_files,
+        "CREATION_DISCOVERY.json": [_plain(d) for inventory in inventories for d in inventory],
         "RAW_DEFINITIONS.json": definitions, "RAW_CREATION_PATHS.json": observations,
         "SOURCE_PROFILE_CANDIDATES.json": candidates, "LEGACY_COMPARISONS.json": comparisons,
         "INPUT_MANIFEST.json": {"configuration": normalized_config, "configuration_sha256": _hash(normalized_config), "inputs": inputs}}

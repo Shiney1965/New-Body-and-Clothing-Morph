@@ -26,6 +26,8 @@ Every file is accounted for even when unsupported. All 657 configured binary-ban
 
 The raw anti-omission audit has empty `missing_from_census`, `census_without_source`, `duplicate_source_rows` and `duplicate_census_rows` sets. Duplicate *resource IDs* remain retained independent observations and are not hidden by that unique-observation audit.
 
+After independent review, expected creation IDs now come from a separate verified-source declaration pass, not from the resolver's emitted observation tuple. `CREATION_DISCOVERY.json` retains all 6,681 expected IDs with exact declaring-owner/locator occurrences, including unresolved declarations and repeated components. The pass does not call the resolver's observation or route-emission functions. Candidate-level and global coverage checks report dropped/extra observations; generator-level mutation tests cover every creation kind and a real retained Gloomstalker source.
+
 ## Exact-source controls
 
 Etheirys reproduces **164 binary-bank files**, **61 accessory sets**, **70 shared-visual mesh joins**, and **42 distinct GR2 names**. The independently calculated definition population is **301**: 61 CharacterCreationAccessorySet, 70 CharacterCreationSharedVisual, 70 VisualBank, 33 MaterialBank and 67 TextureBank. The only mesh *names* unreferenced by observed VisualBank SourceFile values are `PRC_Luminiari_Historia_Dyeable_L.GR2` and `PRC_Luminiari_Zormor_L_Tintable.GR2`; unmatched duplicate *paths* are reported separately. These are raw source-name observations, not geometry failures or proven absence of all possible engine references.
@@ -44,27 +46,28 @@ Eight source modules declare GustavX UUID `cb555efe-2d9e-131f-8195-a89329d218ea`
 
 ## Reproducible local evidence
 
-Final config: `workstreams/source_profile_census/local/task4_neutral_source_20260902/config.json`, SHA-256 `D343F992AC53E2252C95BE5E88EA56F2FCCE0579356B16D03773E68C55D9442F`.
+Final review-fix config: `workstreams/source_profile_census/local/task4_review1_20260902/config.json`, SHA-256 `D343F992AC53E2252C95BE5E88EA56F2FCCE0579356B16D03773E68C55D9442F`.
 
 Final fresh output directories:
 
-- `workstreams/source_profile_census/local/task4_neutral_source_20260902/run_a`
-- `workstreams/source_profile_census/local/task4_neutral_source_20260902/run_b`
+- `workstreams/source_profile_census/local/generated/task4_review1_20260902_a`
+- `workstreams/source_profile_census/local/generated/task4_review1_20260902_b`
 
-Both were generated from unchanged production-code/input snapshots. Exact file bytes, full output path sets, output-manifest sizes/hashes, raw-file/definition/creation accounting, Etheirys controls and all input hashes were checked in the full regression run. Prior configs and probe/verified outputs remain preserved; generation refuses any existing output directory.
+Both were generated from unchanged production-code/input snapshots. Exact file bytes, full output path sets, output-manifest sizes/hashes, raw-file/definition/independent-creation accounting, Etheirys controls and all input hashes were checked in the full regression run. Prior configs and probe/verified outputs remain preserved. Generation permits only fresh direct-child leaves beneath the code-owned `workstreams/source_profile_census/local/generated` root; no configuration override is accepted. Outside, nested, redirected and overlapping destinations are refused before source processing. Existing retained runs cannot receive new child outputs.
 
 | Artifact | Bytes | SHA-256 |
 |---|---:|---|
 | `CENSUS_AUDIT.json` | 83216 | `A7F027172DF98A9BF9F14F9D42C46E7B47EB09636B176A5BBD3C39696B4BE93E` |
-| `INPUT_MANIFEST.json` | 3077255 | `CDEC2597F6E7C467233D09930DB7B13DF008F666844A5D648A150953E1EF28CF` |
+| `CREATION_DISCOVERY.json` | 5289751 | `50ED1BDC0AB5D4B913566CBBC395F6E118FE1AFDB6ECF386594FC4A98ACA5463` |
+| `INPUT_MANIFEST.json` | 3077255 | `9B1D230DC9919D81B33DD36282B22F979A73D685531646C919D112FEC4F7165B` |
 | `LEGACY_COMPARISONS.json` | 246430586 | `1C6B98D2BE07B05309B866BA1B343BC60D183B0BFE677893FE9520D2D6920F0E` |
 | `RAW_CREATION_PATHS.json` | 54527385 | `AEA05E9A606D49BB1B70952419BC84577280C5F9BDB17AEDE9D4B68E317B66DA` |
 | `RAW_DEFINITIONS.json` | 159874656 | `870F7442665C42581A25352830100BB967E6581B3CD62F83A62730E6AED23AEE` |
 | `RAW_FILES.json` | 231000874 | `9D7B394548B2E247E31FF6D88D1A236ED3B99204B761469265AF6827BC8E26A1` |
-| `SOURCE_PROFILE_CANDIDATES.json` | 28345 | `C9A28F9BD8DF561C1DF82D010B7631C2ECDD627EF032C302383ECE994695B948` |
+| `SOURCE_PROFILE_CANDIDATES.json` | 30295 | `B017E525E07F3985FDF0F85A32375DCFE22F9331FA940B61FC478E53058E1AD1` |
 | `SOURCE_SNAPSHOTS.json` | 2918785 | `15C8312919ADE407DCD62E536F2199DF475E5F94488EE23CB9CA8D5178FBC0F4` |
 | `UNRESOLVED_EVIDENCE.json` | 14802751 | `C79DF6D181C60254EAF66B8B920BC451943C87359D464C6FFCD21342CA905358` |
-| `OUTPUT_MANIFEST.json` | 1461 | `749EE12F97AB4FD9E0AC69F617DEE465309D8ABBBF6E3FDF4777D491C95A2F6C` |
+| `OUTPUT_MANIFEST.json` | 1622 | `CBEE0B0E1116DA860EDFF20D66565E88A8A0339855EB6C75569C7663D7E3325F` |
 
 The complete per-file input manifest includes package, content-manifest, listing, every source file, every conversion manifest/inspection, explicitly selected legacy/supporting inputs and the production Python modules. Normalized configuration is also bound, excluding only the output leaf for repeatability. Original source payloads remain in their retained freeze; JSON snapshots carry exact locators/hashes/sizes instead of duplicating binary payloads.
 
@@ -89,6 +92,6 @@ Precommit regression command, with `CLOTHMORPH_CENSUS_RUN_A` and `CLOTHMORPH_CEN
 
 `python.exe -B -m pytest workstreams/source_profile_census workstreams/release_master_ledger workstreams/coverage_ledger workstreams/true_underwear workstreams/vanitybody --import-mode=importlib -q -p no:cacheprovider`
 
-Result: **655 passed, 13 existing skips in 29.07s**, exit 0. Importlib collection is required because the prescribed local-integration filename is also used by an existing workstream; no cache deletion or unrelated configuration changes were made.
+Review-fix result: **684 passed, 13 existing skips in 28.61s**, exit 0. All eight explicitly configured local-integration tests passed. Importlib collection is required because the prescribed local-integration filename is also used by an existing workstream; no cache deletion or unrelated configuration changes were made.
 
 Independent review of this stage is still required. Subsequent work must supply remaining exact source profiles and accepted authority validators, explicitly migrate old observation IDs to canonical identities, review source-scope events and anti-omission mappings, and then address Runtime 1.4, mesh correction, packaging and gameplay. Current ledger/config/IDs/events and all protected/live/profile/save state remain untouched.

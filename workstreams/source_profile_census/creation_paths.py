@@ -92,6 +92,19 @@ class CreationPathCensus:
         return not self.issues
 
 
+@dataclass(frozen=True)
+class CreationDiscovery:
+    """Expected observation plus exact declaring-owner/locator occurrences."""
+    observation_id: str
+    source_observation_id: str
+    kind: str
+    declarations: tuple[tuple[str, str], ...]
+
+    @property
+    def declaration_locators(self):
+        return tuple(locator for _, locator in self.declarations)
+
+
 def _strict_equal(left, right):
     if type(left) is not type(right):
         return False
@@ -447,8 +460,7 @@ class _Resolver:
             tuple(d.observation_id for d in self.source.definitions), tuple(self.observations), tuple(self.issues))
 
 
-def resolve_creation_paths(census: ResourceCensus, dependencies: Sequence[ResourceCensus]) -> CreationPathCensus:
-    """Join exact observations; no filename inference, precedence guess or I/O."""
+def _verified_inputs(census, dependencies):
     source = _verified(census)
     if not isinstance(dependencies, Sequence) or isinstance(dependencies, (str, bytes)):
         raise TypeError("dependencies must be a sequence of ResourceCensus")
@@ -456,4 +468,92 @@ def resolve_creation_paths(census: ResourceCensus, dependencies: Sequence[Resour
     identities = [(c.snapshot.profile_id, c.snapshot.package.sha256) for c in (source, *verified_dependencies)]
     if len(set(identities)) != len(identities):
         raise ValueError("CENSUS_INPUT_DUPLICATE: repeated package/profile input")
+    return source, verified_dependencies
+
+
+def _declared_routes(context, definition):
+    """Inventory route declarations without resolving visuals or emitting routes.
+
+    Each direct attribute/map node contributes one expected BODY_FAMILY
+    occurrence, even if its visual or mesh is missing. Ordered component
+    declaration locators remain attached, including repeated references.
+    """
+    lineage = context.lineage(definition)
+    occurrences = defaultdict(int)
+    result = []
+    for key, _, owner_id in context.effective(lineage):
+        if key == "VisualTemplate":
+            owner = context.by_id[owner_id]
+            attrs = tuple(child for child in owner.node.children if child.tag == "attribute"
+                          and dict(child.attributes).get("id") == key and "value" in dict(child.attributes))
+            result.append(((owner_id, attrs[occurrences[owner_id]].locator),))
+            occurrences[owner_id] += 1
+    for owner in lineage:
+        maps = [entry for equipment in _children(owner.node, "Equipment")
+                for visuals in _children(equipment, "Visuals") for entry in _children(visuals)]
+        maps.extend(entry for visual_set in _children(owner.node, "VisualSet") for entry in _children(visual_set, "Visuals"))
+        for entry in maps:
+            declarations = [(owner.observation_id, entry.locator)]
+            for component in _children(entry, "MapValue"):
+                declarations.extend((owner.observation_id, locator) for _, locator in
+                                    (_attribute_occurrences(component, "Object") or (("", component.locator),)))
+            result.append(tuple(declarations))
+    return tuple(result)
+
+
+def discover_creation_paths(census: ResourceCensus, dependencies: Sequence[ResourceCensus]) -> tuple[CreationDiscovery, ...]:
+    """Independently inventory verified declarations, never emitted observations.
+
+    Shared primitives enforce exact dependency scope/lineage/identity. This pass
+    does not call run, observe, garment, character_creation, routes or components.
+    An unresolved Stats root still has named/inherited discovery declarations;
+    BODY_FAMILY children require a uniquely identified root whose route
+    declarations can actually be inventoried. No missing root is called absent.
+    """
+    source, dependencies = _verified_inputs(census, dependencies)
+    context = _Resolver(source, dependencies)
+    inventory = []
+
+    def add(definition, kind, declarations, suffix=""):
+        inventory.append(CreationDiscovery(_identity(definition, kind, suffix), definition.observation_id,
+                                           kind, tuple(declarations)))
+
+    for definition in source.definitions:
+        declared = [(definition.observation_id, definition.locator)]
+        routes = ()
+        if definition.kind == "Stats":
+            lineage = context.lineage(definition)
+            declared.extend((owner.observation_id, f"line:{statement.line}") for owner in lineage
+                            for statement in owner.statements if statement.command == "using"
+                            or (statement.command == "data" and statement.arguments[0] == "RootTemplate"))
+            add(definition, "NAMED_STATS", declared)
+            if definition.stats_parents:
+                add(definition, "INHERITED_SPAWN", declared)
+            for key, reference, owner_id in context.effective(lineage):
+                if key == "RootTemplate":
+                    matches = context.lookup("RootTemplate", reference, context.by_id[owner_id], "ROOT_TEMPLATE")
+                    if len(matches) == 1:
+                        routes += _declared_routes(context, matches[0])
+        elif definition.kind == "RootTemplate":
+            add(definition, "ROOT_TEMPLATE", declared)
+            routes = _declared_routes(context, definition)
+        elif definition.kind == "CharacterVisualBank":
+            add(definition, "BODY_FAMILY", declared)
+        elif definition.kind in ("CharacterCreationAccessorySet", "CharacterCreationSharedVisual", "CharacterCreationAppearanceVisual"):
+            if definition.kind == "CharacterCreationAccessorySet":
+                kind = "CHARACTER_CREATION_ACCESSORY_SET"
+                declared.extend((definition.observation_id, locator) for part in _children(definition.node, "VisualUUIDs")
+                                for _, locator in (_attribute_occurrences(part, "Object") or (("", part.locator),)))
+            else:
+                kind = "CHARACTER_CREATION_SHARED_VISUAL" if definition.kind == "CharacterCreationSharedVisual" else "CHARACTER_CREATION_APPEARANCE_VISUAL"
+                declared.extend((definition.observation_id, locator) for _, locator in _attribute_occurrences(definition.node, "VisualResource"))
+            add(definition, kind, declared)
+        for index, declarations in enumerate(routes):
+            add(definition, "BODY_FAMILY", declarations, str(index))
+    return tuple(inventory)
+
+
+def resolve_creation_paths(census: ResourceCensus, dependencies: Sequence[ResourceCensus]) -> CreationPathCensus:
+    """Join exact observations; no filename inference, precedence guess or I/O."""
+    source, verified_dependencies = _verified_inputs(census, dependencies)
     return _Resolver(source, verified_dependencies).run()
