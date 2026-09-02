@@ -14,6 +14,11 @@ from .solver import (
     Candidate,
     CandidateContract,
     GateReport,
+    INTERNAL_MIN_AREA_RATIO,
+    INTERNAL_MAX_AREA_RATIO,
+    INTERNAL_MIN_ORIENTATION_COSINE,
+    PUBLISHED_MIN_AREA_RATIO,
+    PUBLISHED_MAX_AREA_RATIO,
     evaluate_candidate,
     solve_coherent_field,
 )
@@ -103,10 +108,36 @@ def _position_sha256(candidate: Candidate) -> str:
     return hashlib.sha256(canonical.tobytes(order="C")).hexdigest().upper()
 
 
-def _failure_reasons(candidate: Candidate, report: GateReport) -> tuple[str, ...]:
+def derive_gate_decision(candidate_status: str, report: GateReport) -> tuple[tuple[str, ...], bool, str]:
+    """Derive the production decision from raw fields, never the stored summary."""
+    boolean_fields = ("topology_identity_equal", "non_position_semantics_equal", "position_count_equal")
+    count_fields = (
+        "fixed_vertex_moves", "active_vertices_below_clearance", "active_surface_ambiguities",
+        "moved_roi_vertices_below_clearance", "moved_roi_surface_ambiguities",
+        "fixed_cohort_coverage_loss", "flipped_faces", "new_zero_area_faces",
+        "faces_below_published_area", "faces_above_published_area", "faces_below_internal_area",
+        "faces_above_internal_area", "faces_below_orientation_cosine",
+    )
+    if any(type(getattr(report, name)) is not bool for name in boolean_fields):
+        raise RuntimeError("SEARCH_RESULT_GATE_FIELDS_INVALID")
+    if any(type(getattr(report, name)) is not int or getattr(report, name) < 0 for name in count_fields):
+        raise RuntimeError("SEARCH_RESULT_GATE_FIELDS_INVALID")
+    extrema = (report.minimum_area_ratio, report.maximum_area_ratio, report.minimum_orientation_cosine)
+    if not all(np.isfinite(value) for value in extrema) or not 0 <= extrema[0] <= extrema[1]:
+        raise RuntimeError("SEARCH_RESULT_GATE_EXTREMA_INVALID")
+    # The extreme value and its aggregate failure count must tell the same story.
+    thresholds = (
+        (report.minimum_area_ratio < PUBLISHED_MIN_AREA_RATIO, report.faces_below_published_area),
+        (report.maximum_area_ratio > PUBLISHED_MAX_AREA_RATIO, report.faces_above_published_area),
+        (report.minimum_area_ratio < INTERNAL_MIN_AREA_RATIO, report.faces_below_internal_area),
+        (report.maximum_area_ratio > INTERNAL_MAX_AREA_RATIO, report.faces_above_internal_area),
+        (report.minimum_orientation_cosine < INTERNAL_MIN_ORIENTATION_COSINE, report.faces_below_orientation_cosine),
+    )
+    if any(bool(failed) != bool(count) for failed, count in thresholds):
+        raise RuntimeError("SEARCH_RESULT_GATE_EXTREMA_MISMATCH")
     reasons: list[str] = []
-    if candidate.status != "CANDIDATE":
-        reasons.append(f"CANDIDATE_STATUS_{candidate.status}")
+    if candidate_status != "CANDIDATE":
+        reasons.append(f"CANDIDATE_STATUS_{candidate_status}")
     if not report.topology_identity_equal:
         reasons.append("TOPOLOGY_IDENTITY_MISMATCH")
     if not report.non_position_semantics_equal:
@@ -139,9 +170,16 @@ def _failure_reasons(candidate: Candidate, report: GateReport) -> tuple[str, ...
         reasons.append("INTERNAL_MAXIMUM_AREA_RATIO_FAILED")
     if report.faces_below_orientation_cosine:
         reasons.append("INTERNAL_ORIENTATION_COSINE_FAILED")
-    if not report.production_passed and not reasons:
-        reasons.append("PRODUCTION_PASS_NOT_ESTABLISHED")
-    return tuple(reasons)
+    passed = not reasons
+    return tuple(reasons), passed, "PRODUCTION_PASS" if passed else "PRODUCTION_FAIL"
+
+
+def validate_gate_report(candidate_status: str, report: GateReport) -> tuple[str, ...]:
+    """Enforce a single canonical summary in both search and output validation."""
+    reasons, passed, status = derive_gate_decision(candidate_status, report)
+    if report.passed is not passed or report.production_passed is not passed or report.status != status:
+        raise RuntimeError("SEARCH_RESULT_GATE_SUMMARY_MISMATCH")
+    return reasons
 
 
 def _serialize_result(
@@ -203,7 +241,7 @@ def run_position_only_search(
                 raise TypeError("CANDIDATE_ROUNDTRIP_MUST_RETURN_CANDIDATE")
         gates = evaluate_candidate(source, candidate, contract)
         position_sha256 = _position_sha256(candidate)
-        reasons = _failure_reasons(candidate, gates)
+        reasons = validate_gate_report(candidate.status, gates)
         records.append(SearchRecord(
             index=index,
             parameters=parameters,

@@ -3,19 +3,20 @@
 from __future__ import annotations
 
 import argparse
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass, fields, is_dataclass
 from datetime import datetime, timezone
 from functools import partial
 import hashlib
 import json
 from pathlib import Path
 import re
+import subprocess
 
 import numpy as np
 
-from .configuration import WORKSTREAM_ROOT, generated_output_path
+from .configuration import WORKSTREAM_ROOT, generated_output_path, load_local_configuration
 from .geometry import serialize_collada_positions
-from .integration import PreparedClosure, prepare_real_closure, roundtrip_candidate
+from .integration import PreparedClosure, prepare_real_closure, prepare_verified_closure, roundtrip_candidate
 from .search import (
     OFFLINE_CANDIDATE,
     POSITION_ONLY_UNFIXABLE,
@@ -24,7 +25,9 @@ from .search import (
     _serialize_result,
     build_parameter_grid,
     run_position_only_search,
+    validate_gate_report,
 )
+from .solver import evaluate_candidate
 
 
 LEGACY_FINDINGS_PATH = Path(
@@ -211,15 +214,76 @@ def build_pending_exclusion_evidence_packet(
 
 
 @dataclass(frozen=True)
+class ImplementationFile:
+    path: str
+    sha256: str
+
+
+def _implementation_identity() -> tuple[str, tuple[ImplementationFile, ...]]:
+    """Hash the complete local implementation in stable repo-relative order."""
+    package = Path(__file__).resolve().parent
+    repository = package.parents[1]
+    commit = subprocess.check_output(
+        ["git", "-C", str(repository), "rev-parse", "HEAD"], text=True,
+    ).strip()
+    if re.fullmatch(r"[0-9a-f]{40}", commit) is None:
+        raise RuntimeError("RUN_IMPLEMENTATION_COMMIT_INVALID")
+    paths = sorted((*package.glob("*.py"), package.parent / "__init__.py"))
+    return commit, tuple(
+        ImplementationFile(path.relative_to(repository).as_posix(), _sha256_bytes(path.read_bytes()))
+        for path in paths
+    )
+
+
+@dataclass(frozen=True)
+class RunSnapshot:
+    implementation_commit: str
+    implementation_files: tuple[ImplementationFile, ...]
+    input_sha256: tuple[tuple[str, str], ...]
+    input_paths: tuple[str, ...]
+
+
+def _capture_run_snapshot(prepared: PreparedClosure, input_paths: tuple[str, ...]) -> RunSnapshot:
+    identity = _implementation_identity()
+    if identity != _IMPORTED_IMPLEMENTATION:
+        raise RuntimeError("RUN_IMPLEMENTATION_DRIFT")
+    inputs = (prepared.verified_source, prepared.verified_body)
+    digests = tuple((value.input_id, _sha256_bytes(value.content)) for value in inputs)
+    if input_paths:
+        if len(input_paths) != len(inputs):
+            raise RuntimeError("RUN_INPUT_PATHS_INVALID")
+        try:
+            actual = tuple(_sha256_bytes(Path(path).read_bytes()) for path in input_paths)
+        except OSError as error:
+            raise RuntimeError("RUN_INPUT_DRIFT") from error
+        if actual != tuple(digest for _input_id, digest in digests):
+            raise RuntimeError("RUN_INPUT_DRIFT")
+    return RunSnapshot(identity[0], identity[1], digests, input_paths)
+
+
+@dataclass(frozen=True)
 class RepeatedClosure:
     prepared: PreparedClosure
     first: SearchResult
     second: SearchResult
+    run_start: RunSnapshot | None = None
+    run_end: RunSnapshot | None = None
 
 
-def run_real_closure_twice(prepared: PreparedClosure | None = None) -> RepeatedClosure:
+def run_real_closure_twice(
+    prepared: PreparedClosure | None = None, *, input_paths: tuple[Path, Path] | None = None,
+) -> RepeatedClosure:
     """Execute both complete searches and require byte-identical evidence."""
-    prepared = prepared or prepare_real_closure()
+    if _implementation_identity() != _IMPORTED_IMPLEMENTATION:
+        raise RuntimeError("RUN_IMPLEMENTATION_DRIFT")
+    if prepared is None:
+        configuration = load_local_configuration()
+        input_paths = tuple(value.path for value in configuration.inputs)
+        prepared = prepare_real_closure()
+    else:
+        prepared = _validate_prepared_closure(prepared)
+    paths = tuple(str(path.resolve(strict=True)) for path in (input_paths or ()))
+    run_start = _capture_run_snapshot(prepared, paths)
     roundtrip = partial(roundtrip_candidate, prepared.verified_source, prepared.source)
     first = run_position_only_search(
         prepared.source, prepared.contract, candidate_roundtrip=roundtrip,
@@ -231,7 +295,19 @@ def run_real_closure_twice(prepared: PreparedClosure | None = None) -> RepeatedC
         raise RuntimeError("REAL_SEARCH_JSON_NONDETERMINISTIC")
     if first.selected_position_sha256 != second.selected_position_sha256:
         raise RuntimeError("REAL_SEARCH_SELECTION_NONDETERMINISTIC")
-    return RepeatedClosure(prepared=prepared, first=first, second=second)
+    run_end = _capture_run_snapshot(prepared, paths)
+    if run_start != run_end:
+        raise RuntimeError("RUN_SNAPSHOT_DRIFT")
+    return RepeatedClosure(prepared, first, second, run_start, run_end)
+
+
+def _validate_run_snapshot(repeated: RepeatedClosure) -> RunSnapshot:
+    if repeated.run_start is None or repeated.run_end is None:
+        raise RuntimeError("RUN_SNAPSHOT_REQUIRED")
+    current = _capture_run_snapshot(repeated.prepared, repeated.run_start.input_paths)
+    if repeated.run_start != repeated.run_end or current != repeated.run_start:
+        raise RuntimeError("RUN_SNAPSHOT_DRIFT")
+    return current
 
 
 def _validate_repeated_closure(repeated: RepeatedClosure) -> None:
@@ -242,9 +318,10 @@ def _validate_repeated_closure(repeated: RepeatedClosure) -> None:
         raise RuntimeError("REPEATED_CLOSURE_SELECTION_MISMATCH")
     if repeated.first.status != repeated.second.status:
         raise RuntimeError("REPEATED_CLOSURE_STATUS_MISMATCH")
-    _validate_prepared_closure(repeated.prepared)
-    _validate_search_result(repeated.first, repeated.prepared)
-    _validate_search_result(repeated.second, repeated.prepared)
+    _validate_run_snapshot(repeated)
+    fresh = _validate_prepared_closure(repeated.prepared)
+    _validate_search_result(repeated.first, fresh)
+    _validate_search_result(repeated.second, fresh)
 
 
 def _validate_verified_input(value: object, input_id: str, code: str) -> None:
@@ -255,8 +332,26 @@ def _validate_verified_input(value: object, input_id: str, code: str) -> None:
         raise RuntimeError(f"PREPARED_{code}_DIGEST_INVALID")
 
 
-def _validate_prepared_closure(prepared: PreparedClosure) -> None:
-    """Revalidate both verified bytes and the stored BCB normal oracle identity."""
+def _require_exact_prepared_value(actual: object, expected: object, path: str) -> None:
+    """Compare all nested contract fields, including certificates and query arrays."""
+    if type(actual) is not type(expected):
+        raise RuntimeError(f"PREPARED_BYTES_MISMATCH:{path}")
+    if isinstance(expected, np.ndarray):
+        equal = actual.dtype == expected.dtype and np.array_equal(actual, expected)
+    elif is_dataclass(expected):
+        for field in fields(expected):
+            _require_exact_prepared_value(
+                getattr(actual, field.name), getattr(expected, field.name), f"{path}.{field.name}",
+            )
+        return
+    else:
+        equal = actual == expected
+    if not equal:
+        raise RuntimeError(f"PREPARED_BYTES_MISMATCH:{path}")
+
+
+def _validate_prepared_closure(prepared: PreparedClosure) -> PreparedClosure:
+    """Reparse verified bytes and independently derive every production input."""
     _validate_verified_input(prepared.verified_source, "pristine_source_dae", "SOURCE")
     _validate_verified_input(prepared.verified_body, "bcb_body_glb", "BODY")
     if prepared.source.content_sha256 != prepared.verified_source.actual_sha256:
@@ -268,6 +363,12 @@ def _validate_prepared_closure(prepared: PreparedClosure) -> None:
         raise RuntimeError("PREPARED_BCB_NORMAL_ORACLE_DIGEST_MISMATCH")
     if prepared.contract.constraints.body_mesh is not prepared.body:
         raise RuntimeError("PREPARED_CONSTRAINT_ORACLE_MISMATCH")
+    try:
+        fresh = prepare_verified_closure(prepared.verified_source, prepared.verified_body)
+    except (ValueError, TypeError, KeyError, IndexError) as error:
+        raise RuntimeError("PREPARED_BYTES_INVALID") from error
+    _require_exact_prepared_value(prepared, fresh, "closure")
+    return fresh
 
 
 def _validate_search_result(result: SearchResult, prepared: PreparedClosure) -> None:
@@ -277,6 +378,10 @@ def _validate_search_result(result: SearchResult, prepared: PreparedClosure) -> 
         raise RuntimeError("SEARCH_RESULT_RECORD_COUNT_INVALID")
     if any(record.index != index or record.parameters != parameters for index, (record, parameters) in enumerate(zip(result.records, grid))):
         raise RuntimeError("SEARCH_RESULT_LITERAL_GRID_INVALID")
+    for record in result.records:
+        reasons = validate_gate_report(record.candidate_status, record.gates)
+        if record.failure_reasons != reasons:
+            raise RuntimeError("SEARCH_RESULT_GATE_REASONS_MISMATCH")
     actual_passing = tuple(record.index for record in result.records if record.gates.production_passed)
     if result.passing_count != len(actual_passing):
         raise RuntimeError("SEARCH_RESULT_PASSING_COUNT_INVALID")
@@ -313,6 +418,10 @@ def _validate_search_result(result: SearchResult, prepared: PreparedClosure) -> 
         or selected_record.candidate_position_sha256 != actual_sha256
     ):
         raise RuntimeError("SEARCH_RESULT_SELECTED_HASH_INVALID")
+    actual_gates = evaluate_candidate(prepared.source, readback, prepared.contract)
+    actual_reasons = validate_gate_report(readback.status, actual_gates)
+    if actual_gates != selected_record.gates or actual_reasons or not actual_gates.production_passed:
+        raise RuntimeError("SEARCH_RESULT_SELECTED_GATES_MISMATCH")
 
 
 def _refuse_existing_artifacts(paths: tuple[Path, ...]) -> None:
@@ -384,6 +493,8 @@ def write_real_closure_artifacts(
         "schema_version": 1,
         "status": repeated.first.status,
         "offline_only": True,
+        "run_start": asdict(repeated.run_start),
+        "run_end": asdict(repeated.run_end),
         "search_sha256": search_sha256,
         "candidate_dae_sha256": candidate_sha256,
         "input_sha256": {
@@ -414,6 +525,8 @@ def write_real_closure_artifacts(
     manifest_bytes = json.dumps(
         manifest, ensure_ascii=False, indent=2, sort_keys=True,
     ).encode("utf-8") + b"\n"
+    # Last read immediately before any output side effect, after expensive replay.
+    _validate_run_snapshot(repeated)
     generated.mkdir(parents=True, exist_ok=True)
     _write_new_bytes(search_path, repeated.first.json_bytes)
     if candidate_bytes is not None:
@@ -436,6 +549,11 @@ def main() -> int:
     )
     print(json.dumps(manifest, indent=2, sort_keys=True))
     return 0
+
+
+# A process cannot claim newly edited on-disk files as the implementation it
+# imported earlier, even when it has not yet begun its first search.
+_IMPORTED_IMPLEMENTATION = _implementation_identity()
 
 
 if __name__ == "__main__":

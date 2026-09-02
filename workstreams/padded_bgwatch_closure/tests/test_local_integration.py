@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import struct
 from dataclasses import replace
 
 import numpy as np
@@ -12,29 +13,29 @@ import pytest
 
 from workstreams.padded_bgwatch_closure.configuration import VerifiedInput
 from workstreams.padded_bgwatch_closure.geometry import (
-    ParsedGlbSurface,
     build_surface_constraints,
     derive_minimal_roi,
     parse_collada_geometry,
+    parse_glb_surface,
     serialize_collada_positions,
 )
 from workstreams.padded_bgwatch_closure.integration import (
-    FixedCoverageEvidence,
     PreparedClosure,
+    derive_original_active_ids,
+    derive_fixed_coverage_contract,
     roundtrip_candidate,
 )
 from workstreams.padded_bgwatch_closure.closure import (
     RepeatedClosure,
     build_pending_exclusion_evidence_packet,
     write_real_closure_artifacts,
+    run_real_closure_twice,
 )
 from workstreams.padded_bgwatch_closure.search import (
     OFFLINE_CANDIDATE,
     POSITION_ONLY_UNFIXABLE,
-    SearchResult,
-    run_position_only_search,
 )
-from workstreams.padded_bgwatch_closure.solver import Candidate, CandidateContract, CoverageContract
+from workstreams.padded_bgwatch_closure.solver import Candidate, CandidateContract
 from workstreams.release_master_ledger.validation import validate_record
 
 
@@ -151,32 +152,51 @@ def test_real_preparation_pins_the_original_active_set_and_fixed_coverage_cohort
     assert prepared.contract.constraints.active_ids == prepared.active_ids
 
 
-def _prepared_fixture() -> PreparedClosure:
-    verified = _verified(_dae())
+def _glb(*, height=0.0) -> bytes:
+    """Minimal indexed triangle with stored normals; all arrays come from bytes."""
+    positions = np.array([[0, 0, height], [1, 0, height], [0, 1, height]], dtype="<f4")
+    normals = np.array([[0, 0, 1]] * 3, dtype="<f4")
+    binary = positions.tobytes() + normals.tobytes() + struct.pack("<3I", 0, 1, 2)
+    document = {
+        "asset": {"version": "2.0"}, "scene": 0, "scenes": [{"nodes": [0]}],
+        "nodes": [{"mesh": 0}],
+        "meshes": [{"primitives": [{"attributes": {"POSITION": 0, "NORMAL": 1}, "indices": 2}]}],
+        "buffers": [{"byteLength": len(binary)}],
+        "bufferViews": [{"buffer": 0, "byteOffset": offset, "byteLength": size}
+                        for offset, size in [(0, 36), (36, 36), (72, 12)]],
+        "accessors": [{"bufferView": view, "componentType": kind, "count": 3, "type": shape}
+                      for view, kind, shape in [(0, 5126, "VEC3"), (1, 5126, "VEC3"), (2, 5125, "SCALAR")]],
+    }
+    encoded = json.dumps(document, separators=(",", ":")).encode()
+    encoded += b" " * (-len(encoded) % 4)
+    return (struct.pack("<4sII", b"glTF", 2, 28 + len(encoded) + len(binary))
+            + struct.pack("<II", len(encoded), 0x4E4F534A) + encoded
+            + struct.pack("<II", len(binary), 0x004E4942) + binary)
+
+
+def _prepared_fixture(*, passing=True) -> PreparedClosure:
+    # Two layers: penetrating vertices and a closer outward layer covering the
+    # body's three vertices. The zero-pass variant pins one near-body connector.
+    values = "0 0 -0.01 1 0 -0.01 0 1 -0.01 0 0 0.005 1 0 0.005 0 1 0.005"
+    faces = "0 0 1 0 2 0 3 0 4 0 5 0"
+    if not passing:
+        values = "0 0 -10 1 0 -10 0 1 0.0001 0 0 0.005 1 0 0.005 0 1 0.005"
+    content = _dae().replace(
+        b'count="9">0 0 0 1 0 0 0 1 0', ('count="18">' + values).encode(),
+    ).replace(b'count="3" stride="3"', b'count="6" stride="3"', 1).replace(
+        b'<triangles count="1" material="cloth">', b'<triangles count="2" material="cloth">',
+    ).replace(b'<p>0 0 1 0 2 0</p>', ('<p>' + faces + '</p>').encode())
+    verified = _verified(content)
     source = parse_collada_geometry(verified)
-    body = ParsedGlbSurface(
-        positions=np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0]], dtype=float),
-        faces=np.array([[0, 1, 2]], dtype=int),
-        vertex_normals=np.array([[0, 0, 1]] * 3, dtype=float),
-    )
-    active = (0, 1, 2)
+    verified_body = replace(_verified(_glb()), input_id="bcb_body_glb")
+    body = parse_glb_surface(verified_body)
+    active = derive_original_active_ids(source.positions, body)
     roi = derive_minimal_roi(source.positions, source.faces, active)
     constraints = build_surface_constraints(source.positions, body, active)
-    cohort = FixedCoverageEvidence(
-        body_vertex_ids=(0,),
-        contract=CoverageContract(
-            points=np.array([[0.0, 0.0, 0.0]]),
-            normals=np.array([[0.0, 0.0, 1.0]]),
-            maximum_distance=0.05,
-        ),
-    )
+    cohort = derive_fixed_coverage_contract(source.positions, source.faces, body)
     return PreparedClosure(
         verified_source=verified,
-        verified_body=VerifiedInput(
-            "bcb_body_glb", b"synthetic body bytes", len(b"synthetic body bytes"),
-            hashlib.sha256(b"synthetic body bytes").hexdigest().upper(),
-            hashlib.sha256(b"synthetic body bytes").hexdigest().upper(),
-        ),
+        verified_body=verified_body,
         source=source,
         body=body,
         body_vertex_normals_sha256=hashlib.sha256(
@@ -189,26 +209,10 @@ def _prepared_fixture() -> PreparedClosure:
 
 
 def _repeated_fixture(*, passing: bool) -> RepeatedClosure:
-    prepared = _prepared_fixture()
-    if not passing:
-        restrictive_coverage = CoverageContract(
-            points=prepared.coverage.contract.points,
-            normals=prepared.coverage.contract.normals,
-            maximum_distance=1e-9,
-        )
-        prepared = replace(
-            prepared,
-            coverage=FixedCoverageEvidence(prepared.coverage.body_vertex_ids, restrictive_coverage),
-            contract=CandidateContract(prepared.contract.roi, prepared.contract.constraints, restrictive_coverage),
-        )
-    first = run_position_only_search(
-        prepared.source, prepared.contract,
-        candidate_roundtrip=lambda candidate: roundtrip_candidate(
-            prepared.verified_source, prepared.source, candidate,
-        ),
-    )
-    assert (first.status == OFFLINE_CANDIDATE) is passing
-    return RepeatedClosure(prepared=prepared, first=first, second=first)
+    prepared = _prepared_fixture(passing=passing)
+    repeated = run_real_closure_twice(prepared)
+    assert (repeated.first.status == OFFLINE_CANDIDATE) is passing
+    return repeated
 
 
 def test_pending_exclusion_packet_is_explicitly_nonattachable_to_release_ledger(tmp_path):

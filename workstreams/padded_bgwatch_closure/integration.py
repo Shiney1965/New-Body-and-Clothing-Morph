@@ -102,30 +102,16 @@ def _ids_digest(values: tuple[int, ...]) -> str:
     ).hexdigest().upper()
 
 
-def prepare_real_closure(workstream_root=WORKSTREAM_ROOT) -> PreparedClosure:
-    """Hash before parse, then reconstruct and pin the exact real gate contract."""
-    verified_source, verified_body = load_and_verify_canonical_inputs(workstream_root)
+def prepare_verified_closure(
+    verified_source: VerifiedInput, verified_body: VerifiedInput,
+) -> PreparedClosure:
+    """Pure preparation shared by canonical loading and output-boundary replay."""
     source = parse_collada_geometry(verified_source)
     body = parse_glb_surface(verified_body)
-    if (
-        len(source.positions) != BASELINES.pristine_source_dae.vertex_count
-        or len(source.faces) != BASELINES.pristine_source_dae.face_count
-    ):
-        raise ValueError("PRISTINE_SOURCE_LOD0_SHAPE_MISMATCH")
-    if len(body.positions) != 10_800 or len(body.faces) != 18_828:
-        raise ValueError("BCB_BODY_SURFACE_SHAPE_MISMATCH")
     active_ids = derive_original_active_ids(source.positions, body)
-    if len(active_ids) != 593:
-        raise ValueError("ORIGINAL_ACTIVE_VERTEX_COUNT_MISMATCH")
-    if _ids_digest(active_ids) != "726ADFC0E20E00ADC0D8D4B6B0451D0939D7CF0FFCC1D904BFEAAE38A5220DF5":
-        raise ValueError("ORIGINAL_ACTIVE_VERTEX_IDENTITY_MISMATCH")
     roi = derive_minimal_roi(source.positions, source.faces, active_ids)
     constraints = build_surface_constraints(source.positions, body, active_ids)
     coverage = derive_fixed_coverage_contract(source.positions, source.faces, body)
-    if len(coverage.body_vertex_ids) != 2_800:
-        raise ValueError("FIXED_COVERAGE_COHORT_COUNT_MISMATCH")
-    if _ids_digest(coverage.body_vertex_ids) != "A15EA818F106A23B44AC3DF26BD50AEC1FBBF3D4DCD157255E6FA0B2C95071E2":
-        raise ValueError("FIXED_COVERAGE_COHORT_IDENTITY_MISMATCH")
     contract = CandidateContract(roi, constraints, fixed_cohort=coverage.contract)
     return PreparedClosure(
         verified_source=verified_source,
@@ -139,6 +125,27 @@ def prepare_real_closure(workstream_root=WORKSTREAM_ROOT) -> PreparedClosure:
         coverage=coverage,
         contract=contract,
     )
+
+
+def prepare_real_closure(workstream_root=WORKSTREAM_ROOT) -> PreparedClosure:
+    """Hash before parse, then reconstruct and pin the exact real gate contract."""
+    prepared = prepare_verified_closure(*load_and_verify_canonical_inputs(workstream_root))
+    if (
+        len(prepared.source.positions) != BASELINES.pristine_source_dae.vertex_count
+        or len(prepared.source.faces) != BASELINES.pristine_source_dae.face_count
+    ):
+        raise ValueError("PRISTINE_SOURCE_LOD0_SHAPE_MISMATCH")
+    if len(prepared.body.positions) != 10_800 or len(prepared.body.faces) != 18_828:
+        raise ValueError("BCB_BODY_SURFACE_SHAPE_MISMATCH")
+    if len(prepared.active_ids) != 593:
+        raise ValueError("ORIGINAL_ACTIVE_VERTEX_COUNT_MISMATCH")
+    if _ids_digest(prepared.active_ids) != "726ADFC0E20E00ADC0D8D4B6B0451D0939D7CF0FFCC1D904BFEAAE38A5220DF5":
+        raise ValueError("ORIGINAL_ACTIVE_VERTEX_IDENTITY_MISMATCH")
+    if len(prepared.coverage.body_vertex_ids) != 2_800:
+        raise ValueError("FIXED_COVERAGE_COHORT_COUNT_MISMATCH")
+    if _ids_digest(prepared.coverage.body_vertex_ids) != "A15EA818F106A23B44AC3DF26BD50AEC1FBBF3D4DCD157255E6FA0B2C95071E2":
+        raise ValueError("FIXED_COVERAGE_COHORT_IDENTITY_MISMATCH")
+    return prepared
 
 
 def roundtrip_candidate(
