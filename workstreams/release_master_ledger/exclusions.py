@@ -623,7 +623,7 @@ def _validate_mode_binding_and_claims(
         errors.append("EXCLUDED_MODE_PACKAGE_CLAIM_PRESENT")
 
 
-def _has_independent_claim(
+def has_independent_claim(
     claims: Mapping[object, object] | None, record_id: str, mode: str,
 ) -> bool:
     if not isinstance(claims, Mapping):
@@ -654,9 +654,9 @@ def _validate_independent_claims(
     ):
         errors.append("MISSING_INDEPENDENT_EXCLUSION_CLAIM_CONTEXT")
         return
-    if _has_independent_claim(independent_provider_claims, record_id, str(mode)):
+    if has_independent_claim(independent_provider_claims, record_id, str(mode)):
         errors.append("INDEPENDENT_PROVIDER_CLAIM")
-    if _has_independent_claim(independent_package_claims, record_id, str(mode)):
+    if has_independent_claim(independent_package_claims, record_id, str(mode)):
         errors.append("INDEPENDENT_PACKAGE_CLAIM")
 
 

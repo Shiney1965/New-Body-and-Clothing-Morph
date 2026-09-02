@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 import hashlib
 import json
+import posixpath
+import re
 from typing import Mapping
 
 from .audit import InventorySets
@@ -12,6 +14,8 @@ from .configuration import VerifiedInput
 
 
 BASE_GAME_SOURCE_PROFILE_UNRESOLVED = "BASE_GAME_SOURCE_PROFILE_UNRESOLVED"
+RELEASE_MODES = ("vanilla", "sbbf", "bcb", "external")
+RECORD_ID_RE = re.compile(r"^LEDGER_[0-9A-F]{64}$")
 
 
 class InventoryIntegrityError(ValueError):
@@ -37,6 +41,8 @@ class IndependentInventories:
     required_source_profiles: frozenset[str] = frozenset()
     complete_source_profiles: frozenset[str] = frozenset()
     protected_manifest_relations: Mapping[str, ProtectedManifestRelation] = field(default_factory=dict)
+    provider_claims: Mapping[object, object] = field(default_factory=dict)
+    package_claims: Mapping[object, object] = field(default_factory=dict)
 
     @property
     def missing_source_profiles(self) -> tuple[str, ...]:
@@ -57,6 +63,8 @@ def extract_independent_inventories(
 ) -> IndependentInventories:
     payloads = {input_.input_id: _read_verified_json(input_) for input_ in verified_inputs}
     relations = _protected_manifest_relations(verified_inputs, payloads)
+    provider_claims = _provider_claim_inventory(verified_inputs, payloads)
+    package_claims = _package_claim_inventory(verified_inputs, payloads)
     source_observations: set[str] = set()
     prior_evidence = {
         str(input_.path)
@@ -87,7 +95,165 @@ def extract_independent_inventories(
         required_source_profiles=frozenset(required_profiles),
         complete_source_profiles=frozenset(complete_profiles),
         protected_manifest_relations=relations,
+        provider_claims=provider_claims,
+        package_claims=package_claims,
     )
+
+
+def _claim_key(route: Mapping[str, object]) -> tuple[str, str]:
+    record_id = route.get("record_id")
+    mode = route.get("mode")
+    if not isinstance(record_id, str) or RECORD_ID_RE.fullmatch(record_id) is None:
+        raise InventoryIntegrityError("CLAIM_INVENTORY_RECORD_ID_INVALID")
+    if not isinstance(mode, str) or mode not in RELEASE_MODES:
+        raise InventoryIntegrityError("CLAIM_INVENTORY_MODE_INVALID")
+    return record_id, mode
+
+
+def _claim_text(route: Mapping[str, object], field: str, label: str) -> list[str]:
+    value = route.get(field)
+    if value is None:
+        return []
+    if not isinstance(value, str) or not value:
+        raise InventoryIntegrityError(f"CLAIM_INVENTORY_{field.upper()}_INVALID")
+    return [f"{label}:{value}"]
+
+
+def _claim_sequence(
+    route: Mapping[str, object], field: str, label: str, *, hashes: bool = False,
+    paths: bool = False,
+) -> list[str]:
+    value = route.get(field)
+    if value is None:
+        return []
+    if not isinstance(value, list) or any(not isinstance(item, str) or not item for item in value):
+        raise InventoryIntegrityError(f"CLAIM_INVENTORY_{field.upper()}_INVALID")
+    normalized: list[str] = []
+    for item in value:
+        if hashes:
+            if not _valid_sha256(item):
+                raise InventoryIntegrityError(f"CLAIM_INVENTORY_{field.upper()}_INVALID")
+            item = item.upper()
+        elif paths:
+            item = posixpath.normpath(item.replace("\\", "/"))
+        normalized.append(f"{label}:{item}")
+    return normalized
+
+
+def _provider_claim_inventory(
+    verified_inputs: list[VerifiedInput], payloads: Mapping[str, object],
+) -> dict[object, tuple[str, ...]]:
+    collected: dict[object, set[str]] = {}
+    for payload in payloads.values():
+        if not isinstance(payload, Mapping) or payload.get("schema") != "clothmorph.provider-claim-inventory":
+            continue
+        if payload.get("schema_version") != 1 or isinstance(payload.get("schema_version"), bool):
+            raise InventoryIntegrityError("PROVIDER_CLAIM_INVENTORY_SCHEMA_INVALID")
+        routes = payload.get("routes")
+        if not isinstance(routes, list):
+            raise InventoryIntegrityError("PROVIDER_CLAIM_INVENTORY_ROUTES_INVALID")
+        for route in routes:
+            if not isinstance(route, Mapping):
+                raise InventoryIntegrityError("PROVIDER_CLAIM_INVENTORY_ROUTE_INVALID")
+            key = _claim_key(route)
+            claims = [
+                *_claim_text(route, "provider_id", "provider_id"),
+                *_claim_sequence(route, "target_vrs", "target_vr"),
+                *_claim_sequence(route, "target_paths", "target_path", paths=True),
+                *_claim_sequence(route, "payload_hashes", "payload_hash", hashes=True),
+                *_claim_text(route, "provenance", "provenance"),
+            ]
+            if claims:
+                collected.setdefault(key, set()).update(claims)
+    for input_ in verified_inputs:
+        if input_.kind.upper() not in {"PACKAGE", "PROVIDER"}:
+            continue
+        payload = payloads[input_.input_id]
+        for record in _records(payload, ("records",)):
+            route_count = record.get("route_count", 0)
+            if isinstance(route_count, bool) or not isinstance(route_count, int) or route_count < 0:
+                raise InventoryIntegrityError("PROVIDER_ROUTE_COUNT_INVALID")
+            routes = record.get("routes")
+            if route_count > 0 and (
+                not isinstance(routes, list) or len(routes) != route_count
+            ):
+                for mode in RELEASE_MODES:
+                    collected.setdefault(mode, set()).add(
+                        f"missing_provider_route_inventory:{input_.input_id}"
+                    )
+    return {
+        key: tuple(sorted(values))
+        for key, values in sorted(collected.items(), key=lambda item: str(item[0]))
+    }
+
+
+def _normalize_package_id(value: object) -> str:
+    if not isinstance(value, str) or not value.startswith("PACKAGE_SHA256:"):
+        raise InventoryIntegrityError("CLAIM_INVENTORY_PACKAGE_ID_INVALID")
+    digest = value.removeprefix("PACKAGE_SHA256:")
+    if not _valid_sha256(digest):
+        raise InventoryIntegrityError("CLAIM_INVENTORY_PACKAGE_ID_INVALID")
+    return f"PACKAGE_SHA256:{digest.upper()}"
+
+
+def _package_claim_inventory(
+    verified_inputs: list[VerifiedInput], payloads: Mapping[str, object],
+) -> dict[tuple[str, str], tuple[str, ...]]:
+    collected: dict[tuple[str, str], set[str]] = {}
+    for payload in payloads.values():
+        if not isinstance(payload, Mapping) or payload.get("schema") != "clothmorph.package-claim-inventory":
+            continue
+        if payload.get("schema_version") != 1 or isinstance(payload.get("schema_version"), bool):
+            raise InventoryIntegrityError("PACKAGE_CLAIM_INVENTORY_SCHEMA_INVALID")
+        routes = payload.get("routes")
+        if not isinstance(routes, list):
+            raise InventoryIntegrityError("PACKAGE_CLAIM_INVENTORY_ROUTES_INVALID")
+        for route in routes:
+            if not isinstance(route, Mapping):
+                raise InventoryIntegrityError("PACKAGE_CLAIM_INVENTORY_ROUTE_INVALID")
+            key = _claim_key(route)
+            raw_package_ids = route.get("package_ids")
+            claims: list[str] = []
+            if raw_package_ids is not None:
+                if not isinstance(raw_package_ids, list):
+                    raise InventoryIntegrityError("CLAIM_INVENTORY_PACKAGE_IDS_INVALID")
+                claims.extend(
+                    f"package_id:{_normalize_package_id(package_id)}"
+                    for package_id in raw_package_ids
+                )
+            if route.get("shipped_package_id") is not None:
+                claims.append(
+                    "shipped_package_id:"
+                    + _normalize_package_id(route.get("shipped_package_id"))
+                )
+            if claims:
+                collected.setdefault(key, set()).update(claims)
+    for input_ in verified_inputs:
+        if input_.kind.upper() != "PACKAGE":
+            continue
+        for index, record in enumerate(_records(payloads[input_.input_id], ("records",))):
+            candidate = record.get("candidate_pak_sha256")
+            if not _valid_sha256(candidate):
+                continue
+            local_id = (
+                record.get("observation_id")
+                or record.get("identity")
+                or record.get("id")
+                or record.get("item_uuid")
+                or f"{input_.input_id}:{index}"
+            )
+            if not isinstance(local_id, str) or not local_id:
+                raise InventoryIntegrityError("PACKAGE_CLAIM_OBSERVATION_ID_INVALID")
+            source_key = f"OBSERVATION:{input_.input_id}:{local_id}"
+            package_id = f"PACKAGE_SHA256:{str(candidate).upper()}"
+            for mode in RELEASE_MODES:
+                collected.setdefault((source_key, mode), set()).add(
+                    f"package_id:{package_id}"
+                )
+    return {
+        key: tuple(sorted(values))
+        for key, values in sorted(collected.items())
+    }
 
 
 def _read_verified_json(input_: VerifiedInput) -> object:

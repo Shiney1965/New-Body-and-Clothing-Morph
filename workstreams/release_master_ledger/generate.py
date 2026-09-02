@@ -20,6 +20,7 @@ from .configuration import (
 from .exclusions import (
     RELEASE_MODES,
     ZERO_CLAIM_MODE_ROUTE,
+    has_independent_claim,
     select_current_exclusion,
 )
 from .identity import canonical_json, sha256_text
@@ -29,7 +30,7 @@ from .inventory import (
     InventoryIntegrityError,
     extract_independent_inventories,
 )
-from .reconcile import reconcile_observations
+from .reconcile import ReconciliationResult, reconcile_observations
 from .validation import validate_generated_ledger
 
 
@@ -128,22 +129,6 @@ def _terminal_exclusion_summary(event_file: DiscoveredExclusionEvent) -> dict[st
             "canonical_event_sha256": sha256_text(canonical_json(event)),
         },
     }
-
-
-def _has_independent_claim(
-    claims: Mapping[object, object] | None, record_id: str, mode: str,
-) -> bool:
-    if not isinstance(claims, Mapping):
-        return False
-    candidates = (
-        claims.get((record_id, mode)),
-        claims.get(f"{record_id}:{mode}"),
-        claims.get(mode),
-    )
-    nested = claims.get(record_id)
-    if isinstance(nested, Mapping):
-        candidates += (nested.get(mode),)
-    return any(bool(value) for value in candidates)
 
 
 def _attach_terminal_exclusions(
@@ -247,30 +232,30 @@ def _attach_terminal_exclusions(
     return tuple(attached)
 
 
-def _independent_provider_claims(
-    records: Iterable[LedgerRecord],
-) -> dict[tuple[str, str], tuple[str, ...]]:
-    """Snapshot pre-attachment provider/target/payload/provenance claims."""
-    claims: dict[tuple[str, str], tuple[str, ...]] = {}
-    for record in records:
-        for mode in RELEASE_MODES:
-            route = record.mode_routes.get(mode)
-            if not isinstance(route, Mapping):
-                claims[(record.record_id, mode)] = ("MISSING_MODE_ROUTE",)
-                continue
-            fields = tuple(
-                field for field, value, zero in (
-                    ("target_vrs", route.get("target_vrs"), []),
-                    ("target_paths", route.get("target_paths"), []),
-                    ("payload_hashes", route.get("payload_hashes"), []),
-                    ("provider_id", route.get("provider_id"), "NO_PROVIDER"),
-                    ("provenance", route.get("provenance"), "NO_PROVENANCE"),
-                )
-                if value != zero
+def _resolve_independent_claims(
+    claims: Mapping[object, object], reconciliation: ReconciliationResult,
+) -> dict[object, object]:
+    """Resolve raw observation source keys without reading reconciled route data."""
+    resolved: dict[object, object] = {}
+    for key, value in claims.items():
+        resolved_key = key
+        if (
+            isinstance(key, tuple)
+            and len(key) == 2
+            and isinstance(key[0], str)
+            and key[0].startswith("OBSERVATION:")
+        ):
+            observation_id = key[0].removeprefix("OBSERVATION:")
+            record_id = reconciliation.observation_to_record.get(observation_id)
+            resolved_key = (
+                (record_id, key[1]) if record_id is not None else key[1]
             )
-            if fields:
-                claims[(record.record_id, mode)] = fields
-    return claims
+        existing = resolved.get(resolved_key)
+        if isinstance(existing, tuple) and isinstance(value, tuple):
+            resolved[resolved_key] = tuple(sorted(set(existing) | set(value)))
+        else:
+            resolved[resolved_key] = value
+    return resolved
 
 
 def _write(path: Path, content: bytes) -> str:
@@ -414,11 +399,11 @@ def _manifest_payload(
                 and item.event.get("mode") in RELEASE_MODES
                 and isinstance(independent_provider_claims, Mapping)
                 and isinstance(independent_package_claims, Mapping)
-                and not _has_independent_claim(
+                and not has_independent_claim(
                     independent_provider_claims,
                     str(item.event["record_id"]), str(item.event["mode"]),
                 )
-                and not _has_independent_claim(
+                and not has_independent_claim(
                     independent_package_claims,
                     str(item.event["record_id"]), str(item.event["mode"]),
                 )
@@ -513,15 +498,12 @@ def generate(config: LocalConfiguration) -> GenerationResult:
     discovered_event_files = {
         item.relative_path: item.sha256 for item in discovered_events
     }
-    independent_provider_claims = _independent_provider_claims(
-        reconciliation.records
+    independent_provider_claims = _resolve_independent_claims(
+        inventories.provider_claims, reconciliation,
     )
-    independent_package_claims = {
-        (record.record_id, mode): (record.shipped_package_id,)
-        for record in reconciliation.records
-        for mode in RELEASE_MODES
-        if record.shipped_package_id in inventories.packaged_records
-    }
+    independent_package_claims = _resolve_independent_claims(
+        inventories.package_claims, reconciliation,
+    )
     records = _attach_terminal_exclusions(
         reconciliation.records,
         discovered_events,

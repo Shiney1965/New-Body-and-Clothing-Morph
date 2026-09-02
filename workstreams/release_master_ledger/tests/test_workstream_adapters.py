@@ -100,6 +100,21 @@ def test_coverage_maps_offline_and_package_states_without_gameplay_promotion():
     assert observations[1].evidence_status == "GAMEPLAY_UNASSESSED_PACKAGE_ONLY"
 
 
+def test_coverage_preserves_explicit_resolved_protected_relations():
+    relations = {
+        "registry_ids": ["REGISTRY_REVIEWED"],
+        "protected_consumers": ["UNACCEPTED_CONSUMER"],
+        "shared_assets": ["Public/Synthetic/Shared.GR2"],
+        "forbidden_targets": ["EMBEDDED_BODY_DATA"],
+    }
+    record = load_fixture("coverage_records.json")[0]
+    record["protected_relations"] = relations
+
+    observation = adapt_coverage([record], VERIFIED_COVERAGE)[0]
+
+    assert observation.protected_relations == relations
+
+
 def test_underwear_missing_route_remains_blocking():
     observation = adapt_true_underwear(
         [underwear_fixture(disposition="MISSING ROUTE / BUILD")], VERIFIED_UNDERWEAR

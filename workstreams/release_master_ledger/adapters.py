@@ -320,7 +320,7 @@ def _normalized_workstream_payload(record: Mapping[str, Any]) -> dict[str, Any]:
             mode_routes[mode]["target_paths"] = [route["path"]]
         if isinstance(route.get("mesh_sha256"), str) and route["mesh_sha256"]:
             mode_routes[mode]["payload_hashes"] = [route["mesh_sha256"]]
-    return {
+    normalized = {
         "source_module": source_module,
         "creation_path": {
             "kind": fields.creation_path_kind,
@@ -337,6 +337,10 @@ def _normalized_workstream_payload(record: Mapping[str, Any]) -> dict[str, Any]:
         "mode_routes": mode_routes,
         "next_admissible_action": _text(record.get("next_action"), "Obtain bounded evidence."),
     }
+    protected_relations = record.get("protected_relations")
+    if isinstance(protected_relations, Mapping):
+        normalized["protected_relations"] = dict(protected_relations)
+    return normalized
 
 
 def adapt_one_protected(record: Mapping[str, Any], verified_input: VerifiedInput) -> Observation:

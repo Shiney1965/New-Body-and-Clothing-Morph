@@ -92,6 +92,26 @@ def test_package_drop_mutation_populates_packaged_without_ledger(tmp_path):
     assert audit["packaged_without_ledger"] == [f"PACKAGE_SHA256:{package_sha}"]
 
 
+def test_package_inventory_retains_raw_package_ownership_claims(tmp_path):
+    package_sha = "A4BB716CB70C8046FE87ECB94A8D081563D953AD1E07BA1F521B01765768E345"
+    input_ = verified_json(tmp_path, "package", "PACKAGE", {
+        "observation_id": "package-row",
+        "candidate_pak_sha256": package_sha,
+        "source_mod_uuid": "module-1",
+        "source_mod_version": "1",
+    })
+
+    inventories = extract_independent_inventories([input_])
+
+    package_id = f"PACKAGE_SHA256:{package_sha}"
+    assert inventories.package_claims == {
+        ("OBSERVATION:package:package-row", mode): (
+            f"package_id:{package_id}",
+        )
+        for mode in ("vanilla", "sbbf", "bcb", "external")
+    }
+
+
 def test_prior_evidence_join_drop_mutation_populates_unreferenced_set(tmp_path):
     input_ = verified_json(tmp_path, "support", "SUPPORTING_EVIDENCE", {"records": []})
     inventories = extract_independent_inventories([input_])

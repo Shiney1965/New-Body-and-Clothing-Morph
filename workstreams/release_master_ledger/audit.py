@@ -6,7 +6,12 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 import re
 
-from .exclusions import RELEASE_MODES, ZERO_CLAIM_MODE_ROUTE, select_current_exclusion
+from .exclusions import (
+    RELEASE_MODES,
+    ZERO_CLAIM_MODE_ROUTE,
+    has_independent_claim,
+    select_current_exclusion,
+)
 from .identity import canonical_json, sha256_text
 from .reconcile import ReconciliationResult
 
@@ -87,22 +92,6 @@ def _has_valid_event_file_provenance(
     )
 
 
-def _has_independent_claim(
-    claims: Mapping[object, object] | None, record_id: str, mode: str,
-) -> bool:
-    if not isinstance(claims, Mapping):
-        return False
-    candidates = (
-        claims.get((record_id, mode)),
-        claims.get(f"{record_id}:{mode}"),
-        claims.get(mode),
-    )
-    nested = claims.get(record_id)
-    if isinstance(nested, Mapping):
-        candidates += (nested.get(mode),)
-    return any(bool(value) for value in candidates)
-
-
 def _current_terminal_exclusion(
     record: object,
     events: tuple[Mapping[str, object], ...],
@@ -148,13 +137,13 @@ def _current_terminal_exclusion(
                 f"{record_id}:{mode}"
             )
             continue
-        if _has_independent_claim(
+        if has_independent_claim(
             independent_provider_claims, record_id, mode,
         ):
             failure_codes.add(
                 f"INDEPENDENT_PROVIDER_CLAIM:{record_id}:{mode}"
             )
-        if _has_independent_claim(
+        if has_independent_claim(
             independent_package_claims, record_id, mode,
         ):
             failure_codes.add(
