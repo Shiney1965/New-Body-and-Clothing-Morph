@@ -258,6 +258,134 @@ def test_claim_authority_explicit_nulls_are_invalid(tmp_path, role, route, error
         extract_independent_inventories([input_])
 
 
+@pytest.mark.parametrize(
+    ("role", "route"),
+    [
+        pytest.param(
+            "provider",
+            {
+                "record_id": "LEDGER_" + "A" * 64,
+                "canonical_source_key": None,
+                "mode": "sbbf",
+                "provider_id": "P",
+            },
+            id="provider-record-id-plus-null-canonical-key",
+        ),
+        pytest.param(
+            "provider",
+            {
+                "record_id": None,
+                "canonical_source_key": "OBSERVATION:coverage:row-a",
+                "mode": "sbbf",
+                "provider_id": "P",
+            },
+            id="provider-canonical-key-plus-null-record-id",
+        ),
+        pytest.param(
+            "package",
+            {
+                "record_id": "LEDGER_" + "A" * 64,
+                "canonical_source_key": None,
+                "mode": "bcb",
+                "package_ids": [],
+            },
+            id="package-record-id-plus-null-canonical-key",
+        ),
+        pytest.param(
+            "package",
+            {
+                "record_id": None,
+                "canonical_source_key": "OBSERVATION:coverage:row-a",
+                "mode": "bcb",
+                "package_ids": [],
+            },
+            id="package-canonical-key-plus-null-record-id",
+        ),
+    ],
+)
+def test_claim_authority_redundant_null_identity_key_is_invalid(tmp_path, role, route):
+    input_ = verified_json(tmp_path, f"{role}_claim_inventory", "SUPPORTING_EVIDENCE", {
+        "schema": f"clothmorph.{role}-claim-inventory",
+        "schema_version": 1,
+        "routes": [route],
+    })
+
+    with pytest.raises(InventoryIntegrityError, match="^CLAIM_INVENTORY_IDENTITY_INVALID$"):
+        extract_independent_inventories([input_])
+
+
+@pytest.mark.parametrize(
+    ("role", "route", "expected_claims"),
+    [
+        pytest.param(
+            "provider",
+            {
+                "record_id": "LEDGER_" + "A" * 64,
+                "mode": "sbbf",
+                "provider_id": "P",
+            },
+            {("LEDGER_" + "A" * 64, "sbbf"): ("provider_id:P",)},
+            id="provider-record-id-only",
+        ),
+        pytest.param(
+            "provider",
+            {
+                "canonical_source_key": "OBSERVATION:coverage:row-a",
+                "mode": "sbbf",
+                "provider_id": "P",
+            },
+            {("OBSERVATION:coverage:row-a", "sbbf"): ("provider_id:P",)},
+            id="provider-canonical-key-only",
+        ),
+        pytest.param(
+            "package",
+            {
+                "record_id": "LEDGER_" + "A" * 64,
+                "mode": "bcb",
+                "package_ids": ["PACKAGE_SHA256:" + "B" * 64],
+            },
+            {
+                ("LEDGER_" + "A" * 64, "bcb"):
+                    ("package_id:PACKAGE_SHA256:" + "B" * 64,)
+            },
+            id="package-record-id-only",
+        ),
+        pytest.param(
+            "package",
+            {
+                "canonical_source_key": "OBSERVATION:coverage:row-a",
+                "mode": "bcb",
+                "package_ids": ["PACKAGE_SHA256:" + "B" * 64],
+            },
+            {
+                ("OBSERVATION:coverage:row-a", "bcb"):
+                    ("package_id:PACKAGE_SHA256:" + "B" * 64,)
+            },
+            id="package-canonical-key-only",
+        ),
+    ],
+)
+def test_claim_authority_accepts_exactly_one_valid_identity_key(
+    tmp_path, role, route, expected_claims,
+):
+    input_ = verified_json(tmp_path, f"{role}_claim_inventory", "SUPPORTING_EVIDENCE", {
+        "schema": f"clothmorph.{role}-claim-inventory",
+        "schema_version": 1,
+        "routes": [route],
+    })
+
+    inventories = extract_independent_inventories([input_])
+
+    claims = (
+        inventories.provider_claims
+        if role == "provider"
+        else inventories.package_claims
+    )
+    assert claims == expected_claims
+    assert getattr(inventories, f"{role}_authority_present") is True
+    assert getattr(inventories, f"{role}_authority_complete") is True
+
+
 def test_prior_evidence_join_drop_mutation_populates_unreferenced_set(tmp_path):
     input_ = verified_json(tmp_path, "support", "SUPPORTING_EVIDENCE", {"records": []})
     inventories = extract_independent_inventories([input_])

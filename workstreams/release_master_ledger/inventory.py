@@ -135,8 +135,14 @@ def _claim_authority_inputs(
 
 
 def _claim_key(route: Mapping[str, object]) -> tuple[str, str]:
-    record_id = route.get("record_id")
-    canonical_source_key = route.get("canonical_source_key")
+    record_id_present = "record_id" in route
+    canonical_source_key_present = "canonical_source_key" in route
+    if record_id_present == canonical_source_key_present:
+        raise InventoryIntegrityError("CLAIM_INVENTORY_IDENTITY_INVALID")
+    record_id = route["record_id"] if record_id_present else None
+    canonical_source_key = (
+        route["canonical_source_key"] if canonical_source_key_present else None
+    )
     mode = route.get("mode")
     if (record_id is None) == (canonical_source_key is None):
         raise InventoryIntegrityError("CLAIM_INVENTORY_IDENTITY_INVALID")
