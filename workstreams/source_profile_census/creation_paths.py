@@ -14,7 +14,7 @@ from hashlib import sha256
 import json
 import re
 
-from .resources import ResourceCensus, ResourceSource, parse_resources
+from .resources import ResourceCensus, ResourceDefinition, ResourceSource, parse_resources
 from .snapshot import FileSnapshot
 
 
@@ -37,6 +37,8 @@ class VisualComponent:
     mesh: FileSnapshot | None = None
     mesh_source: ResourceSource | None = None
     shared_observation_id: str | None = None
+    reference_owner_observation_id: str = ""
+    accessory_locator: str | None = None
 
 
 @dataclass(frozen=True)
@@ -49,6 +51,17 @@ class RouteBinding:
     components: tuple[VisualComponent, ...]
     shared_visual_references: tuple[str, ...] = ()
     equipment_race_values: tuple[str, ...] = ()
+    shared_visual_locators: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class _VisualReference:
+    """The declaring owner is independent of the accessory discovery edge."""
+    reference: str
+    locator: str
+    owner: ResourceDefinition
+    shared_observation_id: str | None = None
+    accessory_locator: str | None = None
 
 
 @dataclass(frozen=True)
@@ -99,9 +112,13 @@ def _verified(census):
 
 
 def _values(node, name):
+    return tuple(value for value, _ in _attribute_occurrences(node, name))
+
+
+def _attribute_occurrences(node, name):
     if node is None:
         return ()
-    return tuple(dict(c.attributes).get("value", "") for c in node.children
+    return tuple((dict(c.attributes).get("value", ""), c.locator) for c in node.children
                  if c.tag == "attribute" and dict(c.attributes).get("id") == name)
 
 
@@ -232,9 +249,10 @@ class _Resolver:
             data.extend((key, value, definition.observation_id) for key, value in values)
         return tuple(data)
 
-    def components(self, owner, references):
+    def components(self, references):
         result = []
-        for reference, locator, shared in references:
+        for occurrence in references:
+            reference, locator, owner = occurrence.reference, occurrence.locator, occurrence.owner
             matches = self.lookup("VisualBank", reference, owner, "VISUAL_BANK", locator)
             slots, paths, mesh, source = (), (), None, None
             if len(matches) == 1:
@@ -263,7 +281,8 @@ class _Resolver:
                         else:
                             self.issue("MESH_SOURCE_MISSING" if not files else "MESH_SOURCE_AMBIGUOUS", definition, detail=path)
             result.append(VisualComponent(reference, locator, tuple(d.observation_id for d in matches),
-                                          slots, paths, mesh, source, shared))
+                                          slots, paths, mesh, source, occurrence.shared_observation_id,
+                                          owner.observation_id, occurrence.accessory_locator))
         return tuple(result)
 
     def routes(self, definition):
@@ -278,9 +297,9 @@ class _Resolver:
                                    and dict(c.attributes).get("id") == "VisualTemplate" and "value" in dict(c.attributes))
                 locator = attributes[direct_occurrences[source_id]].locator
                 direct_occurrences[source_id] += 1
-                refs = ((reference, locator, None),)
-                result.append(RouteBinding(owner.observation_id, refs[0][1], "DIRECT_VISUAL", None,
-                                           (reference,), self.components(owner, refs)))
+                refs = (_VisualReference(reference, locator, owner),)
+                result.append(RouteBinding(owner.observation_id, locator, "DIRECT_VISUAL", None,
+                                           (reference,), self.components(refs)))
         mapped_owners = []
         for owner in lineage:
             maps = []
@@ -301,12 +320,13 @@ class _Resolver:
                     values = _values(part, "Object")
                     if len(values) != 1 or not values[0]:
                         self.issue("EQUIPMENT_COMPONENT_REFERENCE_UNRESOLVED", owner, part.locator)
-                    refs.extend((value, part.locator, None) for value in (values or ("",)))
+                    refs.extend(_VisualReference(value, locator, owner)
+                                for value, locator in (_attribute_occurrences(part, "Object") or (("", part.locator),)))
                 refs = tuple(refs)
                 if not refs:
                     self.issue("EQUIPMENT_COMPONENTS_MISSING", owner, entry.locator)
                 result.append(RouteBinding(owner.observation_id, entry.locator, "EQUIPMENT_RACE",
-                    keys[0] if len(keys) == 1 else None, tuple(v for v, _, _ in refs), self.components(owner, refs),
+                    keys[0] if len(keys) == 1 else None, tuple(r.reference for r in refs), self.components(refs),
                     equipment_race_values=keys))
         if len(mapped_owners) > 1:
             self.issue("ROOT_MAP_INHERITANCE_UNRESOLVED", definition, candidates=mapped_owners)
@@ -359,45 +379,59 @@ class _Resolver:
             self.observe(definition, "BODY_FAMILY", related, roots, slots, (route,), body_data, suffix=str(index))
             self.issue("BODY_TUPLE_UNRESOLVED", definition, route.locator, "Exact canonical body/equipment map not supplied")
 
-    def character_creation(self, definition):
-        data = self.effective((definition,))
+    def validate_character_creation(self, definition):
+        """Apply the same semantic checks to discovered and referenced records."""
         allowed = ("VisualUUIDs",) if definition.kind == "CharacterCreationAccessorySet" else ()
-        if any(dict(child.attributes).get("id") not in allowed for child in _children(definition.node)):
-            self.issue("CREATION_STRUCTURE_UNRESOLVED", definition)
+        for child in _children(definition.node):
+            if dict(child.attributes).get("id") not in allowed:
+                self.issue("CREATION_STRUCTURE_UNRESOLVED", definition, child.locator)
+            elif _children(child) or any(c.tag == "attribute" and dict(c.attributes).get("id") != "Object"
+                                         for c in child.children):
+                self.issue("CREATION_STRUCTURE_UNRESOLVED", definition, child.locator)
         slots = _values(definition.node, "SlotName")
         if len(slots) != 1 or not slots[0]:
             self.issue("CREATION_SLOT_UNRESOLVED", definition)
+        if definition.kind != "CharacterCreationAccessorySet":
+            references = _values(definition.node, "VisualResource")
+            if not references or not all(references):
+                self.issue("CREATION_VISUAL_MISSING", definition)
+            if len(references) > 1:
+                self.issue("CREATION_VISUAL_AMBIGUOUS", definition)
+
+    def character_creation(self, definition):
+        data = self.effective((definition,))
+        self.validate_character_creation(definition)
+        slots = _values(definition.node, "SlotName")
         scope = "NON_GARMENT_PIERCING" if slots == ("Piercing",) else "UNRESOLVED"
-        related, refs, shared_refs = [], [], []
+        related, refs, shared_refs, shared_locators = [], [], [], []
         if definition.kind == "CharacterCreationAccessorySet":
             for item in _children(definition.node, "VisualUUIDs"):
                 values = _values(item, "Object")
                 if len(values) != 1 or not values[0]:
                     self.issue("CREATION_SHARED_REFERENCE_UNRESOLVED", definition, item.locator)
-                for shared in values or ("",):
+                for shared, accessory_locator in _attribute_occurrences(item, "Object") or (("", item.locator),):
                     shared_refs.append(shared)
-                    matches = self.lookup("CharacterCreationSharedVisual", shared, definition, "SHARED_VISUAL", item.locator)
+                    shared_locators.append(accessory_locator)
+                    matches = self.lookup("CharacterCreationSharedVisual", shared, definition, "SHARED_VISUAL", accessory_locator)
                     if len(matches) == 1:
                         target = matches[0]
+                        self.validate_character_creation(target)
                         related.append(target.observation_id)
                         if _values(target.node, "SlotName") != slots:
                             scope = "UNRESOLVED"
                             self.issue("CREATION_SLOT_CONFLICT", definition, item.locator, shared, matches)
-                        refs.extend((v, item.locator, target.observation_id) for v in _values(target.node, "VisualResource"))
-                        if not _values(target.node, "VisualResource"):
-                            self.issue("CREATION_VISUAL_MISSING", target)
-                        elif len(_values(target.node, "VisualResource")) != 1:
-                            self.issue("CREATION_VISUAL_AMBIGUOUS", target)
+                        refs.extend(_VisualReference(value, locator, target, target.observation_id, accessory_locator)
+                                    for value, locator in _attribute_occurrences(target.node, "VisualResource"))
             kind = "CHARACTER_CREATION_ACCESSORY_SET"
         else:
-            if len(_values(definition.node, "VisualResource")) > 1:
-                self.issue("CREATION_VISUAL_AMBIGUOUS", definition)
-            refs.extend((v, definition.locator, None) for v in _values(definition.node, "VisualResource"))
+            refs.extend(_VisualReference(value, locator, definition)
+                        for value, locator in _attribute_occurrences(definition.node, "VisualResource"))
             kind = "CHARACTER_CREATION_SHARED_VISUAL" if definition.kind == "CharacterCreationSharedVisual" else "CHARACTER_CREATION_APPEARANCE_VISUAL"
         if not refs:
             self.issue("CREATION_VISUAL_MISSING", definition)
         route = RouteBinding(definition.observation_id, definition.locator, "CHARACTER_CREATION", None,
-                             tuple(v for v, _, _ in refs), self.components(definition, refs), tuple(shared_refs))
+                             tuple(r.reference for r in refs), self.components(refs), tuple(shared_refs),
+                             shared_visual_locators=tuple(shared_locators))
         self.observe(definition, kind, related, slots=slots, routes=(route,), data=data, scope=scope)
 
     def run(self):

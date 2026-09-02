@@ -303,6 +303,94 @@ def test_relocation_does_not_change_creation_observation_identity(tmp_path):
     assert a.source_observation_ids == b.source_observation_ids
 
 
+def test_accessory_join_cannot_borrow_its_sibling_dependency_for_shared_visual(tmp_path):
+    shared = node("CharacterCreationSharedVisual", attr("UUID", "shared") + attr("SlotName", "Piercing") + attr("VisualResource", "vr"))
+    dep_a = module_census(tmp_path / "a", DEP_UUID, {"shared.lsx": bank("CharacterCreationSharedVisuals", shared, "root")})
+    dep_b = module_census(tmp_path / "b", OTHER_UUID, {"visual.lsx": bank("VisualBank", visual("vr")), "Assets/robe.GR2": b"sibling mesh"})
+    accessory = node("CharacterCreationAccessorySet", attr("UUID", "set") + attr("SlotName", "Piercing"), node("VisualUUIDs", attr("Object", "shared")))
+    src = module_census(tmp_path / "s", SOURCE_UUID, {"sets.lsx": bank("CharacterCreationAccessorySets", accessory, "root")}, ((DEP_UUID, "1"), (OTHER_UUID, "1")))
+    result = resolver()(src, (dep_a, dep_b))
+    component = observations(result, "CHARACTER_CREATION_ACCESSORY_SET")[0].routes[0].components[0]
+    assert component.mesh is None
+    assert component.candidate_observation_ids == ()
+    assert {"REFERENCE_DEPENDENCY_UNDECLARED", "VISUAL_BANK_MISSING"} <= codes(result)
+    assert not result.creation_paths_complete
+
+
+def test_accessory_join_accepts_shared_visuals_own_exact_dependency(tmp_path):
+    shared = node("CharacterCreationSharedVisual", attr("UUID", "shared") + attr("SlotName", "Piercing") + attr("VisualResource", "vr"))
+    dep_a = module_census(tmp_path / "a", DEP_UUID, {"shared.lsx": bank("CharacterCreationSharedVisuals", shared, "root")}, ((OTHER_UUID, "1"),))
+    dep_b = module_census(tmp_path / "b", OTHER_UUID, {"visual.lsx": bank("VisualBank", visual("vr")), "Assets/robe.GR2": b"declared mesh"})
+    accessory = node("CharacterCreationAccessorySet", attr("UUID", "set") + attr("SlotName", "Piercing"), node("VisualUUIDs", attr("Object", "shared")))
+    src = module_census(tmp_path / "s", SOURCE_UUID, {"sets.lsx": bank("CharacterCreationAccessorySets", accessory, "root")}, ((DEP_UUID, "1"),))
+    result = resolver()(src, (dep_a, dep_b))
+    component = observations(result, "CHARACTER_CREATION_ACCESSORY_SET")[0].routes[0].components[0]
+    assert component.mesh.sha256 == digest(b"declared mesh")
+    assert component.reference_owner_observation_id == dep_a.definitions[0].observation_id
+    assert component.mesh_source.module.uuid == OTHER_UUID
+    assert result.creation_paths_complete
+
+
+@pytest.mark.parametrize("location", ["dependency_shared", "accessory_item", "accessory_item_attribute"])
+def test_cc_dependency_and_nested_item_structure_are_validated(tmp_path, location):
+    future = node("FutureVisuals", attr("Object", "hidden"))
+    shared = node("CharacterCreationSharedVisual", attr("UUID", "shared") + attr("SlotName", "Piercing") + attr("VisualResource", "vr"), future if location == "dependency_shared" else "")
+    dep = module_census(tmp_path / "dep", DEP_UUID, {"shared.lsx": bank("CharacterCreationSharedVisuals", shared, "root"),
+        "visual.lsx": bank("VisualBank", visual("vr")), "Assets/robe.GR2": b"real fixture mesh"})
+    accessory = node("CharacterCreationAccessorySet", attr("UUID", "set") + attr("SlotName", "Piercing"),
+        node("VisualUUIDs", attr("Object", "shared") + (attr("FutureVisual", "hidden") if location == "accessory_item_attribute" else ""), future if location == "accessory_item" else ""))
+    src = module_census(tmp_path / "src", SOURCE_UUID, {"set.lsx": bank("CharacterCreationAccessorySets", accessory, "root")}, ((DEP_UUID, "1"),))
+    result = resolver()(src, (dep,))
+    assert "CREATION_STRUCTURE_UNRESOLVED" in codes(result)
+    assert not result.creation_paths_complete
+    assert len(observations(result, "CHARACTER_CREATION_ACCESSORY_SET")) == 1
+
+
+def test_repeated_map_object_attributes_have_distinct_exact_locators(tmp_path):
+    maps = node("Equipment", "", node("Visuals", "", node("Object", attr("MapKey", "race"), node("MapValue", attr("Object", "vr") + attr("Object", "vr")))))
+    result = resolver()(census(tmp_path, root(children=maps), visuals=visual("vr")), ())
+    route = observations(result, "ROOT_TEMPLATE")[0].routes[0]
+    assert route.visual_references == ("vr", "vr")
+    assert [c.locator for c in route.components] == [
+        "/save[1]/region[1]/node[1]/children[1]/node[1]/children[1]/node[1]/children[1]/node[1]/children[1]/node[1]/children[1]/node[1]/attribute[1]",
+        "/save[1]/region[1]/node[1]/children[1]/node[1]/children[1]/node[1]/children[1]/node[1]/children[1]/node[1]/children[1]/node[1]/attribute[2]"]
+
+
+def test_cc_attribute_occurrences_keep_declaring_owner_and_accessory_edge(tmp_path):
+    shared = node("CharacterCreationSharedVisual", attr("UUID", "shared") + attr("SlotName", "Piercing") + attr("VisualResource", "vr") + attr("VisualResource", "vr"))
+    dep = module_census(tmp_path / "dep", DEP_UUID, {"shared.lsx": bank("CharacterCreationSharedVisuals", shared, "root"),
+        "visual.lsx": bank("VisualBank", visual("vr")), "Assets/robe.GR2": b"fixture mesh"})
+    accessory = node("CharacterCreationAccessorySet", attr("UUID", "set") + attr("SlotName", "Piercing"),
+        node("VisualUUIDs", attr("Object", "shared") + attr("Object", "shared")))
+    src = module_census(tmp_path / "src", SOURCE_UUID, {"set.lsx": bank("CharacterCreationAccessorySets", accessory, "root")}, ((DEP_UUID, "1"),))
+    result = resolver()(src, (dep,))
+    route = observations(result, "CHARACTER_CREATION_ACCESSORY_SET")[0].routes[0]
+    shared_id = dep.definitions[0].observation_id
+    assert [c.locator for c in route.components] == [
+        "/save[1]/region[1]/node[1]/children[1]/node[1]/attribute[3]",
+        "/save[1]/region[1]/node[1]/children[1]/node[1]/attribute[4]",
+        "/save[1]/region[1]/node[1]/children[1]/node[1]/attribute[3]",
+        "/save[1]/region[1]/node[1]/children[1]/node[1]/attribute[4]"]
+    assert [c.reference_owner_observation_id for c in route.components] == [shared_id] * 4
+    assert [c.accessory_locator for c in route.components] == [
+        "/save[1]/region[1]/node[1]/children[1]/node[1]/children[1]/node[1]/attribute[1]",
+        "/save[1]/region[1]/node[1]/children[1]/node[1]/children[1]/node[1]/attribute[1]",
+        "/save[1]/region[1]/node[1]/children[1]/node[1]/children[1]/node[1]/attribute[2]",
+        "/save[1]/region[1]/node[1]/children[1]/node[1]/children[1]/node[1]/attribute[2]"]
+    assert route.shared_visual_locators == (
+        "/save[1]/region[1]/node[1]/children[1]/node[1]/children[1]/node[1]/attribute[1]",
+        "/save[1]/region[1]/node[1]/children[1]/node[1]/children[1]/node[1]/attribute[2]")
+
+
+def test_standalone_cc_repeated_visual_attributes_have_exact_locators(tmp_path):
+    shared = node("CharacterCreationSharedVisual", attr("UUID", "shared") + attr("SlotName", "Piercing") + attr("VisualResource", "vr") + attr("VisualResource", "vr"))
+    src = census(tmp_path, visuals=visual("vr"), extras={"shared.lsx": bank("CharacterCreationSharedVisuals", shared, "root")})
+    result = resolver()(src, ())
+    component_a, component_b = observations(result, "CHARACTER_CREATION_SHARED_VISUAL")[0].routes[0].components
+    assert component_a.locator.endswith("/attribute[3]")
+    assert component_b.locator.endswith("/attribute[4]")
+
+
 def test_exact_race_components_duplicates_and_direct_visual_all_survive(tmp_path):
     src = census(tmp_path, root(extra=attr("VisualTemplate", "direct"), children=mapped()),
                  visuals=visual("vr-a") + visual("vr-b") + visual("direct"))
