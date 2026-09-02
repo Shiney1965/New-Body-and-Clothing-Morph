@@ -413,10 +413,13 @@ def load_snapshot(configuration: Mapping[str, object]) -> FrozenSnapshot:
         raw_root = Path(config["root"])
         if not raw_root.is_absolute():
             _fail("CONFIG_INVALID", "root must be explicitly absolute")
+        # Inspect from the anchor downward before resolve can erase a junction.
+        # Checking only raw_root misses an ordinary leaf below a reparse parent.
+        for component in (*reversed(raw_root.parents), raw_root):
+            _check_link(component)
         root = raw_root.resolve(strict=True)
     except (KeyError, TypeError, OSError) as error:
         _fail("CONFIG_INVALID", str(error))
-    _check_link(raw_root)
     if not root.is_dir():
         _fail("CONFIG_INVALID", "root must be a directory")
     profile_id = _text(config.get("profile_id"))

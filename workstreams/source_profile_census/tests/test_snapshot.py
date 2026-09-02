@@ -3,6 +3,8 @@
 from dataclasses import FrozenInstanceError
 from hashlib import sha256
 import json
+import os
+import subprocess
 import pytest
 
 from workstreams.source_profile_census.snapshot import SnapshotError, load_snapshot
@@ -384,3 +386,48 @@ def test_conversion_format_without_pinned_provenance_is_not_assumed_valid(fixtur
     conversion.pop("tool")
     update_conversion(config, conversion)
     rejects(config, "MANIFEST_INVALID")
+
+
+def make_directory_link(link, target):
+    """Create only inside the test's temporary tree; never delete through a link."""
+    assert link.parent == target.parent or link.parent in target.parents
+    if os.name == "nt":
+        result = subprocess.run(
+            [os.environ.get("COMSPEC", "cmd.exe"), "/d", "/c", "mklink", "/J", str(link), str(target)],
+            capture_output=True, text=True, check=False,
+        )
+        assert result.returncode == 0, result.stdout + result.stderr
+    else:
+        link.symlink_to(target, target_is_directory=True)
+
+
+@pytest.mark.parametrize("location", ["ancestor", "root", "extraction", "inspection"])
+def test_real_directory_links_are_rejected_at_root_and_descent_boundaries(tmp_path, location):
+    actual = tmp_path / "actual"
+    config, _ = fixture.__wrapped__(actual / "snapshot")
+    if location in ("ancestor", "root"):
+        target = actual if location == "ancestor" else actual / "snapshot"
+        link = tmp_path / "junction"
+        make_directory_link(link, target)
+        config["root"] = link / "snapshot" if location == "ancestor" else link
+    else:
+        if location == "inspection":
+            add_conversion(config)
+        relative = "extracted" if location == "extraction" else "inspection"
+        link = config["root"] / "junction"
+        make_directory_link(link, config["root"] / relative)
+        if location == "extraction":
+            config["extract_root"]["path"] = "junction"
+        else:
+            config["conversions"][0]["inspection_root"]["path"] = "junction"
+    rejects(config, "UNSAFE_PATH")
+
+
+def test_ancestor_link_refuses_before_any_configured_package_is_opened(tmp_path):
+    actual = tmp_path / "actual"
+    config, _ = fixture.__wrapped__(actual / "snapshot")
+    link = tmp_path / "junction"
+    make_directory_link(link, actual)
+    config["root"] = link / "snapshot"
+    config["package"]["path"] = "deliberately-unavailable.pak"
+    rejects(config, "UNSAFE_PATH")
