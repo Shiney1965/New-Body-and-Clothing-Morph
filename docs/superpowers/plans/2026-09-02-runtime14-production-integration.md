@@ -44,11 +44,14 @@
 
 ## Task 2: Qualify and complete production R1 ownership and user controls
 
-**Files:** copied R1 Lua/MCM modules; source-owned overrides of R0 `EquipRace.lua`, `BodyFamilyEquipRace.lua`, and `BodyFamilyRegistry.lua` only where behavior changes are required; production-bound Lua integration fixtures and tests.
+**Files:** new revisioned `workstreams/runtime14/runtime/r1_qualified_delta/` Lua/MCM overrides, `contracts/r1_qualified_allowed_delta.json`, a separately verified qualification composer, and production-bound Lua integration fixtures/tests. Source-owned overrides of R0 `EquipRace.lua`, `BodyFamilyEquipRace.lua`, and `BodyFamilyRegistry.lua` are allowed only where behavior changes are required. `runtime/r1_foundation/`, the original `contracts/lineage.json`, and all historical input pins remain immutable references.
+
+The qualification composer consumes a freshly verified Task-1 R0-to-R1 stage and applies only the new allowed delta into another exclusive destination. It must preserve all historical references and protected data hashes, reject unknown paths/modified receipts, and bind the new source revision and output manifest independently. Later R2 changes use another distinct revisioned delta; they never rewrite the pinned R1 source to make a test pass.
 
 **Interfaces:** exact `SetCharacterMode`, legacy `SetDesiredBody` delegation, `SetMasterEnabled`, `GetOwnershipStatus`, immutable registry snapshot, central non-exported mutation authorization, schema-7 persistent records.
 
 - [ ] Build a requirement-to-test matrix for every pass-through specification section 13.1-13.3 invariant and shared schema/master/ownership field. Existing review-clean snippets do not waive uncovered requirements.
+- [ ] Record the two nonblocking Task-1 review notes: read-only, fully verified hard-linked input files are allowed (symlinks/reparse redirects are rejected); historical harness hashes in the immutable lineage contract are not current adapted-file hashes. Add a separately labelled adapted-harness manifest/test rather than editing historical pins. Neither note grants unique input-file ownership or live mutation authority.
 - [ ] RED then implement exact four-choice parsing, managed-only cycle, `External / Pass-through` label, unbound External hotkey, host-only master command/MCM, owner-targeted character requests, read-only diagnostics, and truthful distinct version fields.
 - [ ] RED then implement idempotent pre-mutation migration; preserve original fields/legacy claimed CCSV only; reject minted-as-original, missing trusted originals, wrong CvGuid, malformed schema, and stale provider claims.
 - [ ] RED then implement shared-CV arbitration using real body/CCSV paths: mixed External/managed claims restore shared baseline and use owned per-character fallback for managed claimants. No last-writer-wins or third-party visual deletion.
