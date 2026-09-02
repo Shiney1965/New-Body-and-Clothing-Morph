@@ -10,7 +10,7 @@ import pytest
 
 from workstreams.padded_bgwatch_closure.geometry import (
     ParsedColladaGeometry,
-    TriangleMesh,
+    ParsedGlbSurface,
     build_surface_constraints,
     derive_minimal_roi,
 )
@@ -65,9 +65,10 @@ def _production_fixture(*, maximum_coverage_distance: float = 0.2):
             np.asarray(faces, dtype="<i8").tobytes(order="C")
         ).hexdigest().upper(),
     )
-    body = TriangleMesh(
+    body = ParsedGlbSurface(
         positions=np.array([[-2, -2, 0.1], [2, -2, 0.1], [0, 2, 0.1]], dtype=float),
         faces=np.array([[0, 1, 2]], dtype=int),
+        vertex_normals=np.array([[0.0, 0.0, 1.0]] * 3),
     )
     roi = derive_minimal_roi(base, faces, active_ids=[0, 1, 2])
     constraints = build_surface_constraints(base, body, active_ids=[0, 1, 2])

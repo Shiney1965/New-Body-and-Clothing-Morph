@@ -14,6 +14,7 @@ from .geometry import (
     SurfaceConstraints,
     TARGET_CLEARANCE_M,
     TriangleMesh,
+    require_certified_targets,
 )
 
 
@@ -76,6 +77,7 @@ class CandidateContract:
             raise ValueError("PRODUCTION_BODY_SURFACE_REQUIRED")
         if self.fixed_cohort is None or len(self.fixed_cohort.points) == 0:
             raise ValueError("PRODUCTION_FIXED_COHORT_REQUIRED")
+        require_certified_targets(self.constraints)
 
 
 @dataclass(frozen=True)
@@ -321,6 +323,8 @@ def solve_coherent_field(
     movable = np.asarray(roi.movable_ids, dtype=np.int64)
     active = np.asarray(constraints.active_ids, dtype=np.int64)
     _require_exact_active_identity(roi, constraints)
+    if isinstance(base, ParsedColladaGeometry):
+        require_certified_targets(constraints)
     adjacency = _adjacency(len(base_positions), checked_faces)
     target_displacements = {
         int(vertex_id): scale * (target - base_positions[int(vertex_id)])
@@ -447,6 +451,7 @@ def evaluate_candidate(
     """Evaluate every fixed topology, preservation, clearance, and coverage gate."""
     if isinstance(contract, CandidateContract):
         production = True
+        require_certified_targets(contract.constraints)
     elif isinstance(contract, SyntheticCandidateContract):
         production = False
     else:

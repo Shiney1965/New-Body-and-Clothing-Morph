@@ -19,6 +19,8 @@ from .surface import exact_closest_points
 COLLADA_NS = "http://www.collada.org/2005/11/COLLADASchema"
 NS = {"c": COLLADA_NS}
 TARGET_CLEARANCE_M = 0.001
+TARGET_SERIALIZATION_DECIMALS = 6
+TARGET_PROJECTION_EPSILON = 1e-12
 _GLB_COMPONENT_DTYPES = {
     5121: np.dtype("<u1"),
     5123: np.dtype("<u2"),
@@ -96,6 +98,28 @@ class SignedClearanceQuery:
     vertex_normals_sha256: str
 
 
+class SurfaceConstraintSetupError(ValueError):
+    """Invalid target preparation, never a failed geometry/search case."""
+
+    def __init__(self, reason: str, vertex_ids: tuple[int, ...]):
+        self.reason = reason
+        self.vertex_ids = tuple(vertex_ids)
+        super().__init__(f"{reason}: active_vertex_ids={self.vertex_ids}")
+
+
+@dataclass(frozen=True)
+class TargetCertification:
+    """Exact oracle result bound to rounded targets, ordered IDs, and retained body."""
+
+    active_ids: tuple[int, ...]
+    target_positions: np.ndarray
+    body_mesh: ParsedGlbSurface
+    query: SignedClearanceQuery
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "target_positions", _readonly(self.target_positions, np.float64))
+
+
 def _float64_digest(values: object) -> str:
     return hashlib.sha256(
         np.asarray(values, dtype="<f8").tobytes(order="C"),
@@ -127,6 +151,54 @@ def query_signed_clearance(points: object, body: ParsedGlbSurface) -> SignedClea
         signed_clearances=_readonly(signed, np.float64),
         vertex_normals_sha256=_float64_digest(body.vertex_normals),
     )
+
+
+def _setup_clearance_query(
+    points: np.ndarray,
+    body: ParsedGlbSurface,
+    active_ids: tuple[int, ...],
+) -> SignedClearanceQuery:
+    try:
+        return query_signed_clearance(points, body)
+    except (ValueError, FloatingPointError) as error:
+        raise SurfaceConstraintSetupError("TARGET_SETUP_ORACLE_FAILED", active_ids) from error
+
+
+def certify_surface_targets(
+    target_positions: object,
+    body_mesh: ParsedGlbSurface,
+    active_ids: object,
+) -> TargetCertification:
+    """Certify serialized targets against a fresh closest-point/stored-normal query."""
+    active = tuple(int(value) for value in active_ids)
+    if not isinstance(body_mesh, ParsedGlbSurface):
+        raise SurfaceConstraintSetupError("TARGET_SETUP_STORED_NORMAL_BODY_REQUIRED", active)
+    targets = np.asarray(target_positions, dtype=np.float64)
+    if targets.shape != (len(active), 3) or not active or len(set(active)) != len(active):
+        raise SurfaceConstraintSetupError("TARGET_SETUP_IDENTITY_MISMATCH", active)
+    nonfinite = ~np.all(np.isfinite(targets), axis=1)
+    if np.any(nonfinite):
+        raise SurfaceConstraintSetupError(
+            "TARGET_SETUP_NONFINITE_TARGET", tuple(np.asarray(active)[nonfinite].tolist()),
+        )
+    unrounded = np.any(
+        targets != np.round(targets, decimals=TARGET_SERIALIZATION_DECIMALS), axis=1,
+    )
+    if np.any(unrounded):
+        raise SurfaceConstraintSetupError(
+            "TARGET_SETUP_UNROUNDED_TARGET", tuple(np.asarray(active)[unrounded].tolist()),
+        )
+    query = _setup_clearance_query(targets, body_mesh, active)
+    for reason, failed in (
+        ("TARGET_SETUP_SURFACE_AMBIGUITY", query.ambiguous),
+        (
+            "TARGET_SETUP_CLEARANCE_NOT_MET",
+            ~np.isfinite(query.signed_clearances) | (query.signed_clearances < TARGET_CLEARANCE_M),
+        ),
+    ):
+        if np.any(failed):
+            raise SurfaceConstraintSetupError(reason, tuple(np.asarray(active)[failed].tolist()))
+    return TargetCertification(active, targets, body_mesh, query)
 
 
 @dataclass(frozen=True)
@@ -173,6 +245,7 @@ class SurfaceConstraints:
     barycentric: np.ndarray
     ambiguous: np.ndarray | None = None
     body_mesh: TriangleMesh | None = None
+    target_certification: TargetCertification | None = None
 
     def __post_init__(self) -> None:
         count = len(self.active_ids)
@@ -203,6 +276,27 @@ class SurfaceConstraints:
             raise ValueError("surface normals must be unit vectors")
         if self.body_mesh is not None and not isinstance(self.body_mesh, TriangleMesh):
             raise TypeError("body_mesh must be a TriangleMesh when retained")
+
+
+def require_certified_targets(constraints: SurfaceConstraints) -> None:
+    """Stop production before search when oracle provenance or target proof is absent."""
+    active = constraints.active_ids
+    if not isinstance(constraints.body_mesh, ParsedGlbSurface):
+        raise SurfaceConstraintSetupError("TARGET_SETUP_STORED_NORMAL_BODY_REQUIRED", active)
+    certificate = constraints.target_certification
+    if not isinstance(certificate, TargetCertification):
+        raise SurfaceConstraintSetupError("TARGET_SETUP_CERTIFICATION_REQUIRED", active)
+    if (
+        certificate.active_ids != active
+        or certificate.body_mesh is not constraints.body_mesh
+        or not np.array_equal(certificate.target_positions, constraints.target_positions)
+        or certificate.query.signed_clearances.shape != (len(active),)
+        or certificate.query.ambiguous.shape != (len(active),)
+        or np.any(certificate.query.ambiguous)
+        or not np.all(np.isfinite(certificate.query.signed_clearances))
+        or np.any(certificate.query.signed_clearances < TARGET_CLEARANCE_M)
+    ):
+        raise SurfaceConstraintSetupError("TARGET_SETUP_CERTIFICATION_MISMATCH", active)
 
 
 def _position_source(mesh: ET.Element) -> tuple[str, ET.Element, int]:
@@ -716,7 +810,7 @@ def build_surface_constraints(
     body_mesh: TriangleMesh,
     active_ids: object,
 ) -> SurfaceConstraints:
-    """Build exact closest-triangle +1 mm surface constraints for active vertices."""
+    """Build oracle-certified rounded production targets; geometric-only meshes are synthetic."""
     base = np.asarray(base_positions, dtype=np.float64)
     if base.ndim != 2 or base.shape[1] != 3 or not np.all(np.isfinite(base)):
         raise ValueError("base positions must have shape (N,3) and be finite")
@@ -726,19 +820,40 @@ def build_surface_constraints(
     if not isinstance(body_mesh, TriangleMesh):
         raise TypeError("body_mesh must be a TriangleMesh")
     points = base[np.asarray(active, dtype=np.int64)]
+    certification = None
     if isinstance(body_mesh, ParsedGlbSurface):
-        query = query_signed_clearance(points, body_mesh)
+        query = _setup_clearance_query(points, body_mesh, active)
         closest = query.closest_points
         normals = query.interpolated_normals
         face_ids = query.face_ids
         barycentric = query.barycentric
         ambiguous = query.ambiguous
         signed = query.signed_clearances
+        triangles = body_mesh.positions[body_mesh.faces[face_ids]]
+        geometric = np.cross(
+            triangles[:, 1] - triangles[:, 0], triangles[:, 2] - triangles[:, 0],
+        )
+        geometric /= np.linalg.norm(geometric, axis=1)[:, None]
+        projection = np.einsum("ij,ij->i", geometric, normals)
+        geometric[projection < 0.0] *= -1.0
+        projection = np.abs(projection)
+        degenerate = ~np.isfinite(projection) | (projection <= TARGET_PROJECTION_EPSILON)
+        if np.any(degenerate):
+            raise SurfaceConstraintSetupError(
+                "TARGET_SETUP_PROJECTION_DEGENERATE", tuple(np.asarray(active)[degenerate].tolist()),
+            )
+        # The margin absorbs six-decimal POSITION quantization, not a relaxed gate.
+        offsets = (TARGET_CLEARANCE_M + 2 * 10**-TARGET_SERIALIZATION_DECIMALS) / projection
+        targets = np.round(
+            closest + offsets[:, None] * geometric, decimals=TARGET_SERIALIZATION_DECIMALS,
+        )
+        certification = certify_surface_targets(targets, body_mesh, active)
     else:
         closest, normals, face_ids, barycentric, _distances, ambiguous = _closest_points(points, body_mesh)
         signed = np.einsum("ij,ij->i", points - closest, normals)
-    targets = closest + TARGET_CLEARANCE_M * normals
+        targets = closest + TARGET_CLEARANCE_M * normals
     return SurfaceConstraints(
         active, closest, normals, signed, targets, face_ids, barycentric, ambiguous,
         body_mesh=body_mesh,
+        target_certification=certification,
     )

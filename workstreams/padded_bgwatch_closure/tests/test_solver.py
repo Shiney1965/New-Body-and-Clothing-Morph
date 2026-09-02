@@ -370,9 +370,10 @@ def test_parsed_source_solver_propagates_semantics_and_rejects_none_or_tuple_byp
             non_position_sha256="B" * 64,
             face_indices_sha256="C" * 64,
         )
-    body = TriangleMesh(
+    body = ParsedGlbSurface(
         positions=np.array([[-2, -2, 0.1], [2, -2, 0.1], [0, 2, 0.1]], dtype=float),
         faces=np.array([[0, 1, 2]], dtype=int),
+        vertex_normals=np.array([[0.0, 0.0, 1.0]] * 3),
     )
     roi = derive_minimal_roi(base, faces, active_ids=[0, 1, 2])
     constraints = build_surface_constraints(base, body, active_ids=[0, 1, 2])
