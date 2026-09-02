@@ -130,6 +130,17 @@ def prepare_verified_closure(
 def prepare_real_closure(workstream_root=WORKSTREAM_ROOT) -> PreparedClosure:
     """Hash before parse, then reconstruct and pin the exact real gate contract."""
     prepared = prepare_verified_closure(*load_and_verify_canonical_inputs(workstream_root))
+    require_canonical_preparation(prepared)
+    return prepared
+
+
+def require_canonical_preparation(prepared: PreparedClosure) -> None:
+    """Independently bind production evidence to the pinned Padded input profile."""
+    if (
+        prepared.verified_source.actual_sha256 != BASELINES.pristine_source_dae.sha256
+        or prepared.verified_body.actual_sha256 != BASELINES.bcb_body_glb.sha256
+    ):
+        raise ValueError("CANONICAL_PREPARATION_INPUT_IDENTITY_MISMATCH")
     if (
         len(prepared.source.positions) != BASELINES.pristine_source_dae.vertex_count
         or len(prepared.source.faces) != BASELINES.pristine_source_dae.face_count
@@ -145,7 +156,6 @@ def prepare_real_closure(workstream_root=WORKSTREAM_ROOT) -> PreparedClosure:
         raise ValueError("FIXED_COVERAGE_COHORT_COUNT_MISMATCH")
     if _ids_digest(prepared.coverage.body_vertex_ids) != "A15EA818F106A23B44AC3DF26BD50AEC1FBBF3D4DCD157255E6FA0B2C95071E2":
         raise ValueError("FIXED_COVERAGE_COHORT_IDENTITY_MISMATCH")
-    return prepared
 
 
 def roundtrip_candidate(

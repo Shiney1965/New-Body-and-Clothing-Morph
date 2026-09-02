@@ -269,12 +269,15 @@ def test_artifact_writer_emits_candidate_only_for_a_passing_closure(tmp_path):
     """Catches a passing position-only result omitting its only allowed candidate DAE."""
     result = write_real_closure_artifacts(
         _repeated_fixture(passing=True), workstream_root=tmp_path,
-        created_utc="2026-09-02T01:00:00Z",
+        created_utc="2026-09-02T01:00:00Z", evidence_scope="SYNTHETIC_FIXTURE",
     )
 
     generated = tmp_path / "local" / "generated"
     assert result["status"] == OFFLINE_CANDIDATE
-    assert (generated / "HUM_F_ARM_BG_Watch_Leather_A_Body_CMcover_candidate.dae").is_file()
+    assert result["evidence_scope"] == "SYNTHETIC_FIXTURE"
+    assert result["canonical_garment_claim_established"] is False
+    assert (generated / "synthetic_candidate.dae").is_file()
+    assert not (generated / "HUM_F_ARM_BG_Watch_Leather_A_Body_CMcover_candidate.dae").exists()
     assert not (generated / "pending_exclusion_evidence_packet.json").exists()
 
 
@@ -282,14 +285,19 @@ def test_artifact_writer_emits_pending_packet_only_for_zero_pass_closure(tmp_pat
     """Catches an unfixable result emitting a candidate or a ledger-attachable event."""
     result = write_real_closure_artifacts(
         _repeated_fixture(passing=False), workstream_root=tmp_path,
-        created_utc="2026-09-02T01:00:00Z",
+        created_utc="2026-09-02T01:00:00Z", evidence_scope="SYNTHETIC_FIXTURE",
     )
 
     generated = tmp_path / "local" / "generated"
     assert result["status"] == POSITION_ONLY_UNFIXABLE
     assert not (generated / "HUM_F_ARM_BG_Watch_Leather_A_Body_CMcover_candidate.dae").exists()
-    packet = json.loads((generated / "pending_exclusion_evidence_packet.json").read_text(encoding="utf-8"))
-    assert packet["attachment_status"] == "NOT_ATTACHABLE_SOURCE_PROFILE_AND_CANONICAL_BINDING_UNRESOLVED"
+    assert not (generated / "pending_exclusion_evidence_packet.json").exists()
+    packet = json.loads((generated / "synthetic_fixture_report.json").read_text(encoding="utf-8"))
+    assert packet["evidence_scope"] == "SYNTHETIC_FIXTURE"
+    assert packet["canonical_garment_claim_established"] is False
+    assert "fixed_acceptance_gates" not in packet
+    assert packet["active_vertex_count"] == 2
+    assert packet["input_sha256"] == result["input_sha256"]
     assert {"event_id", "record_id", "identity_sha256", "source_profile_id"}.isdisjoint(packet)
 
 
@@ -302,7 +310,7 @@ def test_artifact_writer_refuses_preexisting_stale_artifacts_without_deleting_th
     with pytest.raises(FileExistsError, match="CLOSURE_ARTIFACT_PATH_ALREADY_EXISTS"):
         write_real_closure_artifacts(
             _repeated_fixture(passing=False), workstream_root=tmp_path,
-            created_utc="2026-09-02T01:00:00Z",
+            created_utc="2026-09-02T01:00:00Z", evidence_scope="SYNTHETIC_FIXTURE",
         )
 
     assert stale.read_bytes() == b"stale-candidate"

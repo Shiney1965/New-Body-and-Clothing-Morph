@@ -100,6 +100,59 @@ def _reserialized(result, **changes):
 
 
 @pytest.mark.parametrize("field,value", [
+    ("source_position_count", 999), ("source_position_count", 6.0),
+    ("source_face_indices_sha256", "F" * 64), ("source_non_position_sha256", "E" * 64),
+    ("moved_vertex_count", 999), ("moved_vertex_count", -1), ("moved_vertex_count", True),
+    ("moved_vertex_count", 4), ("moved_vertex_count", 0),
+])
+def test_every_record_metadata_is_bound_to_the_actual_source(passing_repeated, field, value):
+    """Catches internally serialized but fabricated source facts in nonselected rows."""
+    records = tuple(replace(record, **{field: value}) if record.index == 159 else record
+                    for record in passing_repeated.first.records)
+    result = _reserialized(passing_repeated.first, records=records)
+    forged = replace(passing_repeated, first=result, second=result)
+    with pytest.raises(RuntimeError, match="SEARCH_RESULT_RECORD_.*(INVALID|MISMATCH)"):
+        closure._validate_repeated_closure(forged)
+
+
+def test_failed_record_gate_counts_cannot_exceed_the_verified_active_set(passing_repeated):
+    """Catches a numerically impossible failure count hidden by an already-failing summary."""
+    first = passing_repeated.first
+    records = list(first.records)
+    records[0] = replace(records[0], gates=replace(records[0].gates, active_vertices_below_clearance=999))
+    result = _reserialized(first, records=tuple(records))
+    with pytest.raises(RuntimeError, match="SEARCH_RESULT_GATE_COUNTS_INVALID"):
+        closure._validate_repeated_closure(replace(passing_repeated, first=result, second=result))
+
+
+@pytest.mark.parametrize("target,field,value", [
+    ("record", "moved_vertex_count", 2),
+    ("candidate", "moved_vertex_count", 2),
+    ("candidate", "source_face_indices_sha256", "F" * 64),
+    ("candidate", "source_non_position_sha256", "E" * 64),
+])
+def test_selected_metadata_agrees_with_actual_serialized_readback(passing_repeated, target, field, value):
+    """Catches plausible bounded metadata that disagrees with the actual selected positions."""
+    first = passing_repeated.first
+    if target == "record":
+        records = list(first.records)
+        records[first.selected_record_index] = replace(records[first.selected_record_index], **{field: value})
+        result = _reserialized(first, records=tuple(records))
+    else:
+        result = replace(first, selected_candidate=replace(first.selected_candidate, **{field: value}))
+    with pytest.raises(RuntimeError, match="SEARCH_RESULT_SELECTED_METADATA_MISMATCH"):
+        closure._validate_repeated_closure(replace(passing_repeated, first=result, second=result))
+
+
+def test_default_writer_cannot_promote_synthetic_zero_pass_to_canonical_garment_packet(tmp_path):
+    """Catches a small valid fixture emitting the pinned garment's 593/2800 claims."""
+    repeated = _repeated_fixture(passing=False)
+    with pytest.raises(ValueError, match="CANONICAL_PREPARATION_INPUT_IDENTITY_MISMATCH"):
+        closure.write_real_closure_artifacts(repeated, workstream_root=tmp_path, created_utc="2026-09-02T00:00:00Z")
+    assert not (tmp_path / "local").exists()
+
+
+@pytest.mark.parametrize("field,value", [
     ("passed", False), ("production_passed", False), ("status", "PRODUCTION_FAIL"),
     ("topology_identity_equal", False), ("non_position_semantics_equal", False),
     ("position_count_equal", False), ("fixed_vertex_moves", 1),
@@ -167,7 +220,7 @@ def test_writer_reevaluates_actual_selected_geometry_despite_consistent_passing_
 def test_writer_manifest_records_matching_start_end_code_and_input_snapshots(passing_repeated, tmp_path):
     """Catches attributing a completed run to code or input hashes first read at output time."""
     result = closure.write_real_closure_artifacts(
-        passing_repeated, workstream_root=tmp_path, created_utc="2026-09-02T00:00:00Z",
+        passing_repeated, workstream_root=tmp_path, created_utc="2026-09-02T00:00:00Z", evidence_scope="SYNTHETIC_FIXTURE",
     )
     assert "run_start" in result and "run_end" in result
     assert result["run_start"] == result["run_end"]
@@ -242,7 +295,7 @@ try:
             path.write_bytes(path.read_bytes() + b"\n# isolated drift\n")
             return result
         closure._validate_search_result = mutate_after_validation
-    closure.write_real_closure_artifacts(repeated, workstream_root=Path("output"), created_utc="2026-09-02T00:00:00Z")
+    closure.write_real_closure_artifacts(repeated, workstream_root=Path("output"), created_utc="2026-09-02T00:00:00Z", evidence_scope="SYNTHETIC_FIXTURE")
 except RuntimeError as error:
     assert "DRIFT" in str(error), str(error)
     assert not Path("output").exists()

@@ -16,7 +16,10 @@ import numpy as np
 
 from .configuration import WORKSTREAM_ROOT, generated_output_path, load_local_configuration
 from .geometry import serialize_collada_positions
-from .integration import PreparedClosure, prepare_real_closure, prepare_verified_closure, roundtrip_candidate
+from .integration import (
+    PreparedClosure, prepare_real_closure, prepare_verified_closure,
+    require_canonical_preparation, roundtrip_candidate,
+)
 from .search import (
     OFFLINE_CANDIDATE,
     POSITION_ONLY_UNFIXABLE,
@@ -379,9 +382,25 @@ def _validate_search_result(result: SearchResult, prepared: PreparedClosure) -> 
     if any(record.index != index or record.parameters != parameters for index, (record, parameters) in enumerate(zip(result.records, grid))):
         raise RuntimeError("SEARCH_RESULT_LITERAL_GRID_INVALID")
     for record in result.records:
+        if (
+            type(record.source_position_count) is not int
+            or record.source_position_count != len(prepared.source.positions)
+            or record.source_face_indices_sha256 != prepared.source.face_indices_sha256
+            or record.source_non_position_sha256 != prepared.source.non_position_sha256
+        ):
+            raise RuntimeError("SEARCH_RESULT_RECORD_SOURCE_MISMATCH")
+        if (
+            type(record.moved_vertex_count) is not int
+            or not 0 <= record.moved_vertex_count <= len(prepared.source.positions)
+            or record.moved_vertex_count > len(prepared.contract.roi.movable_ids) + record.gates.fixed_vertex_moves
+            or (record.candidate_status == "CANDIDATE" and record.moved_vertex_count == 0)
+        ):
+            raise RuntimeError("SEARCH_RESULT_RECORD_MOVEMENT_INVALID")
         reasons = validate_gate_report(record.candidate_status, record.gates)
         if record.failure_reasons != reasons:
             raise RuntimeError("SEARCH_RESULT_GATE_REASONS_MISMATCH")
+        if record.gates.active_vertices_below_clearance > len(prepared.active_ids):
+            raise RuntimeError("SEARCH_RESULT_GATE_COUNTS_INVALID")
     actual_passing = tuple(record.index for record in result.records if record.gates.production_passed)
     if result.passing_count != len(actual_passing):
         raise RuntimeError("SEARCH_RESULT_PASSING_COUNT_INVALID")
@@ -411,6 +430,15 @@ def _validate_search_result(result: SearchResult, prepared: PreparedClosure) -> 
     selected_record = result.records[result.selected_record_index]
     actual_sha256 = _position_sha256(result.selected_candidate)
     readback = roundtrip_candidate(prepared.verified_source, prepared.source, result.selected_candidate)
+    for name in (
+        "moved_vertex_count", "source_position_count", "source_face_indices_sha256",
+        "source_non_position_sha256", "accepted_step_scales", "rejected_iteration_count",
+    ):
+        actual = getattr(readback, name)
+        if getattr(selected_record, name) != actual or getattr(result.selected_candidate, name) != actual:
+            raise RuntimeError("SEARCH_RESULT_SELECTED_METADATA_MISMATCH")
+    if selected_record.candidate_status != readback.status:
+        raise RuntimeError("SEARCH_RESULT_SELECTED_METADATA_MISMATCH")
     readback_sha256 = _position_sha256(readback)
     if (
         result.selected_position_sha256 != actual_sha256
@@ -446,9 +474,15 @@ def write_real_closure_artifacts(
     workstream_root: Path = WORKSTREAM_ROOT,
     created_utc: str,
     run_id: str | None = None,
+    evidence_scope: str = "CANONICAL_PADDED",
 ) -> dict[str, object]:
     """Write a fresh offline packet only after revalidating determinism and paths."""
     _validate_repeated_closure(repeated)
+    if evidence_scope not in ("CANONICAL_PADDED", "SYNTHETIC_FIXTURE"):
+        raise ValueError("CLOSURE_EVIDENCE_SCOPE_INVALID")
+    synthetic = evidence_scope == "SYNTHETIC_FIXTURE"
+    if not synthetic:
+        require_canonical_preparation(repeated.prepared)
     generated = generated_output_path(workstream_root, "position_only_search.json").parent
     if run_id is not None:
         if re.fullmatch(r"[a-z0-9][a-z0-9_-]{0,63}", run_id) is None:
@@ -456,10 +490,16 @@ def write_real_closure_artifacts(
         generated = generated / "runs" / run_id
     search_path = generated / "position_only_search.json"
     search_sha256 = _sha256_bytes(repeated.first.json_bytes)
-    candidate_path = generated / "HUM_F_ARM_BG_Watch_Leather_A_Body_CMcover_candidate.dae"
-    packet_path = generated / "pending_exclusion_evidence_packet.json"
-    manifest_path = generated / "real_closure_manifest.json"
-    _refuse_existing_artifacts((search_path, candidate_path, packet_path, manifest_path))
+    canonical_candidate_path = generated / "HUM_F_ARM_BG_Watch_Leather_A_Body_CMcover_candidate.dae"
+    canonical_packet_path = generated / "pending_exclusion_evidence_packet.json"
+    canonical_manifest_path = generated / "real_closure_manifest.json"
+    candidate_path = generated / "synthetic_candidate.dae" if synthetic else canonical_candidate_path
+    packet_path = generated / "synthetic_fixture_report.json" if synthetic else canonical_packet_path
+    manifest_path = generated / "synthetic_closure_manifest.json" if synthetic else canonical_manifest_path
+    _refuse_existing_artifacts((
+        search_path, candidate_path, packet_path, manifest_path,
+        canonical_candidate_path, canonical_packet_path, canonical_manifest_path,
+    ))
 
     candidate_bytes: bytes | None = None
     packet_bytes: bytes | None = None
@@ -474,12 +514,28 @@ def write_real_closure_artifacts(
         candidate_sha256 = _sha256_bytes(candidate_bytes)
     elif repeated.first.status == POSITION_ONLY_UNFIXABLE:
         candidate_sha256 = None
-        packet = build_pending_exclusion_evidence_packet(
-            search_evidence_path=search_path,
-            search_evidence_sha256=search_sha256,
-            created_utc=created_utc,
-            search_evidence_bytes=repeated.first.json_bytes,
-        )
+        if synthetic:
+            packet = {
+                "schema": "clothmorph.synthetic-position-only-fixture",
+                "evidence_scope": evidence_scope,
+                "canonical_garment_claim_established": False,
+                "attachment_status": "NOT_ATTACHABLE_SYNTHETIC_FIXTURE",
+                "search_sha256": search_sha256,
+                "input_sha256": {
+                    "pristine_source_dae": repeated.prepared.verified_source.actual_sha256,
+                    "bcb_body_glb": repeated.prepared.verified_body.actual_sha256,
+                },
+                "active_vertex_count": len(repeated.prepared.active_ids),
+                "fixed_cohort_count": len(repeated.prepared.coverage.body_vertex_ids),
+                "created_utc": created_utc,
+            }
+        else:
+            packet = build_pending_exclusion_evidence_packet(
+                search_evidence_path=search_path,
+                search_evidence_sha256=search_sha256,
+                created_utc=created_utc,
+                search_evidence_bytes=repeated.first.json_bytes,
+            )
         packet_bytes = _canonical_json(packet) + b"\n"
     else:
         raise RuntimeError("CLOSURE_STATUS_UNRECOGNIZED")
@@ -493,6 +549,8 @@ def write_real_closure_artifacts(
         "schema_version": 1,
         "status": repeated.first.status,
         "offline_only": True,
+        "evidence_scope": evidence_scope,
+        "canonical_garment_claim_established": not synthetic,
         "run_start": asdict(repeated.run_start),
         "run_end": asdict(repeated.run_end),
         "search_sha256": search_sha256,
@@ -515,7 +573,10 @@ def write_real_closure_artifacts(
         "two_run_json_identical": True,
         "two_run_selected_hash_identical": True,
         "pending_exclusion_evidence_packet_sha256": (
-            _sha256_bytes(packet_bytes) if packet_bytes is not None else None
+            _sha256_bytes(packet_bytes) if packet_bytes is not None and not synthetic else None
+        ),
+        "synthetic_fixture_report_sha256": (
+            _sha256_bytes(packet_bytes) if packet_bytes is not None and synthetic else None
         ),
         "created_utc": created_utc,
         "claims_not_established": [
