@@ -413,6 +413,7 @@ def generate(config: LocalConfiguration) -> GenerationResult:
         inventories.to_audit_sets(),
         exclusion_events=tuple(item.event for item in discovered_events),
         verified_evidence=verified_exclusion_evidence,
+        discovered_event_files=discovered_event_files,
     )
     audit["registered_inventories"] = {
         "packaged_records": sorted(inventories.packaged_records),

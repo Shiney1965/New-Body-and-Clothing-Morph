@@ -4,14 +4,17 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass, field
+import re
 
 from .exclusions import EXCLUSION_MODES, select_current_exclusion
+from .identity import canonical_json, sha256_text
 from .reconcile import ReconciliationResult
 
 
 _TERMINAL_DISPOSITIONS = {
     "ACCEPTED_PROTECTED", "SHIPPED_NATIVE_PASSTHROUGH", "SHIPPED_REFIT",
 }
+_SHA256_RE = re.compile(r"^[0-9A-F]{64}$")
 _REQUIRED_SECTION_19_GATES = (
     "protected_controls", "in_scope_terminal", "in_scope_terminal_modes",
     "package_only_gameplay", "source_observations_exactly_once", "route_ownership",
@@ -52,10 +55,43 @@ def _section_19_summary(gates: Mapping[str, bool]) -> dict[str, bool]:
     return {name: gates.get(name) is True for name in _REQUIRED_SECTION_19_GATES}
 
 
+def _has_valid_event_file_provenance(
+    terminal_exclusion: Mapping[str, object],
+    event: Mapping[str, object],
+    discovered_event_files: Mapping[str, str],
+) -> bool:
+    """Require the selected event's exact immutable file provenance."""
+    if set(terminal_exclusion) != {"event", "event_file"}:
+        return False
+    event_file = terminal_exclusion.get("event_file")
+    if not isinstance(event_file, Mapping):
+        return False
+    if set(event_file) != {
+        "relative_path", "sha256", "canonical_event_sha256",
+    }:
+        return False
+    relative_path = event_file.get("relative_path")
+    digest = event_file.get("sha256")
+    canonical_digest = event_file.get("canonical_event_sha256")
+    return (
+        isinstance(relative_path, str)
+        and bool(relative_path)
+        and not relative_path.startswith(("/", "\\"))
+        and ".." not in relative_path.replace("\\", "/").split("/")
+        and isinstance(digest, str)
+        and _SHA256_RE.fullmatch(digest) is not None
+        and isinstance(canonical_digest, str)
+        and _SHA256_RE.fullmatch(canonical_digest) is not None
+        and canonical_digest == sha256_text(canonical_json(event))
+        and discovered_event_files.get(relative_path) == digest
+    )
+
+
 def _current_terminal_exclusion(
     record: object,
     events: tuple[Mapping[str, object], ...],
     verified_evidence: Mapping[str, str],
+    discovered_event_files: Mapping[str, str],
 ) -> tuple[bool, bool]:
     """Return (valid, claimed) without ever inferring terminality from a state label."""
     record_data = record.to_dict()
@@ -79,6 +115,10 @@ def _current_terminal_exclusion(
     ):
         return False, True
     attached_event = terminal_exclusion["event"]
+    if not _has_valid_event_file_provenance(
+        terminal_exclusion, attached_event, discovered_event_files,
+    ):
+        return False, True
     if any(
         not isinstance(event.get("mode"), str) or event["mode"] not in EXCLUSION_MODES
         for event in claimed_events
@@ -112,10 +152,12 @@ def build_completeness_audit(
     *,
     exclusion_events: tuple[Mapping[str, object], ...] = (),
     verified_evidence: Mapping[str, str] | None = None,
+    discovered_event_files: Mapping[str, str] | None = None,
 ) -> dict[str, object]:
     """Compute exact, sorted audit sets without inferring later gate success."""
     events = tuple(event for event in exclusion_events if isinstance(event, Mapping))
     evidence = verified_evidence if isinstance(verified_evidence, Mapping) else {}
+    event_files = discovered_event_files if isinstance(discovered_event_files, Mapping) else {}
     represented = set(result.observation_to_record)
     record_ids = {record.record_id for record in result.records}
     evidence_paths = {path for record in result.records for path in record.evidence_paths}
@@ -127,7 +169,7 @@ def build_completeness_audit(
     exclusion_failures: set[str] = set()
     excluded_but_packaged: set[str] = set()
     for record in result.records:
-        valid, claimed = _current_terminal_exclusion(record, events, evidence)
+        valid, claimed = _current_terminal_exclusion(record, events, evidence, event_files)
         if claimed and not valid:
             exclusion_failures.add(record.record_id)
         if not valid:

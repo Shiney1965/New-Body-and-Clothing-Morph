@@ -1,6 +1,7 @@
 import pytest
 
 from workstreams.release_master_ledger.audit import InventorySets, build_completeness_audit
+from workstreams.release_master_ledger.identity import canonical_json, sha256_text
 from workstreams.release_master_ledger.models import CanonicalIdentityFields, LedgerRecord, Observation
 from workstreams.release_master_ledger.reconcile import ReconciliationResult, reconcile_observations
 from workstreams.release_master_ledger.tests.test_exclusions import (
@@ -49,6 +50,11 @@ def inventories(**overrides):
     return InventorySets(**values)
 
 
+EVENT_FILE_PATH = "history/synthetic.json"
+EVENT_FILE_SHA256 = "A" * 64
+EVENT_FILE_REGISTRY = {EVENT_FILE_PATH: EVENT_FILE_SHA256}
+
+
 def terminal_exclusion_record(event, **overrides):
     """Build one complete record whose terminal state claims this exact event."""
     data = complete_record_fixture()
@@ -65,20 +71,20 @@ def terminal_exclusion_record(event, **overrides):
         "blocker_codes": [],
         "release_blocking": False,
         "shipped_package_id": "UNKNOWN_SHIPPED_PACKAGE",
-        "terminal_exclusion": {
-            "event": event,
-            "event_file": {
-                "relative_path": "history/synthetic.json",
-                "sha256": "A" * 64,
-                "canonical_event_sha256": "B" * 64,
+            "terminal_exclusion": {
+                "event": event,
+                "event_file": {
+                    "relative_path": EVENT_FILE_PATH,
+                    "sha256": EVENT_FILE_SHA256,
+                    "canonical_event_sha256": sha256_text(canonical_json(event)),
+                },
             },
-        },
     })
     data.update(overrides)
     return LedgerRecord(**data)
 
 
-def audit_terminal_event(record, events, *, evidence=VERIFIED_EVIDENCE):
+def audit_terminal_event(record, events, *, evidence=VERIFIED_EVIDENCE, event_files=EVENT_FILE_REGISTRY):
     result = ReconciliationResult(
         records=(record,), observation_to_record={}, conflicts=(),
     )
@@ -87,6 +93,7 @@ def audit_terminal_event(record, events, *, evidence=VERIFIED_EVIDENCE):
         inventories(),
         exclusion_events=events,
         verified_evidence=evidence,
+        discovered_event_files=event_files,
     )
 
 
@@ -206,6 +213,45 @@ def test_current_valid_terminal_exclusion_is_audited_and_no_longer_nonterminal()
     assert audit["exclusion_validation_failures"] == []
     assert audit["excluded_but_packaged"] == []
     assert audit["in_scope_nonterminal"] == []
+
+
+@pytest.mark.parametrize(
+    "mutate_attachment",
+    [
+        pytest.param(
+            lambda summary: summary.pop("event_file"),
+            id="missing-event-file",
+        ),
+        pytest.param(
+            lambda summary: summary["event_file"].update({"relative_path": "history/wrong.json"}),
+            id="wrong-event-file-path",
+        ),
+        pytest.param(
+            lambda summary: summary["event_file"].update({"sha256": "B" * 64}),
+            id="wrong-event-file-sha256",
+        ),
+        pytest.param(
+            lambda summary: summary["event_file"].update({"canonical_event_sha256": "B" * 64}),
+            id="wrong-canonical-event-sha256",
+        ),
+        pytest.param(
+            lambda summary: summary.update({"event_file": []}),
+            id="malformed-event-file",
+        ),
+    ],
+)
+def test_invalid_event_file_provenance_remains_nonterminal(mutate_attachment):
+    """Breaks if audit accepts a current event without its immutable attachment."""
+    event = signed_event()
+    record = terminal_exclusion_record(event)
+    mutate_attachment(record.terminal_exclusion)
+
+    audit = audit_terminal_event(record, (event,))
+
+    assert audit["excluded_with_proof"] == []
+    assert audit["exclusion_validation_failures"] == [RECORD_ID]
+    assert audit["excluded_but_packaged"] == []
+    assert audit["in_scope_nonterminal"] == [RECORD_ID]
 
 
 @pytest.mark.parametrize(
