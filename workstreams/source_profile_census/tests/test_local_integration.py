@@ -1,8 +1,11 @@
 """Explicit opt-in checks of independently generated exact-source output pairs.
 
 Set CLOTHMORPH_CENSUS_RUN_A and CLOTHMORPH_CENSUS_RUN_B to existing output
-directories. Tests never discover or operate installed/live sources, generate
-outputs, or change files. Portable runs skip only this local evidence fixture.
+directories. Tests never discover or operate installed/live sources; retained
+source evidence and output-pair fixtures remain read-only. The omission
+regression generates one fresh test-owned output under the approved
+local/generated root and removes only that temporary output in finally.
+Portable runs skip only this local evidence fixture.
 """
 
 from collections import Counter
