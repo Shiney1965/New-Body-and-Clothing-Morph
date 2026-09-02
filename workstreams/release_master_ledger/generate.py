@@ -245,6 +245,7 @@ def _resolve_independent_claims(
 ) -> dict[object, object]:
     """Resolve raw observation source keys without reading reconciled route data."""
     resolved: dict[object, object] = {}
+    record_ids = {record.record_id for record in reconciliation.records}
     for key, value in claims.items():
         resolved_key = key
         if (
@@ -258,6 +259,14 @@ def _resolve_independent_claims(
             resolved_key = (
                 (record_id, key[1]) if record_id is not None else key[1]
             )
+        elif (
+            isinstance(key, tuple)
+            and len(key) == 2
+            and isinstance(key[0], str)
+            and key[0].startswith("LEDGER_")
+            and key[0] not in record_ids
+        ):
+            resolved_key = key[1]
         existing = resolved.get(resolved_key)
         if isinstance(existing, tuple) and isinstance(value, tuple):
             resolved[resolved_key] = tuple(sorted(set(existing) | set(value)))

@@ -196,6 +196,68 @@ def test_claim_authority_schemas_are_closed(tmp_path, input_id, payload, error):
         extract_independent_inventories([input_])
 
 
+@pytest.mark.parametrize(
+    ("role", "route", "error"),
+    [
+        pytest.param(
+            "provider", {"record_id": None, "mode": "sbbf", "provider_id": "P"},
+            "CLAIM_INVENTORY_IDENTITY_INVALID", id="provider-null-record-id",
+        ),
+        pytest.param(
+            "provider", {"record_id": "LEDGER_" + "A" * 64, "mode": None, "provider_id": "P"},
+            "CLAIM_INVENTORY_MODE_INVALID", id="provider-null-mode",
+        ),
+        pytest.param(
+            "provider", {"record_id": "LEDGER_" + "A" * 64, "mode": "sbbf", "provider_id": None},
+            "CLAIM_INVENTORY_PROVIDER_ID_INVALID", id="provider-null-provider-id",
+        ),
+        pytest.param(
+            "provider", {"record_id": "LEDGER_" + "A" * 64, "mode": "sbbf", "target_vrs": None},
+            "CLAIM_INVENTORY_TARGET_VRS_INVALID", id="provider-null-target-vrs",
+        ),
+        pytest.param(
+            "provider", {"record_id": "LEDGER_" + "A" * 64, "mode": "sbbf", "target_paths": None},
+            "CLAIM_INVENTORY_TARGET_PATHS_INVALID", id="provider-null-target-paths",
+        ),
+        pytest.param(
+            "provider", {"record_id": "LEDGER_" + "A" * 64, "mode": "sbbf", "payload_hashes": None},
+            "CLAIM_INVENTORY_PAYLOAD_HASHES_INVALID", id="provider-null-payload-hashes",
+        ),
+        pytest.param(
+            "provider", {"record_id": "LEDGER_" + "A" * 64, "mode": "sbbf", "provenance": None},
+            "CLAIM_INVENTORY_PROVENANCE_INVALID", id="provider-null-provenance",
+        ),
+        pytest.param(
+            "package", {"record_id": None, "mode": "bcb", "package_ids": []},
+            "CLAIM_INVENTORY_IDENTITY_INVALID", id="package-null-record-id",
+        ),
+        pytest.param(
+            "package", {"record_id": "LEDGER_" + "A" * 64, "mode": None, "package_ids": []},
+            "CLAIM_INVENTORY_MODE_INVALID", id="package-null-mode",
+        ),
+        pytest.param(
+            "package", {"record_id": "LEDGER_" + "A" * 64, "mode": "bcb", "package_ids": None},
+            "CLAIM_INVENTORY_PACKAGE_IDS_INVALID", id="package-null-package-ids",
+        ),
+        pytest.param(
+            "package", {"record_id": "LEDGER_" + "A" * 64, "mode": "bcb", "shipped_package_id": None},
+            "CLAIM_INVENTORY_PACKAGE_ID_INVALID", id="package-null-shipped-package-id",
+        ),
+    ],
+)
+def test_claim_authority_explicit_nulls_are_invalid(tmp_path, role, route, error):
+    input_id = f"{role}_claim_inventory"
+    payload = {
+        "schema": f"clothmorph.{role}-claim-inventory",
+        "schema_version": 1,
+        "routes": [route],
+    }
+    input_ = verified_json(tmp_path, input_id, "SUPPORTING_EVIDENCE", payload)
+
+    with pytest.raises(InventoryIntegrityError, match=error):
+        extract_independent_inventories([input_])
+
+
 def test_prior_evidence_join_drop_mutation_populates_unreferenced_set(tmp_path):
     input_ = verified_json(tmp_path, "support", "SUPPORTING_EVIDENCE", {"records": []})
     inventories = extract_independent_inventories([input_])

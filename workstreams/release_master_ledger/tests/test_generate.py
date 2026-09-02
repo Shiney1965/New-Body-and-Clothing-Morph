@@ -315,6 +315,51 @@ def test_generate_raw_package_claim_blocks_terminal_exclusion(tmp_path, claim):
     assert record_id in audit["in_scope_nonterminal"]
 
 
+@pytest.mark.parametrize(
+    ("authority", "mode", "expected_code"),
+    [
+        pytest.param(
+            "provider", "sbbf", "INDEPENDENT_PROVIDER_CLAIM",
+            id="stale-provider-record-id",
+        ),
+        pytest.param(
+            "package", "bcb", "INDEPENDENT_PACKAGE_CLAIM",
+            id="stale-package-record-id",
+        ),
+    ],
+)
+def test_generate_stale_direct_claim_id_blocks_real_record_mode_wide(
+    tmp_path, authority, mode, expected_code,
+):
+    stale_record_id = "LEDGER_" + "A" * 64
+    provider_routes = ({
+        "record_id": stale_record_id,
+        "mode": mode,
+        "provider_id": "STALE_PROVIDER",
+    },) if authority == "provider" else ()
+    package_routes = ({
+        "record_id": stale_record_id,
+        "mode": mode,
+        "package_ids": ["PACKAGE_SHA256:" + "B" * 64],
+    },) if authority == "package" else ()
+    config, record_id = lifecycle_generate_fixture(
+        tmp_path,
+        provider_routes=provider_routes,
+        package_routes=package_routes,
+    )
+    assert record_id != stale_record_id
+
+    result = generate(config)
+    audit = json.loads(result.audit_path.read_text(encoding="utf-8"))
+
+    assert audit["excluded_with_proof"] == []
+    assert audit["exclusion_validation_failures"] == [record_id]
+    assert audit["in_scope_nonterminal"] == [record_id]
+    assert f"{expected_code}:{record_id}:{mode}" in audit[
+        "exclusion_history_failures"
+    ]
+
+
 def test_raw_claim_canonical_source_key_resolves_through_reconciliation_map():
     module = importlib.import_module("workstreams.release_master_ledger.generate")
     resolve = getattr(module, "_resolve_independent_claims", None)
@@ -333,7 +378,7 @@ def test_raw_claim_canonical_source_key_resolves_through_reconciliation_map():
 
     assert resolve(claims, reconciliation) == {
         (record_id, "sbbf"): ("package_id:PACKAGE",),
-        (record_id, "bcb"): ("provider_id:DIRECT",),
+        "bcb": ("provider_id:DIRECT",),
         "external": ("missing_provider_route_inventory:provider",),
     }
 

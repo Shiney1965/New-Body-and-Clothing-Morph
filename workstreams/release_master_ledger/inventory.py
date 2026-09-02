@@ -164,9 +164,9 @@ def _reject_unexpected_keys(
 
 
 def _claim_text(route: Mapping[str, object], field: str, label: str) -> list[str]:
-    value = route.get(field)
-    if value is None:
+    if field not in route:
         return []
+    value = route[field]
     if not isinstance(value, str) or not value:
         raise InventoryIntegrityError(f"CLAIM_INVENTORY_{field.upper()}_INVALID")
     return [f"{label}:{value}"]
@@ -176,9 +176,9 @@ def _claim_sequence(
     route: Mapping[str, object], field: str, label: str, *, hashes: bool = False,
     paths: bool = False,
 ) -> list[str]:
-    value = route.get(field)
-    if value is None:
+    if field not in route:
         return []
+    value = route[field]
     if not isinstance(value, list) or any(not isinstance(item, str) or not item for item in value):
         raise InventoryIntegrityError(f"CLAIM_INVENTORY_{field.upper()}_INVALID")
     normalized: list[str] = []
@@ -301,19 +301,19 @@ def _package_claim_inventory(
                 "PACKAGE_CLAIM_INVENTORY_ROUTE_UNEXPECTED_KEY",
             )
             key = _claim_key(route)
-            raw_package_ids = route.get("package_ids")
             claims: list[str] = []
-            if raw_package_ids is not None:
+            if "package_ids" in route:
+                raw_package_ids = route["package_ids"]
                 if not isinstance(raw_package_ids, list):
                     raise InventoryIntegrityError("CLAIM_INVENTORY_PACKAGE_IDS_INVALID")
                 claims.extend(
                     f"package_id:{_normalize_package_id(package_id)}"
                     for package_id in raw_package_ids
                 )
-            if route.get("shipped_package_id") is not None:
+            if "shipped_package_id" in route:
                 claims.append(
                     "shipped_package_id:"
-                    + _normalize_package_id(route.get("shipped_package_id"))
+                    + _normalize_package_id(route["shipped_package_id"])
                 )
             if claims:
                 collected.setdefault(key, set()).update(claims)
