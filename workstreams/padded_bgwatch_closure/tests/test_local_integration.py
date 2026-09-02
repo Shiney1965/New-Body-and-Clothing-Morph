@@ -5,18 +5,36 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+from dataclasses import replace
 
 import numpy as np
 import pytest
 
 from workstreams.padded_bgwatch_closure.configuration import VerifiedInput
 from workstreams.padded_bgwatch_closure.geometry import (
+    ParsedGlbSurface,
+    build_surface_constraints,
+    derive_minimal_roi,
     parse_collada_geometry,
     serialize_collada_positions,
 )
-from workstreams.padded_bgwatch_closure.integration import roundtrip_candidate
-from workstreams.padded_bgwatch_closure.closure import build_terminal_exclusion_event
-from workstreams.padded_bgwatch_closure.solver import Candidate
+from workstreams.padded_bgwatch_closure.integration import (
+    FixedCoverageEvidence,
+    PreparedClosure,
+    roundtrip_candidate,
+)
+from workstreams.padded_bgwatch_closure.closure import (
+    RepeatedClosure,
+    build_pending_exclusion_evidence_packet,
+    write_real_closure_artifacts,
+)
+from workstreams.padded_bgwatch_closure.search import (
+    OFFLINE_CANDIDATE,
+    POSITION_ONLY_UNFIXABLE,
+    SearchResult,
+)
+from workstreams.padded_bgwatch_closure.solver import Candidate, CandidateContract, CoverageContract
+from workstreams.release_master_ledger.validation import validate_record
 
 
 def _verified(content: bytes) -> VerifiedInput:
@@ -132,23 +150,178 @@ def test_real_preparation_pins_the_original_active_set_and_fixed_coverage_cohort
     assert prepared.contract.constraints.active_ids == prepared.active_ids
 
 
-def test_terminal_exclusion_event_is_canonical_and_names_only_bounded_architecture_exhaustion(tmp_path):
-    """Catches a zero-pass result claiming impossibility or emitting an unbound event ID."""
+def _prepared_fixture() -> PreparedClosure:
+    verified = _verified(_dae())
+    source = parse_collada_geometry(verified)
+    body = ParsedGlbSurface(
+        positions=np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0]], dtype=float),
+        faces=np.array([[0, 1, 2]], dtype=int),
+        vertex_normals=np.array([[0, 0, 1]] * 3, dtype=float),
+    )
+    active = (0, 1, 2)
+    roi = derive_minimal_roi(source.positions, source.faces, active)
+    constraints = build_surface_constraints(source.positions, body, active)
+    cohort = FixedCoverageEvidence(
+        body_vertex_ids=(0,),
+        contract=CoverageContract(
+            points=np.array([[0.0, 0.0, 0.0]]),
+            normals=np.array([[0.0, 0.0, 1.0]]),
+            maximum_distance=0.05,
+        ),
+    )
+    return PreparedClosure(
+        verified_source=verified,
+        source=source,
+        body=body,
+        active_ids=active,
+        coverage=cohort,
+        contract=CandidateContract(roi, constraints, fixed_cohort=cohort.contract),
+    )
+
+
+def _repeated_fixture(*, passing: bool) -> RepeatedClosure:
+    prepared = _prepared_fixture()
+    if passing:
+        candidate = Candidate.from_positions(
+            prepared.source.positions,
+            prepared.source.faces,
+            prepared.source.positions,
+            status="CANDIDATE",
+            source_non_position_sha256=prepared.source.non_position_sha256,
+        )
+        first = SearchResult(
+            status=OFFLINE_CANDIDATE,
+            records=(),
+            passing_count=1,
+            selected_record_index=0,
+            selected_position_sha256="A" * 64,
+            selected_candidate=candidate,
+            json_bytes=b'{"status":"OFFLINE_POSITION_ONLY_CANDIDATE"}',
+        )
+    else:
+        first = SearchResult(
+            status=POSITION_ONLY_UNFIXABLE,
+            records=(),
+            passing_count=0,
+            selected_record_index=None,
+            selected_position_sha256=None,
+            selected_candidate=None,
+            json_bytes=b'{"status":"POSITION_ONLY_UNFIXABLE_UNDER_CURRENT_TOPOLOGY"}',
+        )
+    return RepeatedClosure(prepared=prepared, first=first, second=first)
+
+
+def test_pending_exclusion_packet_is_explicitly_nonattachable_to_release_ledger(tmp_path):
+    """Catches the Padded closure inventing a canonical record/profile/event binding."""
     evidence = tmp_path / "position_only_search.json"
     evidence.write_bytes(b'{"status":"POSITION_ONLY_UNFIXABLE_UNDER_CURRENT_TOPOLOGY"}')
 
-    event = build_terminal_exclusion_event(
+    packet = build_pending_exclusion_evidence_packet(
         search_evidence_path=evidence,
         search_evidence_sha256=hashlib.sha256(evidence.read_bytes()).hexdigest().upper(),
         created_utc="2026-09-01T23:59:59Z",
     )
-    without_id = {key: value for key, value in event.items() if key != "event_id"}
-    expected_digest = hashlib.sha256(json.dumps(
-        without_id, ensure_ascii=False, separators=(",", ":"), sort_keys=True,
-    ).encode("utf-8")).hexdigest().upper()
+    assert packet["attachment_status"] == "NOT_ATTACHABLE_SOURCE_PROFILE_AND_CANONICAL_BINDING_UNRESOLVED"
+    assert packet["reason"] == "NO_SAFE_GEOMETRY_AVAILABLE"
+    assert packet["protected_impact"]["result"] == "NO_PROTECTED_MUTATION"
+    assert packet["next_project_if_reopened"].startswith("separately approved manual-remesh")
+    assert {"event_id", "record_id", "identity_sha256", "source_profile_id"}.isdisjoint(packet)
+    assert "mathematically impossible" not in json.dumps(packet).lower()
+    ledger_errors = validate_record(packet)
+    assert "MISSING:record_id" in ledger_errors
+    assert "MISSING:identity_sha256" in ledger_errors
 
-    assert event["event_id"] == f"EXCLUSION_{expected_digest}"
-    assert event["reason"] == "NO_SAFE_GEOMETRY_AVAILABLE"
-    assert event["protected_impact"]["result"] == "NO_PROTECTED_MUTATION"
-    assert event["next_project_if_reopened"].startswith("separately approved manual-remesh")
-    assert "mathematically impossible" not in json.dumps(event).lower()
+
+def test_pending_packet_registers_and_revalidates_every_retained_prior_architecture_artifact(tmp_path):
+    """Catches architecture claims relying on an unhashed clearance report or side evidence."""
+    evidence = tmp_path / "position_only_search.json"
+    evidence.write_bytes(b'{"status":"POSITION_ONLY_UNFIXABLE_UNDER_CURRENT_TOPOLOGY"}')
+
+    packet = build_pending_exclusion_evidence_packet(
+        search_evidence_path=evidence,
+        search_evidence_sha256=hashlib.sha256(evidence.read_bytes()).hexdigest().upper(),
+        created_utc="2026-09-01T23:59:59Z",
+    )
+
+    registered = packet["registered_prior_artifacts"]
+    by_path = {item["path"]: item for item in registered}
+    assert len(registered) == 36
+    assert by_path["CLEARANCE_COMPARISON.md"]["sha256"] == (
+        "3EABA70C12BFACD4D0862AE93EE342350E4A969CBAC50D8D7ECAA9F7B9F8739D"
+    )
+    assert by_path["evidence/four_way_clearance.json"]["sha256"] == (
+        "46EC39E4EAEA832B4DF3BFCD9ADA0B5BA9DDD560E452F1BCB306D3E87DE22805"
+    )
+    assert by_path["evidence/local_repair_manifest.json"]["sha256"] == (
+        "CC097FD41746ED2474A604CF042D037D18C920B80044F5338CEB8F2C6A310066"
+    )
+    assert all(item["sha256"] == item["verified_sha256"] for item in registered)
+    architectures = {item["name"]: item["evidence_paths"] for item in packet["prior_architectures"]}
+    assert "CLEARANCE_COMPARISON.md" in architectures["strict_global_alpha_interpolation"]
+    assert "CLEARANCE_COMPARISON.md" in architectures["confidence_gated_local_clearance_repair"]
+
+
+def test_artifact_writer_emits_candidate_only_for_a_passing_closure(tmp_path):
+    """Catches a passing position-only result omitting its only allowed candidate DAE."""
+    result = write_real_closure_artifacts(
+        _repeated_fixture(passing=True), workstream_root=tmp_path,
+        created_utc="2026-09-02T01:00:00Z",
+    )
+
+    generated = tmp_path / "local" / "generated"
+    assert result["status"] == OFFLINE_CANDIDATE
+    assert (generated / "HUM_F_ARM_BG_Watch_Leather_A_Body_CMcover_candidate.dae").is_file()
+    assert not (generated / "pending_exclusion_evidence_packet.json").exists()
+
+
+def test_artifact_writer_emits_pending_packet_only_for_zero_pass_closure(tmp_path):
+    """Catches an unfixable result emitting a candidate or a ledger-attachable event."""
+    result = write_real_closure_artifacts(
+        _repeated_fixture(passing=False), workstream_root=tmp_path,
+        created_utc="2026-09-02T01:00:00Z",
+    )
+
+    generated = tmp_path / "local" / "generated"
+    assert result["status"] == POSITION_ONLY_UNFIXABLE
+    assert not (generated / "HUM_F_ARM_BG_Watch_Leather_A_Body_CMcover_candidate.dae").exists()
+    packet = json.loads((generated / "pending_exclusion_evidence_packet.json").read_text(encoding="utf-8"))
+    assert packet["attachment_status"] == "NOT_ATTACHABLE_SOURCE_PROFILE_AND_CANONICAL_BINDING_UNRESOLVED"
+    assert {"event_id", "record_id", "identity_sha256", "source_profile_id"}.isdisjoint(packet)
+
+
+def test_artifact_writer_refuses_preexisting_stale_artifacts_without_deleting_them(tmp_path):
+    """Catches zero-pass cleanup unlinking a stale candidate or overwriting its audit trail."""
+    stale = tmp_path / "local" / "generated" / "HUM_F_ARM_BG_Watch_Leather_A_Body_CMcover_candidate.dae"
+    stale.parent.mkdir(parents=True)
+    stale.write_bytes(b"stale-candidate")
+
+    with pytest.raises(FileExistsError, match="CLOSURE_ARTIFACT_PATH_ALREADY_EXISTS"):
+        write_real_closure_artifacts(
+            _repeated_fixture(passing=False), workstream_root=tmp_path,
+            created_utc="2026-09-02T01:00:00Z",
+        )
+
+    assert stale.read_bytes() == b"stale-candidate"
+    assert sorted(path.name for path in stale.parent.iterdir()) == [stale.name]
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "error"),
+    [
+        ("json_bytes", b'{"different":true}', "REPEATED_CLOSURE_JSON_MISMATCH"),
+        ("selected_position_sha256", "B" * 64, "REPEATED_CLOSURE_SELECTION_MISMATCH"),
+    ],
+)
+def test_artifact_writer_revalidates_directly_constructed_repeated_closure_before_writing(
+    tmp_path, field, value, error,
+):
+    """Catches forged RepeatedClosure objects bypassing the two-run determinism claim."""
+    repeated = _repeated_fixture(passing=True)
+    forged = RepeatedClosure(repeated.prepared, repeated.first, replace(repeated.second, **{field: value}))
+
+    with pytest.raises(RuntimeError, match=error):
+        write_real_closure_artifacts(
+            forged, workstream_root=tmp_path, created_utc="2026-09-02T01:00:00Z",
+        )
+
+    assert not (tmp_path / "local").exists()

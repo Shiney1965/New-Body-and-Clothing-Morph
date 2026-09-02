@@ -36,7 +36,6 @@ readiness.
 - Candidate DAE: none emitted
 - Full search evidence SHA-256: `6BD170B5738192C1C79355E351AD1CEFC42C80E0DD89DF88482275B9FBC25D58`
 - Closure manifest SHA-256: `BD06D4A539B29A1F0F6A7C632CBB40ED636086057B6DE4EC7699F5744D69AEEE`
-- Terminal-exclusion event-input SHA-256: `1EC1482F8C06AF50CD43EEC168590BEBF66377765F072D110CFE4262D6610691`
 
 All 160 records fail `ACTIVE_CLEARANCE_NOT_MET`; record indices `2`, `3`,
 `50`, `66`, `67`, `98`, and `115` additionally fail
@@ -46,12 +45,27 @@ serialized POSITION digest, and gate result.
 
 ## Bounded disposition
 
-The generated terminal-exclusion event input uses the approved reason
-`NO_SAFE_GEOMETRY_AVAILABLE`, preserves `NO_PROTECTED_MUTATION`, and identifies
-a separately approved manual-remesh or licensed source-replacement project as
-the only reopening path. This records exhaustion of the declared safe
-automatic position-only architecture; it does not claim mathematical
-impossibility.
+The `0/160` result is retained as bounded offline evidence of the declared
+automatic position-only architecture. It does not by itself authorize a
+terminal-exclusion event: the current private route label cannot be attached to
+a verified base-game source profile or a canonical release-ledger record.
+
+The hardened writer emits only a
+`NOT_ATTACHABLE_SOURCE_PROFILE_AND_CANONICAL_BINDING_UNRESOLVED` pending
+evidence packet for a zero-pass run. That packet has no event ID, ledger record
+ID, identity digest, or source-profile ID and cannot change release scope. It
+registers and re-hashes the complete retained prior-evidence corpus, including
+`CLEARANCE_COMPARISON.md`, its four-way clearance evidence, and its local-repair
+evidence. A separately approved manual-remesh or licensed source-replacement
+project remains the reopening path after exact source-profile and canonical
+binding work.
+
+The existing ignored `terminal_exclusion_event_input.json` from the earlier
+writer was left untouched. The hardened writer refuses any pre-existing output
+path rather than deleting or overwriting it, so that stale file is not a
+current artifact and has no attachment or terminal-disposition implication.
+The new writer must be run against a fresh empty generated-output directory to
+produce its pending packet.
 
 No GR2, PAK, VisualBank, Lua, profile, installation, save, or gameplay action
 was created, read for mutation, or changed by this closure.

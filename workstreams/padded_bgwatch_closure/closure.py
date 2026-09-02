@@ -15,20 +15,46 @@ import numpy as np
 from .configuration import WORKSTREAM_ROOT, generated_output_path
 from .geometry import serialize_collada_positions
 from .integration import PreparedClosure, prepare_real_closure, roundtrip_candidate
-from .search import OFFLINE_CANDIDATE, SearchResult, run_position_only_search
+from .search import (
+    OFFLINE_CANDIDATE,
+    POSITION_ONLY_UNFIXABLE,
+    SearchResult,
+    run_position_only_search,
+)
 
 
 LEGACY_FINDINGS_PATH = Path(
     r"C:\Claude Projects\BG3 Mods\ChatGPT Work Files"
     r"\Padded_BGWatch_TopologyRecovery_20260826\TOPOLOGY_RECOVERY_FINDINGS.md"
 )
-LEGACY_FINDINGS_SHA256 = "CDD5CBAE21FC88BABAFC1893F5D7BA1B4B5C34FDECDAD64671D45B5EEC96ADA8"
-ROUTE_IDENTITY = {
-    "source_profile_id": "LARIAN_PADDED_DAE_DB6C143EE853385BA5A4FDEE9CF60E85030203856596256C37EE8A0D45AAA262",
-    "mode": "bcb",
-    "base_visual_uuid": "a2edea05-8d9d-4d60-c128-6484fec0727c",
-    "component": "HUM_F_ARM_BG_Watch_Leather_A_Body",
-    "behavior": "BCB-mode no-BCBPak covering fallback",
+LEGACY_EVIDENCE_ROOT = LEGACY_FINDINGS_PATH.parent
+LEGACY_ARTIFACT_MANIFEST_PATH = LEGACY_EVIDENCE_ROOT / "evidence" / "ARTIFACT_MANIFEST.json"
+LEGACY_ARTIFACT_MANIFEST_SHA256 = "68D69D210AA12388D72EA945B1FA9978D3C628E1CBAF474ED4452A9BCE4BCDCE"
+
+# These are architecture labels only.  They deliberately do not infer a
+# release-ledger record, a source profile, or canonical route identity.
+PRIOR_ARCHITECTURE_EVIDENCE = {
+    "smooth_nearest_vertex_body_transfer": (
+        "TOPOLOGY_RECOVERY_FINDINGS.md",
+        "evidence/deformation_stage_probe.json",
+        "evidence/source_dae_lod0_topology.json",
+    ),
+    "global_nearest_target_vertex_normal_clipping": (
+        "TOPOLOGY_RECOVERY_FINDINGS.md",
+        "evidence/deformation_stage_probe.json",
+        "evidence/source_dae_lod0_topology.json",
+    ),
+    "strict_global_alpha_interpolation": (
+        "TOPOLOGY_RECOVERY_FINDINGS.md",
+        "CLEARANCE_COMPARISON.md",
+        "evidence/prototype_manifest.json",
+        "evidence/four_way_clearance.json",
+    ),
+    "confidence_gated_local_clearance_repair": (
+        "CLEARANCE_COMPARISON.md",
+        "evidence/four_way_clearance.json",
+        "evidence/local_repair_manifest.json",
+    ),
 }
 
 
@@ -42,32 +68,106 @@ def _sha256_bytes(value: bytes) -> str:
     return hashlib.sha256(value).hexdigest().upper()
 
 
-def build_terminal_exclusion_event(
+def _load_registered_prior_artifacts() -> tuple[dict[str, object], ...]:
+    """Revalidate the complete retained prior-evidence corpus before citing it."""
+    manifest_bytes = LEGACY_ARTIFACT_MANIFEST_PATH.read_bytes()
+    if _sha256_bytes(manifest_bytes) != LEGACY_ARTIFACT_MANIFEST_SHA256:
+        raise RuntimeError("LEGACY_ARTIFACT_MANIFEST_HASH_MISMATCH")
+    try:
+        manifest = json.loads(manifest_bytes.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise RuntimeError("LEGACY_ARTIFACT_MANIFEST_INVALID") from error
+    records = manifest.get("records") if isinstance(manifest, dict) else None
+    if not isinstance(records, list) or manifest.get("record_count") != len(records):
+        raise RuntimeError("LEGACY_ARTIFACT_MANIFEST_RECORD_COUNT_INVALID")
+
+    root = LEGACY_EVIDENCE_ROOT.resolve(strict=True)
+    registered: list[dict[str, object]] = []
+    seen_paths: set[str] = set()
+    for record in records:
+        if not isinstance(record, dict):
+            raise RuntimeError("LEGACY_ARTIFACT_MANIFEST_RECORD_INVALID")
+        relative_path = record.get("relative_path")
+        expected_sha256 = record.get("sha256")
+        expected_bytes = record.get("bytes")
+        if (
+            not isinstance(relative_path, str)
+            or not isinstance(expected_sha256, str)
+            or not isinstance(expected_bytes, int)
+            or relative_path in seen_paths
+        ):
+            raise RuntimeError("LEGACY_ARTIFACT_MANIFEST_RECORD_INVALID")
+        candidate = (root / relative_path).resolve(strict=False)
+        if root not in candidate.parents:
+            raise RuntimeError("LEGACY_ARTIFACT_PATH_OUTSIDE_RETAINED_ROOT")
+        try:
+            content = candidate.read_bytes()
+        except OSError as error:
+            raise RuntimeError(f"LEGACY_ARTIFACT_UNREADABLE:{relative_path}") from error
+        actual_sha256 = _sha256_bytes(content)
+        if len(content) != expected_bytes or actual_sha256 != expected_sha256:
+            raise RuntimeError(f"LEGACY_ARTIFACT_HASH_MISMATCH:{relative_path}")
+        seen_paths.add(relative_path)
+        registered.append({
+            "path": relative_path,
+            "bytes": expected_bytes,
+            "sha256": expected_sha256,
+            "verified_sha256": actual_sha256,
+        })
+
+    required_paths = {
+        path for paths in PRIOR_ARCHITECTURE_EVIDENCE.values() for path in paths
+    }
+    if not required_paths.issubset(seen_paths):
+        raise RuntimeError("LEGACY_ARCHITECTURE_EVIDENCE_UNREGISTERED")
+    return tuple(registered)
+
+
+def build_pending_exclusion_evidence_packet(
     *,
     search_evidence_path: Path,
     search_evidence_sha256: str,
     created_utc: str,
+    search_evidence_bytes: bytes | None = None,
 ) -> dict[str, object]:
-    """Build one canonical policy event for bounded safe-architecture exhaustion."""
-    identity_sha256 = _sha256_bytes(_canonical_json(ROUTE_IDENTITY))
-    event: dict[str, object] = {
-        "schema": "clothmorph.terminal-exclusion",
+    """Build non-attachable offline evidence; it is not a terminal policy event."""
+    search_content = (
+        search_evidence_path.read_bytes()
+        if search_evidence_bytes is None else search_evidence_bytes
+    )
+    actual_search_sha256 = _sha256_bytes(search_content)
+    if actual_search_sha256 != search_evidence_sha256:
+        raise RuntimeError("SEARCH_EVIDENCE_HASH_MISMATCH")
+    registered = _load_registered_prior_artifacts()
+    packet: dict[str, object] = {
+        "schema": "clothmorph.padded-position-only-pending-exclusion-evidence",
         "schema_version": 1,
-        "record_id": f"LEDGER_{identity_sha256}",
-        "identity_sha256": identity_sha256,
-        "source_profile_id": ROUTE_IDENTITY["source_profile_id"],
+        "attachment_status": "NOT_ATTACHABLE_SOURCE_PROFILE_AND_CANONICAL_BINDING_UNRESOLVED",
+        "attachment_blocker": (
+            "The current private route label cannot be attached to a verified "
+            "canonical release-ledger record or base-game source profile."
+        ),
         "mode": "bcb",
         "reason": "NO_SAFE_GEOMETRY_AVAILABLE",
         "scope_statement": (
-            "Remove the BCB-mode, BCBPak-absent automatic covering fallback for "
-            "HUM_F_ARM_BG_Watch_Leather_A_Body from the advertised release."
+            "Offline evidence packet for the Padded BG Watch position-only "
+            "search; it cannot alter advertised release scope until an exact "
+            "source profile and canonical ledger binding are independently verified."
         ),
-        "attempted_architectures": [
-            "smooth nearest-vertex body transfer",
-            "global nearest-target-vertex-normal clipping",
-            "strict global alpha interpolation",
-            "confident-penetration per-vertex incident-face backtracking",
-            "connected-per-component ROI Laplacian position-only 160-case search",
+        "current_search_evidence": {
+            "path": str(search_evidence_path),
+            "sha256": search_evidence_sha256,
+            "claim": "All 160 fixed current position-only cases and their gate results.",
+        },
+        "prior_artifact_manifest": {
+            "path": str(LEGACY_ARTIFACT_MANIFEST_PATH),
+            "sha256": LEGACY_ARTIFACT_MANIFEST_SHA256,
+            "record_count": len(registered),
+        },
+        "registered_prior_artifacts": list(registered),
+        "prior_architectures": [
+            {"name": name, "evidence_paths": list(paths)}
+            for name, paths in PRIOR_ARCHITECTURE_EVIDENCE.items()
         ],
         "fixed_acceptance_gates": {
             "source_dae_sha256": "DB6C143EE853385BA5A4FDEE9CF60E85030203856596256C37EE8A0D45AAA262",
@@ -84,18 +184,6 @@ def build_terminal_exclusion_event(
             "parameter_case_count": 160,
             "serialization_decimals": 6,
         },
-        "evidence": [
-            {
-                "path": str(search_evidence_path),
-                "sha256": search_evidence_sha256,
-                "claim": "All 160 fixed position-only cases and every fixed gate result.",
-            },
-            {
-                "path": str(LEGACY_FINDINGS_PATH),
-                "sha256": LEGACY_FINDINGS_SHA256,
-                "claim": "Retained prior architecture outcomes and protected-route boundary.",
-            },
-        ],
         "protected_impact": {
             "registry_ids": [],
             "shared_consumers": [
@@ -113,12 +201,9 @@ def build_terminal_exclusion_event(
         "next_project_if_reopened": (
             "separately approved manual-remesh or licensed source-replacement project"
         ),
-        "approved_by": "Alan",
-        "approved_reason": "fix every outstanding element or declare it unfixable and excluded",
         "created_utc": created_utc,
     }
-    event["event_id"] = f"EXCLUSION_{_sha256_bytes(_canonical_json(event))}"
-    return event
+    return packet
 
 
 @dataclass(frozen=True)
@@ -145,20 +230,50 @@ def run_real_closure_twice(prepared: PreparedClosure | None = None) -> RepeatedC
     return RepeatedClosure(prepared=prepared, first=first, second=second)
 
 
+def _validate_repeated_closure(repeated: RepeatedClosure) -> None:
+    """Independently enforce the two-run claim immediately before artifact writes."""
+    if repeated.first.json_bytes != repeated.second.json_bytes:
+        raise RuntimeError("REPEATED_CLOSURE_JSON_MISMATCH")
+    if repeated.first.selected_position_sha256 != repeated.second.selected_position_sha256:
+        raise RuntimeError("REPEATED_CLOSURE_SELECTION_MISMATCH")
+    if repeated.first.status != repeated.second.status:
+        raise RuntimeError("REPEATED_CLOSURE_STATUS_MISMATCH")
+
+
+def _refuse_existing_artifacts(paths: tuple[Path, ...]) -> None:
+    """Fail closed instead of deleting or overwriting a previous evidence packet."""
+    for path in paths:
+        if path.exists():
+            raise FileExistsError(f"CLOSURE_ARTIFACT_PATH_ALREADY_EXISTS:{path}")
+
+
+def _write_new_bytes(path: Path, content: bytes) -> None:
+    """Write only a new artifact, leaving any raced/stale artifact untouched."""
+    try:
+        with path.open("xb") as stream:
+            stream.write(content)
+    except FileExistsError as error:
+        raise FileExistsError(f"CLOSURE_ARTIFACT_PATH_ALREADY_EXISTS:{path}") from error
+
+
 def write_real_closure_artifacts(
     repeated: RepeatedClosure,
     *,
     workstream_root: Path = WORKSTREAM_ROOT,
     created_utc: str,
 ) -> dict[str, object]:
-    """Write only ignored offline evidence and an optional passing DAE."""
+    """Write a fresh offline packet only after revalidating determinism and paths."""
+    _validate_repeated_closure(repeated)
     generated = generated_output_path(workstream_root, "position_only_search.json").parent
-    generated.mkdir(parents=True, exist_ok=True)
     search_path = generated / "position_only_search.json"
-    search_path.write_bytes(repeated.first.json_bytes)
     search_sha256 = _sha256_bytes(repeated.first.json_bytes)
     candidate_path = generated / "HUM_F_ARM_BG_Watch_Leather_A_Body_CMcover_candidate.dae"
-    event_path = generated / "terminal_exclusion_event_input.json"
+    packet_path = generated / "pending_exclusion_evidence_packet.json"
+    manifest_path = generated / "real_closure_manifest.json"
+    _refuse_existing_artifacts((search_path, candidate_path, packet_path, manifest_path))
+
+    candidate_bytes: bytes | None = None
+    packet_bytes: bytes | None = None
     if repeated.first.status == OFFLINE_CANDIDATE:
         if repeated.first.selected_candidate is None:
             raise RuntimeError("PASS_STATUS_WITHOUT_SELECTED_CANDIDATE")
@@ -167,20 +282,18 @@ def write_real_closure_artifacts(
             repeated.prepared.source,
             repeated.first.selected_candidate.positions,
         )
-        candidate_path.write_bytes(candidate_bytes)
         candidate_sha256 = _sha256_bytes(candidate_bytes)
-        if event_path.exists():
-            event_path.unlink()
-    else:
+    elif repeated.first.status == POSITION_ONLY_UNFIXABLE:
         candidate_sha256 = None
-        if candidate_path.exists():
-            candidate_path.unlink()
-        event = build_terminal_exclusion_event(
+        packet = build_pending_exclusion_evidence_packet(
             search_evidence_path=search_path,
             search_evidence_sha256=search_sha256,
             created_utc=created_utc,
+            search_evidence_bytes=repeated.first.json_bytes,
         )
-        event_path.write_bytes(_canonical_json(event) + b"\n")
+        packet_bytes = _canonical_json(packet) + b"\n"
+    else:
+        raise RuntimeError("CLOSURE_STATUS_UNRECOGNIZED")
     active_digest = _sha256_bytes(np.asarray(
         repeated.prepared.active_ids, dtype="<i8",
     ).tobytes(order="C"))
@@ -208,6 +321,10 @@ def write_real_closure_artifacts(
         "passing_count": repeated.first.passing_count,
         "selected_record_index": repeated.first.selected_record_index,
         "two_run_json_identical": True,
+        "two_run_selected_hash_identical": True,
+        "pending_exclusion_evidence_packet_sha256": (
+            _sha256_bytes(packet_bytes) if packet_bytes is not None else None
+        ),
         "created_utc": created_utc,
         "claims_not_established": [
             "GR2", "PAK", "installation", "gameplay", "visual acceptance", "release readiness",
@@ -216,8 +333,13 @@ def write_real_closure_artifacts(
     manifest_bytes = json.dumps(
         manifest, ensure_ascii=False, indent=2, sort_keys=True,
     ).encode("utf-8") + b"\n"
-    manifest_path = generated / "real_closure_manifest.json"
-    manifest_path.write_bytes(manifest_bytes)
+    generated.mkdir(parents=True, exist_ok=True)
+    _write_new_bytes(search_path, repeated.first.json_bytes)
+    if candidate_bytes is not None:
+        _write_new_bytes(candidate_path, candidate_bytes)
+    if packet_bytes is not None:
+        _write_new_bytes(packet_path, packet_bytes)
+    _write_new_bytes(manifest_path, manifest_bytes)
     return {**manifest, "manifest_sha256": _sha256_bytes(manifest_bytes)}
 
 
