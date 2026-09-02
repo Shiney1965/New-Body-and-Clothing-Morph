@@ -2,6 +2,111 @@
 
 ## TL/DR
 
+The corrected real setup now certifies all 593 targets twice with exact
+equality. The unchanged 160-case garment search then ran twice with identical
+results: `0/160` candidates pass all gates, so no candidate DAE was emitted;
+this is bounded evidence for the declared method, not an attachable exclusion
+or a claim that all eligible repair architectures are exhausted.
+
+## Current verified repeated-search checkpoint — 2026-09-02
+
+Frozen implementation: `a99446e3415ea6c9aa2148cbf9dfd2131237fa8d`.
+The tracked worktree was clean at launch and throughout the run. Before/after
+snapshots verify the same commit, all ten ordered implementation-file hashes,
+and both canonical input hashes. Exec session `10500` completed exit 0.
+
+The repeated run used the existing production preparation, exact stored-normal
+oracle, six-decimal POSITION roundtrip, literal ordered parameter grid, and
+reviewed `CANONICAL_PADDED` writer without modifying production code during
+execution. Both complete search byte streams were retained for independent
+comparison. The output scope means the exact Padded inputs were verified; it
+does **not** mean a working garment, gameplay PASS, or release acceptance.
+
+### Setup and unchanged identities
+
+- All 593 targets pass clearance `0.001 m`; minimum actual target clearance
+  `0.0010013890379883881 m`, maximum `0.001002627974515205 m`, ambiguities 0.
+- Only the previously failing target IDs `546`, `548`, `4134`, `5725`, and
+  `7623` changed. All other targets remain byte-identical; none was omitted.
+- Target POSITION SHA-256:
+  `5BDA3F7998776A5BC98203DDDDC0ECBB28A1EE22E32F14EBDC39ABB463995F9C`.
+- Active IDs: 593, SHA-256
+  `726ADFC0E20E00ADC0D8D4B6B0451D0939D7CF0FFCC1D904BFEAAE38A5220DF5`.
+- ROI: 763 movable IDs, 617 fixed-boundary IDs. Fixed coverage: 2800 IDs,
+  SHA-256 `A15EA818F106A23B44AC3DF26BD50AEC1FBBF3D4DCD157255E6FA0B2C95071E2`.
+- Pristine DAE: 6004823 bytes, SHA-256
+  `DB6C143EE853385BA5A4FDEE9CF60E85030203856596256C37EE8A0D45AAA262`.
+- BCB body GLB: 911216 bytes, SHA-256
+  `51D4D723EB945CD16E0EF99296CFBD8050013D6FA74D863C5A7ACF962746328C`.
+- Stored body-normal SHA-256:
+  `533C492F576BDDD539DC5E7D696661A2E912C2E7E3901FFCCE7F018EB65979C0`.
+
+### Actual method outcome
+
+The implementation status is
+`POSITION_ONLY_UNFIXABLE_UNDER_CURRENT_TOPOLOGY`. Interpret that label narrowly:
+none of this fixed method's 160 cases met all predeclared gates. It is not
+mathematical impossibility or proof that every other eligible method failed.
+
+| Gate failure reason | Cases |
+|---|---:|
+| `ACTIVE_CLEARANCE_NOT_MET` | 160 |
+| `ACTIVE_SURFACE_AMBIGUITY` | 8 |
+| `MOVED_ROI_CLEARANCE_NOT_MET` | 114 |
+| `MOVED_ROI_SURFACE_AMBIGUITY` | 114 |
+
+Counts overlap. Every case still has all 593 active vertices below required
+clearance; active ambiguity occurs at indices `2`, `3`, `50`, `66`, `67`,
+`98`, `115`, and `135`. Other serialized gate-failure reasons occur in zero
+cases. The full records preserve movement, backtracking scales, geometry
+extrema, and all gate fields; a separate readback derived every decision from
+those fields and verified the exact literal grid and equal result bytes.
+
+### Immutable current artifacts
+
+All files below are in the new ignored directory
+`local/generated/runs/refined-targets-a99446e/`.
+
+| Artifact | Bytes | SHA-256 |
+|---|---:|---|
+| `certified_setup.json` | 513133 | `A9AD6222871359DA15819436C0C27504D3FA5F198362C9D8C213B1334D4666AD` |
+| `position_only_search.json` | 210970 | `5DAD7E910EB0E09E9E53EC9EE9444F916A9669AF885C6F7AD182432C98B9CA0A` |
+| `second_search.json` | 210970 | `5DAD7E910EB0E09E9E53EC9EE9444F916A9669AF885C6F7AD182432C98B9CA0A` |
+| `pending_exclusion_evidence_packet.json` | 11048 | `92E6B89B6D29D8EAED34D1AD1ED2E29F48BE2D39108AD336E2FEF3CFBB211F8E` |
+| `real_closure_manifest.json` | 6019 | `F5ECD68E64E4E3DF1287C27FCAC4815519D39413B77222C16242FFE32A08D4F6` |
+| `completion.json` | 8698 | `2BC7018F8537005F98CCA06EA7E74BE2E18DE1262F713AEF2ACC18539BA0962E` |
+
+### Verification and remaining acceptance gates
+
+- Independent completed-output readback: `INDEPENDENT_READBACK_PASS`; literal
+  160 tuples, both search byte streams, all gate summaries/counts/reasons,
+  artifact hashes, absent candidate, and unchanged current code/inputs checked.
+- Final portable suite: `156 passed, 1 skipped in 14.55s`. The opt-in actual
+  canonical-preparation test separately passed: `1 passed in 99.60s`.
+- Final adjacent ledger/coverage/underwear/vanitybody suites:
+  `161 passed, 14 skipped in 0.80s`.
+- All six original/restored-oracle historical artifact hashes and the previous
+  five-target failure diagnostic remain unchanged. They remain rejected or
+  superseded history; no older run was relabeled as this result.
+
+The new pending packet is explicitly
+`NOT_ATTACHABLE_SOURCE_PROFILE_AND_CANONICAL_BINDING_UNRESOLVED`. It has no
+event ID, record ID, identity digest, or source-profile ID. Independent branch
+review and the separate full architecture/policy/source-profile/canonical
+record gates remain outstanding before any terminal disposition. The garment
+therefore remains nonterminal in the release program; do not infer closure
+from the writer's method-status label or its provisional reason field.
+
+No protected route, source asset, live game/profile/save, Runtime, GR2, PAK,
+installation, or gameplay state was changed. No test PAK or candidate DAE was
+produced by this task.
+
+## Historical blocked setup — superseded, retained verbatim below
+
+The following `BLOCKED_SETUP` account describes the earlier f538a86 run. Its
+five-target construction defect has now been corrected and certified above;
+it is retained as historical evidence, not the current state.
+
 The current real-input result is `BLOCKED_SETUP`, not garment impossibility:
 the reviewed target builder fails the unchanged `0.001 m` clearance gate at
 five source vertices. No new parameter-grid search ran, no candidate was
