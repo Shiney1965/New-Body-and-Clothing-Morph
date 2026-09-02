@@ -1,4 +1,5 @@
 import hashlib
+import copy
 import json
 from pathlib import Path
 import struct
@@ -165,3 +166,68 @@ def test_gap_scope_cannot_replace_a_retained_file_with_an_unreviewed_file(tmp_pa
     changed = (*snapshot.unresolved_retained_evidence_files[:-1], str(unrelated))
     with pytest.raises(ValueError, match='GAP_ORIGINAL_SET_CHANGED'):
         audit.build_current_gap_audit(replace(snapshot, unresolved_retained_evidence_files=changed))
+
+
+def test_resolver_rejects_numbered_fake_gaps_pointing_to_one_unrelated_code_file():
+    from workstreams.bard_authority_closure import authority_contracts as contracts
+    base = contracts.load_current_authority_snapshot(include_gap_audit=False)
+    unrelated = Path(contracts.__file__).resolve()
+    forged = {
+        'status': 'SOURCE_AUDIT_COMPLETE_GEOMETRY_UNASSESSED',
+        'source_audit_complete': False, 'defect_region': {'invented': True},
+        'geometry_admitted': False, 'geometry_methods_tested': [], 'exclusion_event_input': None,
+        'gaps': [{'gap_id': f'{number:02}', 'status': 'RESOLVED_SOURCE_EVIDENCE',
+                  'path': str(unrelated), 'evidence': {'source_sha256': audit.sha256_file(unrelated)}}
+                 for number in range(1, 12)],
+    }
+    with pytest.raises(contracts.ContractAdmissionError, match='AUTHORITY_GAP_AUDIT_'):
+        contracts.resolve_authority_contract(replace(base, unresolved_retained_evidence_files=(), source_gap_audit=forged))
+
+
+@pytest.fixture(scope='module')
+def genuine_gap_snapshot():
+    from workstreams.bard_authority_closure.authority_contracts import load_current_authority_snapshot
+    return load_current_authority_snapshot(include_gap_audit=True)
+
+
+@pytest.mark.parametrize('mutation', (
+    'duplicate_unrelated_paths', 'missing_geometry', 'missing_conversions',
+    'altered_manifest', 'altered_semantics', 'altered_source_binding',
+    'contradictory_status', 'false_complete', 'invented_defect', 'altered_frozen_source',
+))
+def test_resolver_reconstructs_full_production_audit_not_just_gap_hashes(genuine_gap_snapshot, mutation):
+    from workstreams.bard_authority_closure import authority_contracts as contracts
+    forged = copy.deepcopy(genuine_gap_snapshot.source_gap_audit)
+    if mutation == 'duplicate_unrelated_paths':
+        unrelated = Path(contracts.__file__).resolve()
+        for gap in forged['gaps']:
+            gap['path'] = str(unrelated)
+            gap['evidence']['source_sha256'] = audit.sha256_file(unrelated)
+    elif mutation == 'missing_geometry':
+        del forged['geometry']
+    elif mutation == 'missing_conversions':
+        del forged['conversions']
+    elif mutation == 'altered_manifest':
+        forged['packages']['addon']['manifest'][0]['sha256'] = '0' * 64
+    elif mutation == 'altered_semantics':
+        forged['geometry']['HFL_F_ARM_Authority_Robe']['gr2']['mesh_count'] = 999
+    elif mutation == 'altered_source_binding':
+        forged['routes']['raw_sco_human']['alt'] = ['invented-source-visual']
+    elif mutation == 'contradictory_status':
+        forged['status'] = 'BLOCKED_SOURCE_AUDIT_INCOMPLETE'
+    elif mutation == 'false_complete':
+        forged['source_audit_complete'] = False
+    elif mutation == 'invented_defect':
+        forged['defect_region'] = {'invented': True}
+    elif mutation == 'altered_frozen_source':
+        forged['fresh_source_pak_sha256'] = '0' * 64
+    with pytest.raises(contracts.ContractAdmissionError, match='AUTHORITY_GAP_AUDIT_'):
+        contracts.resolve_authority_contract(replace(genuine_gap_snapshot, source_gap_audit=forged))
+
+
+def test_resolver_still_accepts_genuine_reconstructed_source_audit(genuine_gap_snapshot):
+    from workstreams.bard_authority_closure.authority_contracts import resolve_authority_contract
+    result = resolve_authority_contract(genuine_gap_snapshot)
+    assert result.status == 'SOURCE_AUDIT_COMPLETE_GEOMETRY_UNASSESSED'
+    assert result.geometry_admitted is False
+    assert result.exclusion_event_input is None

@@ -47,6 +47,14 @@ Current integrated packets at `local/task-4-integrated-source-output-20260902/ru
 
 Final continuation verification: `python -m pytest workstreams/bard_authority_closure/tests -q` passed 104 tests in 167.63s. Python compilation and staged `git diff --check` passed. Self-review covered the exact gap-set anti-substitution gate, complete source/derived hash pins, runtime-material versus exporter-placeholder distinction, metadata-slot versus physical-mesh distinction, per-item/race/variant bindings, and the absence of geometry/event admission. Independent review remains separate.
 
+### Continuation fix round 1 — production audit acceptance boundary
+
+An independent review found that the resolver could accept eleven numbered rows pointing to one unrelated file with its correct hash, without validating the full production audit. This was reproduced alongside ten related missing/altered-manifest, semantic, conversion, source-binding, status and defect-field variants: 11 failed and one genuine control passed before the fix. The resolver now reconstructs the complete production snapshot from canonical verified inputs and compares the entire submitted snapshot's canonical bytes, including the exact original eleven paths and all semantic/conversion/manifests/source bindings. Contradictory status, false completeness, and a non-null defect region are explicitly rejected. The boundary does not read caller-selected gap paths as trust anchors.
+
+Focused RED/GREEN command: `python -m pytest workstreams/bard_authority_closure/tests/test_authority_gap_audit.py -q -k resolver`. RED: 11 failed, 1 passed, 10 deselected in 19.29s. GREEN: 12 passed, 10 deselected in 143.15s. This is a source-audit validation fix only: geometry remains unassessed, and no fit/exhaustion/exclusion/Task-5 claim is introduced. The full fix-round verification and scoped review handoff are recorded in the SDD Task 4 report.
+
+Final fix-round full workstream verification passed: **116 tests in 355.29s**. The fixed writer regenerated an integrated packet that is byte-identical to the preserved genuine packet (1945736 bytes; SHA-256 `1499C9FF02482F6AB6CB399CC16C8D7A10A65ED0CF7F943E73A2E5F18FD743AD`). Compilation and staged whitespace checks passed. Scoped independent re-review remains pending; the geometry/admission and release boundaries are unchanged.
+
 This resolves only the original eleven source gaps. A source-bound defect region, exact conditional-geometry admission, geometry-method testing, independent anti-omission review, and any later canonical release-ledger/terminal-policy binding remain outstanding. The current result has no unresolved *source identities* in that audited set, but has `geometry_admitted=false`, no tested geometry methods, `exclusion_event_input=null`, `ready_for_attachment=false`, and `release_blocking=true`. No GR2/PAK was created, and no protected/live/save mutation occurred.
 
 ## Historical first-pass checkpoint

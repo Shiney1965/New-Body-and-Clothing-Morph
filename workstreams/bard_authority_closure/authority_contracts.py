@@ -8,7 +8,7 @@ and a declared defect region.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from dataclasses import asdict, dataclass, replace
 import hashlib
 import json
 from pathlib import Path
@@ -399,17 +399,34 @@ def resolve_authority_contract(snapshot: AuthoritySourceSnapshot) -> AuthorityRe
         geometry_id for geometry_id in UNRESOLVED_GEOMETRY_IDS if geometry_id in set(forbidden)
     )
     if snapshot.source_gap_audit is not None:
-        from .authority_gap_audit import source_audit_disposition
+        from .authority_gap_audit import canonical_bytes, source_audit_disposition
         gap_result = snapshot.source_gap_audit
+        if (not isinstance(gap_result, dict)
+                or not isinstance(gap_result.get("gaps"), list)
+                or not all(isinstance(gap, dict) for gap in gap_result["gaps"])):
+            raise ContractAdmissionError("AUTHORITY_GAP_AUDIT_STATE_INVALID")
         disposition = source_audit_disposition(gap_result.get("gaps", []))
         if (not disposition["source_audit_complete"] or snapshot.unresolved_retained_evidence_files
+                or gap_result.get("status") != "SOURCE_AUDIT_COMPLETE_GEOMETRY_UNASSESSED"
+                or gap_result.get("source_audit_complete") is not True
+                or "defect_region" not in gap_result or gap_result["defect_region"] is not None
                 or gap_result.get("geometry_admitted") is not False
                 or gap_result.get("geometry_methods_tested") != []
                 or gap_result.get("exclusion_event_input") is not None):
             raise ContractAdmissionError("AUTHORITY_GAP_AUDIT_STATE_INVALID")
-        for gap in gap_result["gaps"]:
-            if _hash_file(Path(gap["path"])) != gap["evidence"]["source_sha256"]:
-                raise ContractAdmissionError("AUTHORITY_GAP_SOURCE_HASH_MISMATCH")
+        # Never let submitted gap rows choose the evidence corpus. Rebuild from
+        # the canonical local configuration and pinned sources, including every
+        # original gap path, package/derived manifest, conversion, semantic read,
+        # route binding and refreshed base-snapshot field. This loader does not
+        # invoke the resolver, so the trust-boundary reconstruction is acyclic.
+        expected_snapshot = load_current_authority_snapshot(include_gap_audit=True)
+        try:
+            submitted_bytes = canonical_bytes(asdict(snapshot))
+            expected_bytes = canonical_bytes(asdict(expected_snapshot))
+        except (TypeError, ValueError) as error:
+            raise ContractAdmissionError("AUTHORITY_GAP_AUDIT_PROVENANCE_MISMATCH") from error
+        if submitted_bytes != expected_bytes:
+            raise ContractAdmissionError("AUTHORITY_GAP_AUDIT_PROVENANCE_MISMATCH")
         # Source inspection resolves source identities, not garment fit or an
         # admissible nine-object replacement. No exhaustion/event follows.
         return AuthorityResolution(
