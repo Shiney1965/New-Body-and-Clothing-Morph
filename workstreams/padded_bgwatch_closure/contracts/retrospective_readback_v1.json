@@ -1,0 +1,97 @@
+{
+  "schema": "clothmorph.padded-retrospective-readback",
+  "schema_version": 1,
+  "profile_kind": "RETROSPECTIVE_FROZEN_ARTIFACT_READBACK",
+  "historical_construction_governed_by_profile": false,
+  "source": {
+    "sha256": "DB6C143EE853385BA5A4FDEE9CF60E85030203856596256C37EE8A0D45AAA262",
+    "geometry_id": "HUM_F_ARM_BG_Watch_Leather_A_Body_Mesh-geom",
+    "vertex_count": 8033,
+    "face_count": 14943,
+    "active_count": 593,
+    "active_ids_le_i8_sha256": "726ADFC0E20E00ADC0D8D4B6B0451D0939D7CF0FFCC1D904BFEAAE38A5220DF5"
+  },
+  "body": {
+    "sha256": "51D4D723EB945CD16E0EF99296CFBD8050013D6FA74D863C5A7ACF962746328C",
+    "vertex_count": 10800,
+    "face_count": 18828,
+    "fixed_cohort_count": 2800,
+    "fixed_cohort_ids_le_i8_sha256": "A15EA818F106A23B44AC3DF26BD50AEC1FBBF3D4DCD157255E6FA0B2C95071E2"
+  },
+  "corpus": {
+    "artifact_manifest_path": "evidence/ARTIFACT_MANIFEST.json",
+    "artifact_manifest_sha256": "68D69D210AA12388D72EA945B1FA9978D3C628E1CBAF474ED4452A9BCE4BCDCE",
+    "source_control_path": "evidence/source_and_control_manifest.json",
+    "source_control_sha256": "85689C958D25974A7DE82438B04EBF5D8A71C289529D922047B53195E9621D19"
+  },
+  "gates": {
+    "published_area_ratio": [0.5, 2.0],
+    "current_internal_area_ratio": [0.51, 1.99],
+    "minimum_orientation_cosine": 0.05,
+    "zero_area_epsilon": 1e-12,
+    "maximum_flipped_faces": 0,
+    "maximum_new_zero_area_faces": 0,
+    "target_clearance_m": 0.001,
+    "existing_clearance_numerical_tolerance_m": 1e-12,
+    "reject_surface_ambiguity": true,
+    "coverage_outward_projection": "strictly_positive",
+    "coverage_maximum_distance_m": 0.05,
+    "serialization_decimals": 6,
+    "oracle": "exact closest triangle; barycentric interpolation of retained transformed GLB vertex normals",
+    "active_rule": "pristine confident signed penetration; original IDs remain fixed",
+    "cohort_rule": "pristine garment bounds; positive stored-normal projection; distance <= 0.05 m",
+    "roi_rule": "derive_minimal_roi of original active IDs; comparison only, not historical movement-domain authority"
+  },
+  "candidates": {
+    "transfer": {
+      "sha256": "A3AAA64FFFD8E83C00ADAA0BD5870155159DEFF519D973CE8253BDB0BBA7245E",
+      "architecture": "smooth_nearest_vertex_body_transfer",
+      "original_movement_domain": "GLOBAL",
+      "target_status": "NOT_A_CERTIFIED_POSITIVE_TARGET_SEARCH",
+      "historical_evidence": ["evidence/deformation_stage_probe.json", "evidence/four_way_clearance.json"]
+    },
+    "post_clip": {
+      "sha256": "ADBBD323D587AC2D9A1C3069F73BB86505A440822BAD64E319A938727EEC9015",
+      "architecture": "global_nearest_target_vertex_normal_clipping",
+      "original_movement_domain": "GLOBAL",
+      "target_status": "NOT_A_CERTIFIED_POSITIVE_TARGET_SEARCH",
+      "historical_evidence": ["evidence/deformation_stage_probe.json", "evidence/source_and_control_manifest.json"]
+    },
+    "alpha": {
+      "sha256": "99F11C2E55BA1307C0EFC0860121766DECFCEEA3CC9B75C1665A9AA38BF5ED78",
+      "architecture": "strict_global_alpha_interpolation",
+      "original_movement_domain": "GLOBAL",
+      "target_status": "NOT_A_CERTIFIED_POSITIVE_TARGET_SEARCH",
+      "historical_evidence": ["evidence/prototype_manifest.json", "evidence/four_way_clearance.json"]
+    },
+    "local": {
+      "sha256": "DF0DF226697BF22E5A5F646F4BF85FBF77C7FAD56E110BF9B75FD3C38FA7280B",
+      "architecture": "confidence_gated_local_clearance_repair",
+      "original_movement_domain": "HISTORICAL_CONFIDENCE_GATED_VERTEX_SET_NOT_CURRENT_ROI",
+      "target_status": "TARGET_NOT_CERTIFIED",
+      "historical_evidence": ["evidence/local_repair_manifest.json", "evidence/four_way_clearance.json"]
+    }
+  },
+  "historical_gate_crosswalk": {
+    "clearance": "Historical comparer counted signed < 0.0; this profile requires >= 0.001 m and rejects ambiguity on fixed active IDs.",
+    "coverage": "Historical comparer tested positive projection; this profile additionally checks distance <= 0.05 m.",
+    "alpha_selection": "Historical alpha selection used published area [0.5, 2.0]; this profile also measures current internal [0.51, 1.99] and cosine >= 0.05.",
+    "same_predeclared_gate_coverage": "UNASSESSED",
+    "historical_gate_evidence_interpretation": "Task 2 must retain and crosswalk exact construction reports; current measurements never rewrite those reports."
+  },
+  "preservation_scope": {
+    "measured": "Selected DAE geometry positions and ordered triangle indices; exact whole DAE bytes with only selected POSITION payload masked; XML geometry inventory and presence of controllers/material libraries.",
+    "not_established": "Absence of a library is not proof of no skin/material requirement. Equality of retained DAE bytes is not complete source GR2, pants, ordered route component, LOD-controller, or runtime material proof."
+  },
+  "unavailable_checks": {
+    "predeclared_silhouette": "UNASSESSED",
+    "predeclared_nontriviality": "UNASSESSED",
+    "atomic_component_membership": "UNASSESSED",
+    "pants_component_result": "UNASSESSED",
+    "complete_route_skin_lod_material_contract": "UNASSESSED",
+    "historical_generator_repeatability": "UNASSESSED",
+    "same_predeclared_gate_architecture_exhaustion": "UNASSESSED",
+    "canonical_source_profile_record_mode": "UNASSESSED",
+    "protected_registry_shared_consumers": "UNASSESSED"
+  }
+}
