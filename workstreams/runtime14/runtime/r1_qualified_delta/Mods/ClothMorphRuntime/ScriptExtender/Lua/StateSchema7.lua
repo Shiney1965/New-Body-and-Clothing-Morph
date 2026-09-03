@@ -32,6 +32,14 @@ local function arrayOf(value, predicate)
 end
 
 local function nonemptyString(value) return type(value)=="string" and value~="" end
+local function nullableGuid(value) return value==nil or validGuid(value) end
+local function historicalOriginal(value)
+    return type(value)=="table" and nonemptyString(value.ProviderId)
+        and validDigest(value.ProviderDigest) and validGuid(value.CvGuid)
+        and nullableGuid(value.OrigBodySetVisual) and nullableGuid(value.OrigEquipRace)
+        and nullableGuid(value.FamilyOrigEquipRace) and arrayOf(value.OriginalVisuals,validGuid)
+        and type(value.Effective)=="boolean" and nonemptyString(value.Reason)
+end
 local function providerClaim(value)
     return type(value)=="table" and nonemptyString(value.ProviderId)
         and validGuid(value.OwnerModuleUuid) and validDigest(value.ProviderDigest)
@@ -75,6 +83,9 @@ local function validateSchema7(state)
     for _,key in ipairs({'OptoutTemplates','ProviderDescriptors'}) do
         if type(state[key])~='table' then return false,'SCHEMA7_'..key..'_INVALID' end
     end
+    for guid,value in pairs(state.OptoutTemplates) do
+        if not validGuid(guid) or type(value)~="boolean" then return false,"SCHEMA7_OPTOUT_ENTRY_INVALID" end
+    end
     for _,key in ipairs({'MasterTransition','CleanupTransaction','CleanupAudit'}) do
         if state[key]~=nil and type(state[key])~='table' then return false,'SCHEMA7_'..key..'_INVALID' end
     end
@@ -89,7 +100,9 @@ local function validateSchema7(state)
             or type(descriptor.canonicalPayload)~="table" then return false,"SCHEMA7_PROVIDER_DESCRIPTOR_INVALID" end
     end
     if type(state.Bodies) ~= "table" then return false, "SCHEMA7_BODIES_INVALID" end
+    local allRestored=true
     for charGuid, rec in pairs(state.Bodies) do
+        if not validGuid(charGuid) then return false,"SCHEMA7_CHARACTER_GUID_INVALID" end
         if type(rec) ~= "table" then
             return false, "SCHEMA7_BODY_RECORD_INVALID:" .. tostring(charGuid)
         end
@@ -99,17 +112,36 @@ local function validateSchema7(state)
         if not MANAGED_CHOICES[rec.PreferredChoice] then
             return false, "SCHEMA7_PREFERRED_CHOICE_INVALID:" .. tostring(charGuid)
         end
+        if rec.ClothedChoice~=nil and rec.ClothedChoice~="off" and not MANAGED_CHOICES[rec.ClothedChoice] then
+            return false,"SCHEMA7_CLOTHED_CHOICE_INVALID"
+        end
+        if rec.FamilyClothedChoice~=nil and not MANAGED_CHOICES[rec.FamilyClothedChoice] then
+            return false,"SCHEMA7_FAMILY_CLOTHED_CHOICE_INVALID"
+        end
+        if rec.BodyFamilyId~=nil and type(rec.BodyFamilyId)~="string" then return false,"SCHEMA7_BODY_FAMILY_ID_INVALID" end
         for _,key in ipairs({'OriginalVisuals','OwnedCcsvs','RemovedOriginalVisuals','RestoreFailures','HistoricalOriginals'}) do
             if type(rec[key])~='table' then return false,'SCHEMA7_'..key..'_INVALID:'..tostring(charGuid) end
         end
         if not arrayOf(rec.OriginalVisuals,validGuid) or not arrayOf(rec.RestoreFailures,nonemptyString)
-            or not arrayOf(rec.HistoricalOriginals,function(row) return type(row)=="table" end) then
+            or not arrayOf(rec.HistoricalOriginals,historicalOriginal) then
             return false,"SCHEMA7_RECORD_ARRAY_INVALID:"..tostring(charGuid)
         end
         for guid,value in pairs(rec.RemovedOriginalVisuals) do
             if not validGuid(guid) or type(value)~="boolean" then return false,"SCHEMA7_REMOVED_VISUAL_INVALID" end
         end
         if rec.ActiveProvider~=nil and not providerClaim(rec.ActiveProvider) then return false,"SCHEMA7_ACTIVE_PROVIDER_INVALID" end
+        local effectiveCount=0
+        for _,row in ipairs(rec.HistoricalOriginals) do
+            if row.Effective then
+                effectiveCount=effectiveCount+1
+                if effectiveCount>1 or rec.ActiveProvider==nil
+                    or row.CvGuid:lower()~=tostring(rec.CvGuid):lower()
+                    or row.ProviderId~=rec.ActiveProvider.ProviderId
+                    or row.ProviderDigest:upper()~=rec.ActiveProvider.ProviderDigest:upper() then
+                    return false,"SCHEMA7_EFFECTIVE_HISTORY_INVALID"
+                end
+            end
+        end
         if rec.Transition~=nil then
             local transition=rec.Transition
             local phases={gated=true,captured=true,restoring=true,applying=true,verifying=true}
@@ -119,6 +151,7 @@ local function validateSchema7(state)
         if rec.RestoreState~='clean' and rec.RestoreState~='pending' and rec.RestoreState~='partial' and rec.RestoreState~='blocked' then
             return false,'SCHEMA7_RESTORE_STATE_INVALID:'..tostring(charGuid)
         end
+        if rec.RestoreState~="clean" or rec.Transition~=nil or rec.ProviderTransition~=nil then allRestored=false end
         for _,key in ipairs({'Transition','ProviderTransition','ActiveProvider'}) do
             if rec[key]~=nil and type(rec[key])~='table' then return false,'SCHEMA7_'..key..'_INVALID:'..tostring(charGuid) end
         end
@@ -144,6 +177,10 @@ local function validateSchema7(state)
                 if not found then return false,'SCHEMA7_STALE_PROVIDER_CLAIM:'..tostring(guid) end
             end
         end
+    end
+    if state.PassThroughRestoreComplete and (state.MasterEnabled or not allRestored)
+        or (state.MasterState=="off_restored" and not state.PassThroughRestoreComplete) then
+        return false,"SCHEMA7_RESTORE_COMPLETE_INVALID"
     end
     return true
 end

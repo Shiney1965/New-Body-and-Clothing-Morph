@@ -294,10 +294,14 @@ function Runtime:SetMasterEnabled(enabled)
                 managed[#managed + 1] = guid
             else
                 record.Choice = "external"
-                record.RestoreState = "partial"
-                record.RestoreFailures = {
-                    choice == nil and "PREFERRED_CHOICE_INVALID" or "MANAGED_REAPPLY_FAILED",
-                }
+                -- RunExplicitManaged already classified restoration and bound
+                -- any failed rollback to its retained claim/journal. A master
+                -- summary must not erase that blocking evidence or downgrade a
+                -- blocked/pending record to a generic partial result.
+                if choice==nil then record.RestoreState="blocked" end
+                record.RestoreFailures=record.RestoreFailures or {}
+                local code=choice==nil and "PREFERRED_CHOICE_INVALID" or "MANAGED_REAPPLY_FAILED"
+                if not hasFailureCode(record,code) then record.RestoreFailures[#record.RestoreFailures+1]=code end
                 external[#external + 1] = guid
             end
             self.state.MasterTransition.PendingCharacters[guid]=nil

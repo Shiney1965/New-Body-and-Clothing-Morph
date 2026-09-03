@@ -918,11 +918,19 @@ local function RestoreAllBaseWrites(reason, token)
                 local r = GetCVRes(cv)
                 r.VisualSet.BodySetVisual = bw.orig
             end)
-            if okW then
-                bw.cur = bw.orig; n = n + 1
+            local after=ReadBaseBody(cv)
+            if okW and after==bw.orig then
+                bw.cur = bw.orig;bw.released=true;bw.restoreFailure=nil;n = n + 1
                 -- SF-1: re-render the restored character NOW (no-op warn if
                 -- that char does not exist in the loaded save).
                 if bw.char ~= nil then pcall(function() ForceVisualRebuild(bw.char) end) end
+            else
+                -- Preserve cur/orig as the exact outstanding process claim.
+                -- A normal-returning no-op setter is not a successful restore;
+                -- the next load must still retry once the writer is available.
+                bw.restoreFailure="base-restore-readback-failed"
+                Warn(("RestoreAllBaseWrites(%s): %s cv=%s want=%s got=%s")
+                    :format(tostring(reason),bw.restoreFailure,tostring(cv),tostring(bw.orig),tostring(after)))
             end
         end
         ::continue::
@@ -1519,6 +1527,13 @@ R1Runtime = R1Foundation.Install(MOD, EnsurePV(), {
         if entity == nil or cv == nil or cca == nil then return false,"character-unavailable" end
         if rec.CvGuid ~= nil and rec.CvGuid ~= cv then return false,"body-cv-mismatch" end
         local body = wasManaged and rec.OrigBodySetVisual or ReadBaseBody(cv)
+        if not wasManaged then
+            local process=BaseWrites[cv]
+            -- A prior claimant may already have changed this shared resource.
+            -- Only the exact still-owned process write attests its original;
+            -- an arbitrary or changed minted live value remains untrusted.
+            if process and process.released~=true and process.cur==body then body=process.orig end
+        end
         local equipment = wasManaged and (rec.FamilyOrigEquipRace or rec.OrigEquipRace) or EquipRace.ReadEquipRace(char)
         if not IsTrustedSchema6BodyOriginal(body,cv) then return false,"base-original-untrusted" end
         if not IsTrustedSchema6EquipOriginal(equipment,rec,char) then return false,"equipment-original-untrusted" end
@@ -2148,6 +2163,12 @@ local function Cmd_Master(_cmd, arg)
     if value=="status" then
         local result=MOD.GetStateDiagnostics()
         Log("MasterEnabled: "..tostring(result.MasterEnabled).." MasterState: "..tostring(result.MasterState))
+        for _,label in ipairs({"ManagedGuids","ExternalGuids","PendingGuids","PartialGuids","BlockedGuids"}) do
+            local values={}
+            for _,guid in ipairs(result[label] or {}) do values[#values+1]=tostring(guid) end
+            table.sort(values)
+            Log(label..": ["..table.concat(values,", ").."]")
+        end
         return result
     end
     if value ~= "on" and value ~= "off" then

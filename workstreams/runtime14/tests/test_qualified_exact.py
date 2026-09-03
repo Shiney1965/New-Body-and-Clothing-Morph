@@ -25,7 +25,7 @@ def test_actual_qualified_stage_executes_production_modules_and_schema():
              'test_r1_mutator_inventory.lua','test_r1_failure_matrix.lua','test_r1_event_matrix.lua',
              'test_r1_master_resume.lua','test_r1_diagnostics.lua','test_r1_managed_regression.lua',
              'test_r1_external_legacy.lua','test_r1_native_visual_timing.lua',
-             'test_r1_pending_refresh.lua')
+             'test_r1_pending_refresh.lua','test_r1_review_round1.lua')
     # Freeze executable harness bytes before the slow complete source scan. A
     # concurrent editor cannot silently change the test while its stage builds.
     suffix=uuid4().hex
@@ -73,9 +73,12 @@ def test_actual_qualified_stage_executes_production_modules_and_schema():
                    'runnerSha256':runner_hash,'harnessDrift':drifted,
                    'task2':'IN_PROGRESS','gameplay':'NOT_RUN'},stream,indent=2)
     assert not drifted,'Harness changed during verification: '+repr(drifted)
-    for result in (*syntax,*results):
-        assert result['exit_code']==0,result['stdout']+result['stderr']
-        assert result['stderr']==''
+    failures=[(row.get('script') or row.get('path'))+'\n'+row['stdout']+row['stderr']
+              for row in (*syntax,*results) if row['exit_code']!=0 or row['stderr']!='']
+    # Report every mandatory failure surface rather than hiding later failures
+    # behind the first known RED. Neither pending refresh nor MCM authority may
+    # be silently skipped while approval-dependent behavior is unresolved.
+    assert not failures,'\n\n'.join(failures)
 
 
 def test_r0_embedded_refit_map_bytes_are_unchanged_in_qualification():

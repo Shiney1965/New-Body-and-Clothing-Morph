@@ -562,10 +562,26 @@ local function snapshotDescriptor(descriptor)
     return out
 end
 
+function Registry:_currentActivation(descriptor)
+    if self.restartRequired or self.attaching
+        or self.activated[descriptor.providerId]~=descriptor.canonicalDigest then
+        return false,"PROCESS_ACTIVATION_REQUIRED"
+    end
+    local called,valid,why=pcall(self._preflight,self,descriptor)
+    if not called or not valid then return false,called and why or "DEPENDENCY_VALIDATION_FAILED" end
+    return true
+end
+
 function Registry:GetSnapshot()
     local descriptors = {}
     for _, providerId in ipairs(mapKeys(self.state.ProviderDescriptors)) do
         local descriptor=snapshotDescriptor(self.state.ProviderDescriptors[providerId])
+        descriptor.persistedActivationState=descriptor.activationState
+        if descriptor.activationState=="active" then
+            local current,why=self:_currentActivation(self.state.ProviderDescriptors[providerId])
+            descriptor.processActivated=current
+            if not current then descriptor.activationState="rejected";descriptor.failureCodes={why} end
+        else descriptor.processActivated=false end
         if self.restartRequired and self.activated[providerId]~=descriptor.canonicalDigest then
             descriptor.activationState="rejected";descriptor.restartRequired=true
         end
@@ -611,6 +627,8 @@ function Registry:ClaimForCcsv(ccsv, cvGuid, resourceKind)
         end
     end
     if match == nil then return nil, "CCSV_OWNER_NOT_REGISTERED" end
+    local current,why=self:_currentActivation(match)
+    if not current then return nil,"CCSV_PROVIDER_NOT_ACTIVE:"..tostring(why) end
     if match.ownerUnresolved==true or not validUuid(match.ownerModuleUuid) then return nil,"CCSV_OWNER_UNRESOLVED" end
     return {
         ProviderId = match.providerId,

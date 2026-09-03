@@ -1,5 +1,9 @@
 # R1 qualification - work in progress
 
+Latest partial review-fix evidence is in [TASK_2_FIX_ROUND1.md](TASK_2_FIX_ROUND1.md).
+Six bounded findings are corrected; both MCM-origin relay cases and all four
+pending-refresh cases remain mandatory RED. Task 2 is not accepted.
+
 The separately revisioned `runtime/r1_qualified_delta/` is a candidate, not an
 accepted Runtime or playable Alfira fix. It does not change the frozen pure-R1
 reference. `qualification.py` revalidates the complete Task-1 source stage and
