@@ -20,6 +20,9 @@ local VISUAL_SLOTS = { "Breast", "VanityBody", "Cloak", "Helmet", "Gloves", "Boo
 local registrations = {}
 local passDone = {}
 local passRevision = {}
+local pendingRefresh = {}
+local PENDING_WAIT_NOTIFY_MS = 2000
+local PENDING_WAIT_MESSAGE = "Please Wait for Body Morph"
 
 local function owner(familyId)
     return registrations[tostring(familyId or "")]
@@ -201,6 +204,91 @@ local function sweepEquipped(familyId, choice, char)
     end
 end
 
+
+local function monotonicMs()
+    local now
+    pcall(function() now = Ext.Utils.MonotonicTime() end)
+    return tonumber(now) or 0
+end
+
+local function notifyPendingWait()
+    pcall(function() Ext.Utils.Print("[ClothMorphRuntime] " .. PENDING_WAIT_MESSAGE) end)
+    pcall(function()
+        local channel = Ext.Net.CreateChannel(nil, "ClothMorphRuntime_Cmd")
+        if channel ~= nil then
+            channel:Broadcast({ cmd = "cm_wait", message = PENDING_WAIT_MESSAGE })
+        end
+    end)
+end
+
+local function maybeNotifyPending(entry)
+    if entry == nil or entry.notified then return end
+    if monotonicMs() - (entry.started or 0) >= PENDING_WAIT_NOTIFY_MS then
+        notifyPendingWait()
+        entry.notified = true
+    end
+end
+
+local function trackPending(char, items)
+    local copy = {}
+    for index, item in ipairs(items) do copy[index] = item end
+    local entry = pendingRefresh[char]
+    if entry == nil then
+        pendingRefresh[char] = { items = copy, started = monotonicMs(), notified = false }
+        return pendingRefresh[char]
+    end
+    local seen = {}
+    for _, item in ipairs(entry.items) do seen[item] = true end
+    for _, item in ipairs(copy) do
+        if not seen[item] then
+            entry.items[#entry.items + 1] = item
+            seen[item] = true
+        end
+    end
+    return entry
+end
+
+local function tryReequip(char, items, operation)
+    if not PassThrough.CanMutate(operation, char) then return false end
+    local okCount, failCount = 0, 0
+    for _, item in ipairs(items) do
+        local ok = pcall(function() Osi.Equip(char, item) end)
+        if ok then okCount = okCount + 1 else failCount = failCount + 1 end
+    end
+    if failCount > 0 then
+        Warn(("RefreshEquipment: re-equip incomplete on %s (ok=%d fail=%d).")
+            :format(tostring(char), okCount, failCount))
+        return false
+    end
+    if okCount > 0 then
+        Log(("RefreshEquipment: re-equipped %d item(s) on %s."):format(okCount, tostring(char)))
+    end
+    return true
+end
+
+function M.HasPendingRefresh(char)
+    return pendingRefresh[char] ~= nil
+end
+
+function M.CompletePendingRefresh(char)
+    local entry = pendingRefresh[char]
+    if entry == nil then return false end
+    maybeNotifyPending(entry)
+    local ok = tryReequip(char, entry.items, "BodyFamilyEquipRace.DelayedRefresh")
+    pendingRefresh[char] = nil
+    return ok
+end
+
+function M.CompleteAllPendingRefresh()
+    local chars = {}
+    for char in pairs(pendingRefresh) do chars[#chars + 1] = char end
+    local any = false
+    for _, char in ipairs(chars) do
+        if M.CompletePendingRefresh(char) then any = true end
+    end
+    return any
+end
+
 function M.RefreshEquipment(char)
     local items = {}
     for _, slot in ipairs(VISUAL_SLOTS) do
@@ -210,14 +298,17 @@ function M.RefreshEquipment(char)
         end)
     end
     for _, item in ipairs(items) do pcall(function() Osi.Unequip(char, item) end) end
+    if #items == 0 then return end
+    trackPending(char, items)
     local function equipAgain()
+        local entry = pendingRefresh[char]
+        if entry == nil then return end
         if not PassThrough.CanMutate("BodyFamilyEquipRace.DelayedRefresh", char) then return end
-        for _, item in ipairs(items) do pcall(function() Osi.Equip(char, item) end) end
+        local ok = tryReequip(char, entry.items, "BodyFamilyEquipRace.DelayedRefresh")
+        if ok then pendingRefresh[char] = nil end
     end
-    if #items > 0 then
-        local timerOk = pcall(function() Ext.Timer.WaitFor(250, equipAgain) end)
-        if not timerOk then equipAgain() end
-    end
+    local timerOk = pcall(function() Ext.Timer.WaitFor(250, equipAgain) end)
+    if not timerOk then equipAgain() end
 end
 
 local function readFamily(char)
@@ -312,9 +403,13 @@ function M.OnEquipped(item, char, record)
         M.RefreshEquipment(char)
     elseif result == "refit" or result == "injected" then
         pcall(function() Osi.Unequip(char, item) end)
+        trackPending(char, { item })
         local function equipAgain()
+            local entry = pendingRefresh[char]
+            if entry == nil then return end
             if not PassThrough.CanMutate("BodyFamilyEquipRace.DelayedOnEquipped",char) then return end
-            pcall(function() Osi.Equip(char,item) end)
+            local ok = tryReequip(char, entry.items, "BodyFamilyEquipRace.DelayedOnEquipped")
+            if ok then pendingRefresh[char] = nil end
         end
         local timerOk = pcall(function() Ext.Timer.WaitFor(250, equipAgain) end)
         if not timerOk then equipAgain() end

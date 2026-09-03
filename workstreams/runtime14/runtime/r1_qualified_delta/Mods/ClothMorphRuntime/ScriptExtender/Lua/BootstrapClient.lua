@@ -310,7 +310,12 @@ pcall(function()
     Channel:SetHandler(function(a, b)
         local data = a
         if type(data) ~= "table" or data.cmd == nil then data = b end
-        if type(data) ~= "table" or data.cmd ~= "cm_applied" then return end
+        if type(data) ~= "table" then return end
+        if data.cmd == "cm_wait" then
+            Log(tostring(data.message or "Please Wait for Body Morph"))
+            return
+        end
+        if data.cmd ~= "cm_applied" then return end
         local mine = Targeting.GetClientControlTarget()
         -- Fail CLOSED (review fix): if we cannot resolve OUR controlled
         -- character, do NOT sync the radio. Better a lagging radio (reopen MCM

@@ -1,8 +1,16 @@
 # R1 qualification - work in progress
 
+## Dirty overlay note (2026-09-03, not a Task 2 acceptance)
+
+Pending-refresh wait-then-apply is implemented on the current dirty
+`r1_qualified_delta` overlay. Independently executed `test_r1_pending_refresh.lua`
+is Wait PASS (4/4 + WAIT_NOTIFY), not RED. MCM origin-proof remains OPEN (0/2).
+Task 2 is not accepted. Historical 0/4 receipts below describe prior heads, not
+this dirty tree.
+
 Latest partial review-fix evidence is in [TASK_2_FIX_ROUND1.md](TASK_2_FIX_ROUND1.md).
-Six bounded findings are corrected; both MCM-origin relay cases and all four
-pending-refresh cases remain mandatory RED. Task 2 is not accepted.
+Six bounded findings were corrected in round 1. MCM-origin relay cases remain OPEN.
+Pending-refresh on this dirty overlay is Wait PASS (see note above). Task 2 is not accepted.
 
 The separately revisioned `runtime/r1_qualified_delta/` is a candidate, not an
 accepted Runtime or playable Alfira fix. It does not change the frozen pure-R1
@@ -43,14 +51,14 @@ with exact current-entry preservation, replication and verified ownership
 readback; see `PENDING_REFRESH_INVESTIGATION.md`. Its compatibility basis is R0's
 existing use of that surface, not a claim of testing a historical SE20 binary.
 
-The separate stateful `test_r1_pending_refresh.lua` remains a mandatory RED:
+Historical (prior head): the separate stateful `test_r1_pending_refresh.lua` was a mandatory RED:
 an already-started managed refresh unequips an item, but immediate External gates
 its delayed re-equip and leaves the equipped slot empty. There is no verified
 inventory-preserving EquipmentRace refresh replacement yet. Delaying Off/External
 has not been approved or implemented. This source-only blocker prevents Task 2
 acceptance even if all other aggregate tests pass.
 
-## Review checkpoint: mandatory aggregate remains RED
+## Review checkpoint (historical): mandatory aggregate was RED
 
 Review base: `9fe8e0739b954ee18cad9b87b8a08e133f103e11`. The latest full mandatory
 run completed **1 failed, 480 passed, 15 skipped in 120.36 seconds**. The failure
@@ -79,7 +87,7 @@ Fresh public index exports `_r14pub_8d311a6c/false` and `/true` each passed
 59 tests with 5 explicit skips, in 12.66 and 11.40 seconds respectively. These
 portable runs deliberately do not claim the local actual-source test passed.
 
-Unfulfilled: pending-refresh behavior/approved design resolution, independent
+Unfulfilled on this dirty tree: MCM origin-proof OPEN, independent
 review and resulting fixes, and Task 2 acceptance. Full provider remint/reverse
 and rollback acceptance remains mandatory DEFERRED_TO_TASK5. Gameplay NOT_RUN;
 no PAK build/install or Alfira/whole-release completion. The pending refresh

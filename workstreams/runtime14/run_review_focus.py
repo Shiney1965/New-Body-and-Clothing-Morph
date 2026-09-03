@@ -14,11 +14,14 @@ from .qualification import compose_qualified_stage
 def main():
     config_path=Path(sys.argv[1])
     selector=sys.argv[2]
+    test_script=sys.argv[3] if len(sys.argv)>3 else 'test_r1_review_round1.lua'
+    if test_script not in ('test_r1_review_round1.lua','test_r1_review_round2.lua','test_r1_pending_refresh.lua'):
+        raise ValueError('Unknown review script')
     root=Path(__file__).parent.resolve()
     suffix='review-'+uuid4().hex
     frozen=root/'local/harnesses'/suffix
     receipts=[]
-    for name in ('production_engine.lua','test_r1_review_round1.lua'):
+    for name in ('production_engine.lua',test_script):
         source=root/'tests/lua'/name
         data=source.read_bytes()
         frozen.mkdir(parents=True,exist_ok=True)
@@ -28,7 +31,7 @@ def main():
     verified=verify_lineage_inputs(config['inputs'])
     base=compose_runtime_stage(verified,root/'local/stages'/('base-'+suffix))
     stage=compose_qualified_stage(verified,base,root/'local/stages/qualified'/suffix)
-    command=[shutil.which('lua'),str(frozen/'test_r1_review_round1.lua'),stage.output,selector]
+    command=[shutil.which('lua'),str(frozen/test_script),stage.output,selector]
     result=subprocess.run(command,capture_output=True,text=True,timeout=60)
     drift=[r['path'] for r in receipts if hashlib.sha256(Path(r['path']).read_bytes()).hexdigest().upper()!=r['sha256']]
     report={'stage':asdict(stage),'command':command,'selector':selector,'exit_code':result.returncode,

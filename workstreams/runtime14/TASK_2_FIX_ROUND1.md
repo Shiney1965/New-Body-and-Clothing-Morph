@@ -1,5 +1,10 @@
 # Task 2 fix round 1 - partial checkpoint
 
+## Dirty overlay note (2026-09-03, not a Task 2 acceptance)
+
+Pending-refresh 0/4 in this round-1 record is historical. On the current dirty overlay it is Wait PASS (4/4 + WAIT_NOTIFY). Task 2 is not accepted. MCM origin-proof remains OPEN.
+
+
 Status: six bounded independent-review findings corrected and individually
 verified; Task 2 NOT COMPLETE. Review base is
 `e4abe5af13c803f0f133285cad4a7fed0d47cc19`.
@@ -15,7 +20,7 @@ verified; Task 2 NOT COMPLETE. Review base is
 | First-use shared-CV baseline | Corrected: only exact still-owned process original is eligible; stale/arbitrary minted controls; 3/3 |
 | Schema invariants/history/maps/enums | Corrected: nullable archived originals preserved, effective history bound, contradictory state rejected; 22/22 |
 | Printed master-status GUID lists | Corrected: actual output and exact classifications tested; 1/1 |
-| Pending equipment refresh | OPEN, 0/4 RED; mature/family paths with External/master-off |
+| Pending equipment refresh | Historical 0/4 RED in this round-1 record; dirty overlay 2026-09-03 is Wait PASS 4/4 + WAIT_NOTIFY (not Task 2 acceptance) |
 
 The source-backed MCM options and integration requirements are in
 [MCM_AUTHORITY_REVIEW.md](MCM_AUTHORITY_REVIEW.md). No UI change, disabling of the

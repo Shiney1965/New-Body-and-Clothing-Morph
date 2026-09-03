@@ -1472,6 +1472,8 @@ end
 SetDesiredBody = function(char, choice)
     if R1Runtime == nil then return SetDesiredBodyManaged(char, choice) end
     char = NormGuid(char)
+    pcall(function() EquipRace.CompletePendingRefresh(char) end)
+    pcall(function() BodyFamilyEquipRace.CompletePendingRefresh(char) end)
     if type(choice) ~= "string" or not Shared.IsValidBodyChoice(choice) then
         return false, "invalid-choice"
     end

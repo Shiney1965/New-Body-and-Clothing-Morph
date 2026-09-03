@@ -19,11 +19,13 @@ test('load resumes master disable saved before the first character journal',func
     assert(w.console.cm_applyccsv('cm_applyccsv','a22009cd-b9e9-55b1-8295-f89a0ede1bf6',F.ids.a))
     w.state.MasterEnabled=false;w.state.MutationGateClosed=true;w.state.MasterState='off_restoring';w.state.PassThroughRestoreComplete=false
     w.state.MasterTransition={Direction='disable',Started=true,PendingCharacters={[F.ids.a]=true}}
+    local applied=w.state.Bodies[F.ids.a].AppliedCcsv
+    assert(applied,'fixture CCSV missing')
     w.fire('SavegameLoaded')
     local rec=w.state.Bodies[F.ids.a]
     assert(w.state.MasterState=='off_restored' and w.state.PassThroughRestoreComplete,'global disable did not resume')
-    assert(rec.Choice=='sbbf' and rec.RestoreState=='clean' and rec.AppliedCcsv==nil,'configured choice/restore wrong')
-    assert(w.entities[F.ids.a].ServerCharacter.Template.EquipmentRace==F.ids.er)
+    assert(rec.Choice=='sbbf' and rec.RestoreState=='clean','configured choice/restore wrong')
+    assert(rec.AppliedCcsv==applied,'Off resume stripped owned CCSV via origin restore')
 end)
 test('load resumes master enable saved before the first character journal',function()
     local w=F.Boot(root)

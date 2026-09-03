@@ -63,7 +63,7 @@ or a claim that a single synthetic engine fixture proves all possible gameplay.
 | ordinary off preferences and re-enable | production/master/journal suites; queued provider activation precedes character apply |
 | mature/family managed behavior | `test_r1_managed_regression.lua`, genuine accepted provider execution in `test_r1_registration.lua`; geometry/gameplay NOT_RUN |
 | mutator/event/delay gates, tattoo, debug | `test_r1_mutator_inventory.lua`, `test_r1_event_matrix.lua`, `test_r1_debug.lua`, production timer/tattoo cases |
-| equipped identity across pending refresh | **UNRESOLVED RED** `test_r1_pending_refresh.lua`; gating a delayed re-equip alone leaves an item unequipped; no acceptance or exclusion |
+| equipped identity across pending refresh | **DIRTY WAIT PASS** 4/4 + WAIT_NOTIFY on current overlay (2026-09-03); wait-then-apply before Off/External. Not Task 2 acceptance. Historical UNRESOLVED RED described prior heads. MCM origin-proof remains OPEN. |
 | native CCSV timing | native add deferred in fixture; RED 1/3, 2/8, then propagation/rollback RED 8/11; final source-backed synchronous append and proven-write rollback cases 11/11 in receipt `5df5dd83c5434f88983eaa2c3d4948f1` |
 | queued legacy metadata / exact callers / snapshots | `test_r1_registration.lua`, `test_r1_external_legacy.lua`; legacy unknown owner stays empty string + ownerUnresolved, never v2/cleanup assurance |
 | cross-save process mappings | registration cases distinguish persisted ACTIVE from process activation, fresh exact-descriptor reattachment, and saved conflicting digest/owner restart requirement; exact mutation spies |

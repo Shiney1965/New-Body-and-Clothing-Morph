@@ -1,9 +1,16 @@
 # Inventory-preserving refresh investigation
 
-Status: no verified replacement for managed EquipmentRace refresh established.
-The stateful `test_r1_pending_refresh.lua` remains RED. This is not an exclusion
-or a Task 2 acceptance waiver. No live test, application control, installation,
-network action, or source-project edit was performed.
+## Dirty overlay note (2026-09-03, not a Task 2 acceptance)
+
+Wait-then-apply is implemented on the current dirty overlay: in-flight
+RefreshEquipment is completed before Off/External; delayed re-equip still
+refuses after the gate; wait >= ~2s shows player-visible `Please Wait for Body Morph`.
+Stateful `test_r1_pending_refresh.lua` is Wait PASS (4/4 + WAIT_NOTIFY) on this
+tree. This is not an exclusion and not Task 2 acceptance. MCM origin-proof remains
+OPEN. Historical RED reproduction below is retained as prior-head evidence.
+
+Status (historical, prior heads): no verified replacement had been established and
+the stateful suite was RED. That present-tense RED does not describe this dirty tree.
 
 ## Reproduced conflict
 

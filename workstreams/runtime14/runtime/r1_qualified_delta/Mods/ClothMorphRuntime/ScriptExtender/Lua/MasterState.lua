@@ -5,6 +5,33 @@ Runtime.__index = Runtime
 local MANAGED_CHOICES = { vanilla = true, sbbf = true, bcb = true }
 local MANAGED_ROLLBACK_FAILURE = "MANAGED_REAPPLY_ROLLBACK_FAILED"
 
+local function loadOverlay(name)
+    local ok, mod = pcall(function()
+        if Ext ~= nil and Ext.Require ~= nil then return Ext.Require(name) end
+        return require((tostring(name):gsub("%.lua$", "")))
+    end)
+    if ok and type(mod) == "table" then return mod end
+    return nil
+end
+
+local function completePendingRefresh(char)
+    for _, name in ipairs({ "EquipRace.lua", "BodyFamilyEquipRace.lua" }) do
+        local mod = loadOverlay(name)
+        if mod ~= nil and type(mod.CompletePendingRefresh) == "function" then
+            pcall(mod.CompletePendingRefresh, char)
+        end
+    end
+end
+
+local function completeAllPendingRefresh()
+    for _, name in ipairs({ "EquipRace.lua", "BodyFamilyEquipRace.lua" }) do
+        local mod = loadOverlay(name)
+        if mod ~= nil and type(mod.CompleteAllPendingRefresh) == "function" then
+            pcall(mod.CompleteAllPendingRefresh)
+        end
+    end
+end
+
 local function hasFailureCode(record, expected)
     for _, code in ipairs(type(record) == "table" and record.RestoreFailures or {}) do
         if code == expected then return true end
@@ -146,9 +173,39 @@ end
 local function recomputeComplete(state)
     if state.MasterEnabled ~= false then return false end
     for _, record in pairs(state.Bodies or {}) do
-        if record.RestoreState ~= "clean" then return false end
+        if record.RestoreState ~= "clean" or record.Transition~=nil
+            or record.ProviderTransition~=nil then return false end
     end
     return true
+end
+
+local function summarizeOffRestoration(state, restoring)
+    if state.MasterEnabled~=false then return end
+    local clean,partial,blocked,pending={},{},{},{}
+    local unfinished={}
+    for _,guid in ipairs(sortedGuids(state.Bodies)) do
+        local record=state.Bodies[guid]
+        if record.RestoreState=="clean" and record.Transition==nil and record.ProviderTransition==nil then
+            clean[#clean+1]=guid
+        else
+            unfinished[guid]=true
+            if record.RestoreState=="partial" then partial[#partial+1]=guid
+            elseif record.RestoreState=="blocked" then blocked[#blocked+1]=guid
+            else pending[#pending+1]=guid end
+        end
+    end
+    state.MutationGateClosed=true
+    state.PassThroughRestoreComplete=not restoring and recomputeComplete(state)
+    if state.PassThroughRestoreComplete then
+        state.MasterState="off_restored"
+        state.MasterTransition=nil
+    else
+        state.MasterState=restoring and "off_restoring"
+            or ((#partial>0 or #clean>0) and "off_partial" or "off_blocked")
+        state.MasterTransition={schema=1,Kind="master_off",Direction="disable",Started=true,
+            Phase=restoring and "restoring" or "complete",PendingCharacters=unfinished,
+            CleanGuids=clean,PartialGuids=partial,BlockedGuids=blocked,PendingGuids=pending}
+    end
 end
 
 function Runtime:SetMasterEnabled(enabled)
@@ -170,86 +227,44 @@ function Runtime:SetMasterEnabled(enabled)
     end
 
     if not enabled then
+        -- Finish any in-flight outfit refresh while the mutation gate is
+        -- still open. Delayed leftover timers must later no-op on the gate.
+        completeAllPendingRefresh()
+        -- Off = stop driving. Do not restore a saved pre-ClothMorph origin;
+        -- the live game/mod stack decides shape. Completed Off means the
+        -- mutation gate is closed and schema is consistent, not origin-restored.
         self.state.MasterEnabled = false
         self.state.MutationGateClosed = true
         self.state.MasterState = "off_restoring"
         self.state.PassThroughRestoreComplete = false
         self.state.CleanupState = "idle"
-        self.state.MasterTransition = {
-            schema = 1, Kind = "master_off", Phase = "restoring",
-            Direction="disable",Started=true,PendingCharacters={},
-            CleanGuids = {}, PartialGuids = {}, BlockedGuids = {},
-        }
-        for guid,record in pairs(self.state.Bodies) do
-            if record.Choice~="external" or record.RestoreState~="clean" or record.Transition~=nil then
-                self.state.MasterTransition.PendingCharacters[guid]=true
+        persist(self, "master-off-gated")
+        for _, guid in ipairs(sortedGuids(self.state.Bodies)) do
+            local record = self.state.Bodies[guid]
+            if record.Transition and record.Transition.PreserveChoice
+                and record.Transition.Direction=="to_external" then
+                record.Transition=nil
+                if record.RestoreState=="pending" then record.RestoreState="clean" end
             end
         end
-        persist(self, "master-off-gated")
-
+        summarizeOffRestoration(self.state, false)
+        persist(self, "master-off-complete")
         local clean, partial, blocked, pending = {}, {}, {}, {}
         for _, guid in ipairs(sortedGuids(self.state.Bodies)) do
             local record = self.state.Bodies[guid]
-            if record.Choice=="external" and record.RestoreState=="clean" and record.Transition==nil then
+            if record.RestoreState=="clean" and record.Transition==nil
+                and record.ProviderTransition==nil then
                 clean[#clean+1]=guid
-                goto continue_disable
-            end
-            record.Transition={Direction="to_external",Phase="gated",PreserveChoice=true}
-            record.RestoreState="pending"
-            persist(self,"master-character-gated")
-            local accepted, result = self:WriteGate("ordinary_restore", guid, function()
-                if self.deps.restoreExternal == nil then
-                    record.RestoreState = "blocked"
-                    record.RestoreFailures = { "RESTORE_ADAPTER_UNAVAILABLE" }
-                    return { status = "blocked", failureCodes = record.RestoreFailures }
-                end
-                return self.deps.restoreExternal(guid, record, "ordinary_restore")
-            end)
-            if not accepted then
-                record.RestoreState = "blocked"
-                record.RestoreFailures = { "WRITE_GATE_CLOSED" }
-                result = { status = "blocked" }
-            end
-            local status = classifyRestore(record, result)
-            if status == "clean" then record.Transition=nil end
-            if status == "clean" then clean[#clean + 1] = guid
-            elseif status == "partial" then partial[#partial + 1] = guid
-            elseif status == "pending" then pending[#pending+1]=guid
-            else blocked[#blocked + 1] = guid end
-            ::continue_disable::
+            elseif record.RestoreState=="partial" then partial[#partial+1]=guid
+            elseif record.RestoreState=="blocked" then blocked[#blocked+1]=guid
+            else pending[#pending+1]=guid end
         end
-
-        self.state.PassThroughRestoreComplete = recomputeComplete(self.state)
-        if self.state.PassThroughRestoreComplete then
-            self.state.MasterState = "off_restored"
-            self.state.MasterTransition = nil
-        elseif #partial > 0 or #clean > 0 then
-            self.state.MasterState = "off_partial"
-            local unfinished={}
-            for guid,record in pairs(self.state.Bodies) do if record.RestoreState~="clean" then unfinished[guid]=true end end
-            self.state.MasterTransition = {
-                schema = 1, Kind = "master_off", Phase = "complete",
-                Direction="disable",Started=true,PendingCharacters=unfinished,
-                CleanGuids = clean, PartialGuids = partial, BlockedGuids = blocked,
-            }
-        else
-            self.state.MasterState = "off_blocked"
-            local unfinished={}
-            for guid,record in pairs(self.state.Bodies) do if record.RestoreState~="clean" then unfinished[guid]=true end end
-            self.state.MasterTransition = {
-                schema = 1, Kind = "master_off", Phase = "complete",
-                Direction="disable",Started=true,PendingCharacters=unfinished,
-                CleanGuids = clean, PartialGuids = partial, BlockedGuids = blocked,
-            }
-        end
-        persist(self, "master-off-complete")
         return {
             ok = true, status = "COMPLETE", masterState = self.state.MasterState,
             cleanGuids = clean, partialGuids = partial, blockedGuids = blocked,
             pendingGuids = pending,
         }
     end
-
     self:ResumePending()
     self.state.MasterEnabled = true
     self.state.MutationGateClosed = true
@@ -320,18 +335,28 @@ function Runtime:SetMasterEnabled(enabled)
 end
 
 function Runtime:SetExternal(charGuid)
+    completePendingRefresh(charGuid)
     local record = self.state.Bodies and self.state.Bodies[charGuid] or nil
     if record == nil then return { ok = false, status = "CHARACTER_NOT_TRACKED" } end
-    if record.Choice == "external" and record.RestoreState == "clean" then
+    if record.Choice == "external" and record.RestoreState == "clean"
+        and record.Transition==nil and record.ProviderTransition==nil then
         return { ok = true, status = "IDEMPOTENT" }
     end
     local allowed = M.CheckWriteGate(self.state, "external_restore", charGuid)
     if not allowed then return { ok = false, status = "WRITE_GATE_CLOSED" } end
+    if self.state.MasterEnabled==false then
+        -- Invalidate the completed global summary before making this record
+        -- pending. Wrapped internal gates validate the whole schema again.
+        self.state.PassThroughRestoreComplete=false
+        self.state.MasterState="off_restoring"
+        self.state.MutationGateClosed=true
+    end
     if MANAGED_CHOICES[record.Choice] then record.PreferredChoice = record.Choice end
     record.Choice = "external"
     record.Transition = {Direction="to_external",Phase="gated"}
     record.RestoreState = "pending"
     record.RestoreFailures = {}
+    summarizeOffRestoration(self.state,true)
     persist(self, "external-gated")
     local accepted, result = self:WriteGate("external_restore", charGuid, function()
         if self.deps.restoreExternal == nil then
@@ -344,6 +369,7 @@ function Runtime:SetExternal(charGuid)
     record.Choice = "external"
     classifyRestore(record, result)
     if record.RestoreState == "clean" then record.Transition=nil end
+    summarizeOffRestoration(self.state,false)
     persist(self, "external-complete")
     result.ok = record.RestoreState == "clean"
     return result
@@ -416,14 +442,12 @@ function Runtime:ResumePending()
     local resumeEnable=self.state.MasterState=="enabling" and type(master)=="table"
     local resumeDisable=self.state.MasterEnabled==false and type(master)=="table"
         and (master.Direction=="disable" or master.Kind=="master_off")
-    if resumeEnable or resumeDisable then
+    if resumeEnable then
         for _,guid in ipairs(sortedGuids(self.state.Bodies)) do
             local rec=self.state.Bodies[guid]
             if master.PendingCharacters and master.PendingCharacters[guid] and rec.Transition==nil then
                 local choice=master.RequestedChoices and master.RequestedChoices[guid] or rec.Choice
-                rec.Transition=resumeEnable
-                    and {Direction="to_managed",Phase="gated",RequestedChoice=choice,Deferred=true,PreserveChoice=true}
-                    or {Direction="to_external",Phase="gated",PreserveChoice=true}
+                rec.Transition={Direction="to_managed",Phase="gated",RequestedChoice=choice,Deferred=true,PreserveChoice=true}
                 rec.RestoreState="pending"
             end
         end
@@ -433,34 +457,40 @@ function Runtime:ResumePending()
     for _,guid in ipairs(sortedGuids(self.state.Bodies)) do
         local rec=self.state.Bodies[guid]
         if rec.ProviderTransition==nil and (rec.Transition~=nil or rec.RestoreState=="pending") then
-            hasPending=true
-            local deferred=rec.Transition and (rec.Transition.Deferred or (resumeEnable and rec.Transition.PreserveChoice))
-                and rec.Transition.RequestedChoice
-            if rec.Transition and rec.Transition.Direction=="to_managed" and not deferred then rec.Choice="external" end
-            local preserve=rec.Transition and rec.Transition.PreserveChoice
-            local choice=rec.Choice
-            rec.Transition={Direction="to_external",Phase="restoring",PreserveChoice=preserve}
-            persist(self,"resume-restore-gated")
-            local result=self.deps.restoreExternal and self.deps.restoreExternal(guid,rec,"maintenance_restore")
-            local status=classifyRestore(rec,result)
-            if preserve then rec.Choice=choice end
-            if status=="clean" then
+            local offRestore=self.state.MasterEnabled==false and rec.Transition
+                and rec.Transition.PreserveChoice and rec.Transition.Direction=="to_external"
+            if offRestore then
                 rec.Transition=nil
-                if deferred and self.state.MasterEnabled==true and not resumeEnable then
-                    self:RunExplicitManaged(guid,deferred,function()
-                        return self.deps.applyManaged and self.deps.applyManaged(guid,rec,deferred)==true
-                    end)
+                if rec.RestoreState=="pending" then rec.RestoreState="clean" end
+                persist(self,"resume-off-stop-driving")
+            else
+                hasPending=true
+                local deferred=rec.Transition and (rec.Transition.Deferred or (resumeEnable and rec.Transition.PreserveChoice))
+                    and rec.Transition.RequestedChoice
+                if rec.Transition and rec.Transition.Direction=="to_managed" and not deferred then rec.Choice="external" end
+                local preserve=rec.Transition and rec.Transition.PreserveChoice
+                local choice=rec.Choice
+                rec.Transition={Direction="to_external",Phase="restoring",PreserveChoice=preserve}
+                persist(self,"resume-restore-gated")
+                local result=self.deps.restoreExternal and self.deps.restoreExternal(guid,rec,"maintenance_restore")
+                local status=classifyRestore(rec,result)
+                if preserve then rec.Choice=choice end
+                if status=="clean" then
+                    rec.Transition=nil
+                    if deferred and self.state.MasterEnabled==true and not resumeEnable then
+                        self:RunExplicitManaged(guid,deferred,function()
+                            return self.deps.applyManaged and self.deps.applyManaged(guid,rec,deferred)==true
+                        end)
+                    end
+                elseif deferred then
+                    rec.Transition={Direction="to_managed",Phase="gated",RequestedChoice=deferred,Deferred=true}
                 end
-            elseif deferred then
-                rec.Transition={Direction="to_managed",Phase="gated",RequestedChoice=deferred,Deferred=true}
+                persist(self,"resume-restore-result")
             end
-            persist(self,"resume-restore-result")
         end
     end
-    if self.state.MasterEnabled==false and hasPending then
-        self.state.PassThroughRestoreComplete=recomputeComplete(self.state)
-        self.state.MasterState=self.state.PassThroughRestoreComplete and "off_restored" or "off_partial"
-        if self.state.PassThroughRestoreComplete then self.state.MasterTransition=nil end
+    if self.state.MasterEnabled==false then
+        summarizeOffRestoration(self.state,false)
         persist(self,"resume-master-summary")
     end
     if resumeEnable then
