@@ -2179,8 +2179,12 @@ function M.OnEquipped(item, char, rec)
     if r == "injected" or r == "refit" then
         Log("OnEquipped: late-injected template for " .. tostring(item) .. "; re-equipping to refresh.")
         pcall(function() Osi.Unequip(char, item) end)
-        local okT = pcall(function() Ext.Timer.WaitFor(250, function() pcall(function() Osi.Equip(char, item) end) end) end)
-        if not okT then pcall(function() Osi.Equip(char, item) end) end
+        local function lateEquip()
+            if not PassThrough.CanMutate("EquipRace.DelayedOnEquipped",char) then return end
+            pcall(function() Osi.Equip(char,item) end)
+        end
+        local okT=pcall(function() Ext.Timer.WaitFor(250,lateEquip) end)
+        if not okT then lateEquip() end
     end
 end
 

@@ -17,12 +17,16 @@ function M.Install(modTable, state, deps)
     local migrated, initialSchemaFailure = Schema.Migrate(state, deps.schema)
 
     local runtime
+    local providerRegistry
     local runtimeDeps = {
         persist = deps.persist,
         applyManaged = deps.applyManaged,
         captureBaseline = deps.captureBaseline,
         verifyManaged = deps.verifyManaged,
         isCharacterAvailable = deps.isCharacterAvailable,
+        beforeEnable = function()
+            return providerRegistry:ActivateQueued()
+        end,
         readVisuals = deps.readVisuals,
         writeVisuals = deps.writeVisuals,
         restoreExternal = function(charGuid, record, capability)
@@ -51,12 +55,13 @@ function M.Install(modTable, state, deps)
     }
     runtime = Master.New(migrated or state, runtimeDeps)
     runtime.schemaFailure = initialSchemaFailure
-    local providerRegistry = ProviderRegistry.New(runtime.state, {
+    providerRegistry = ProviderRegistry.New(runtime.state, {
         persist = deps.persist,
         activate = deps.activateProvider,
         resourceExists = deps.providerResourceExists,
         existingTarget = deps.providerExistingTarget,
         isModuleLoaded = deps.isModuleLoaded,
+        validateLegacyFamily = deps.validateLegacyFamily,
     }, {
         runtimeUuid = modTable.ModuleUUID,
         packageVersion64 = "36451011631513600",
@@ -92,24 +97,44 @@ function M.Install(modTable, state, deps)
     runtime.WriteGate = function(self, ...)
         self:RefreshState()
         if self.schemaFailure ~= nil then return false, self.schemaFailure end
+        if providerRegistry:MutationBlocked() then return false,"PROVIDER_PROFILE_RESTART_REQUIRED" end
         return rawWriteGate(self, ...)
     end
     local rawFilterManagedBodies = runtime.FilterManagedBodies
     runtime.FilterManagedBodies = function(self, ...)
         self:RefreshState()
         if self.schemaFailure ~= nil then return {} end
+        if providerRegistry:MutationBlocked() then return {} end
         return rawFilterManagedBodies(self, ...)
     end
     local rawRunExplicitManaged = runtime.RunExplicitManaged
     runtime.RunExplicitManaged = function(self, ...)
         self:RefreshState()
         if self.schemaFailure ~= nil then return false, self.schemaFailure end
+        if providerRegistry:MutationBlocked() then return false,"PROVIDER_PROFILE_RESTART_REQUIRED" end
         return rawRunExplicitManaged(self, ...)
     end
     local rawGetDiagnostics = runtime.GetDiagnostics
     runtime.GetDiagnostics = function(self, ...)
         self:RefreshState()
-        return rawGetDiagnostics(self, ...)
+        if self.schemaFailure then
+            local blocked={}
+            if type(self.state.Bodies)=="table" then for guid in pairs(self.state.Bodies) do blocked[#blocked+1]=tostring(guid) end end
+            table.sort(blocked)
+            return {PersistentSchema=self.state.Version,MasterEnabled=self.state.MasterEnabled,
+                MutationGateClosed=self.state.MutationGateClosed,MasterState=self.state.MasterState,
+                PassThroughRestoreComplete=false,CleanupState=self.state.CleanupState,
+                SchemaFailure=self.schemaFailure,ManagedGuids={},ExternalGuids=blocked,
+                PendingGuids={},PartialGuids={},BlockedGuids=blocked}
+        end
+        local diagnostics=rawGetDiagnostics(self, ...)
+        diagnostics.ProviderRegistryRestartRequired=providerRegistry.restartRequired==true
+        if providerRegistry:MutationBlocked() then
+            diagnostics.ManagedGuids={};diagnostics.ExternalGuids={}
+            for guid in pairs(self.state.Bodies or {}) do diagnostics.ExternalGuids[#diagnostics.ExternalGuids+1]=guid end
+            table.sort(diagnostics.ExternalGuids)
+        end
+        return diagnostics
     end
 
     modTable.PersistentSchema = 7
@@ -130,8 +155,10 @@ function M.Install(modTable, state, deps)
         if runtime.schemaFailure ~= nil then
             return false, { ok = false, status = "REJECTED_INVALID_SCHEMA", failureCode = runtime.schemaFailure }
         end
+        if providerRegistry:MutationBlocked() then return false,{ok=false,status="PROVIDER_PROFILE_RESTART_REQUIRED",restartRequired=true} end
         local result = runtime:SetMasterEnabled(enabled)
-        if enabled == true and result.ok == true and runtime.state.MutationGateClosed == false then
+        if enabled == true and result.ok == true and runtime.state.MutationGateClosed == false
+            and result.providerActivationResults == nil then
             result.providerActivationResults = providerRegistry:ActivateQueued()
         end
         return result.ok == true, result
@@ -141,6 +168,7 @@ function M.Install(modTable, state, deps)
         if runtime.schemaFailure ~= nil then
             return { ok = false, status = "REJECTED_INVALID_SCHEMA", failureCode = runtime.schemaFailure }
         end
+        if providerRegistry:MutationBlocked() then return {ok=false,status="PROVIDER_PROFILE_RESTART_REQUIRED",restartRequired=true} end
         return runtime:SetExternal(charGuid)
     end
     modTable.GetStateDiagnostics = function()
@@ -173,6 +201,7 @@ function M.Install(modTable, state, deps)
     function runtime:CanManagedWrite(entryPoint, charGuid)
         local current = self:RefreshState()
         if self.schemaFailure ~= nil then return false, self.schemaFailure end
+        if providerRegistry:MutationBlocked() then return false,"PROVIDER_PROFILE_RESTART_REQUIRED" end
         return Master.CheckWriteGate(current, "managed", charGuid)
     end
 

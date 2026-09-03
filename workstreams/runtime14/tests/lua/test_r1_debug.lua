@@ -26,7 +26,7 @@ test('unknown CCSV and minted or wrong-family recovery ER fail without writes',f
     assert(#w.writes==0,'untrusted debug request wrote gameplay')
 end)
 test('debug CCSV no-op engine write gains no ownership claim',function()
-    local w=F.Boot(root,{addNoop=true})
+    local w=F.Boot(root,{visualWriteNoop=true})
     assert(w.console.cm_applyccsv('cm_applyccsv',CCSV,F.ids.a)~=true)
     assert(w.state.Bodies[F.ids.a].OwnedCcsvs[CCSV]==nil,'failed CCSV write gained ownership')
 end)

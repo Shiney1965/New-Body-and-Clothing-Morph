@@ -312,7 +312,10 @@ function M.OnEquipped(item, char, record)
         M.RefreshEquipment(char)
     elseif result == "refit" or result == "injected" then
         pcall(function() Osi.Unequip(char, item) end)
-        local function equipAgain() pcall(function() Osi.Equip(char, item) end) end
+        local function equipAgain()
+            if not PassThrough.CanMutate("BodyFamilyEquipRace.DelayedOnEquipped",char) then return end
+            pcall(function() Osi.Equip(char,item) end)
+        end
         local timerOk = pcall(function() Ext.Timer.WaitFor(250, equipAgain) end)
         if not timerOk then equipAgain() end
     end

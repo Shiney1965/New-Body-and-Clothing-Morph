@@ -130,10 +130,10 @@ function M.InstallServer(deps)
                 return
             end
             local t = Now()
-            if last.value == choice and (t - last.t) < DEDUPE_MS then return end
+            if last.value == choice and last.char==char and (t - last.t) < DEDUPE_MS then return end
             deps.Log(("MCM(server): body_choice -> '%s' (%s)"):format(choice, tostring(char)))
             deps.SetDesiredBody(char, choice)
-            last.value, last.t = choice, t
+            last.value, last.t, last.char = choice, t, char
         end,
         ApplyTattooPolicy = function(policy)
             local okAuth, authorized, why = pcall(deps.AuthorizeTattooPolicy)
@@ -167,10 +167,10 @@ function M.NetApply(deps, choice, target)
     end
     if not char then deps.Warn("MCM(net): no validated character target."); return false end
     local t = Now()
-    if last.value == choice and (t - last.t) < DEDUPE_MS then return false end
+    if last.value == choice and last.char==char and (t - last.t) < DEDUPE_MS then return false end
     deps.Log(("MCM(net): body_choice -> '%s' (%s)"):format(choice, tostring(char)))
     deps.SetDesiredBody(char, choice)
-    last.value, last.t = choice, t
+    last.value, last.t, last.char = choice, t, char
     return true
 end
 
@@ -214,10 +214,10 @@ end
 -- reaches NetApply it would double-apply. The primary fix is client-side
 -- (MCM.Set(..., shouldEmitEvent=false) suppresses the echo entirely), but we
 -- also let the server mark the value so a stray echo dedupes here too.
-function M.NoteApplied(choice)
+function M.NoteApplied(choice,char)
     choice = ToChoice(choice)
     if choice == nil then return end
-    last.value, last.t = choice, Now()
+    last.value, last.t, last.char = choice, Now(), char
 end
 
 -- CLIENT keybinding registration. MCM >= 1.19 required for MCM.Keybinding;

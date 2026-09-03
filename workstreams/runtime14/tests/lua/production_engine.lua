@@ -18,7 +18,7 @@ function F.Boot(root, options)
     local ids = F.ids
     local world = { modules = {}, entities = {}, resources = {}, statics = {},
         reads = {}, writes = {}, logs = {}, warnings = {}, events = {}, listeners = {},
-        console = {}, timers = {}, broadcasts = {}, mcmWrites = {}, mcm = {}, loaded = {} }
+        console = {}, timers = {}, nativeAdds = {}, broadcasts = {}, mcmWrites = {}, mcm = {}, loaded = {} }
     local function read(kind, key)
         world.reads[#world.reads+1] = {kind,key}
         if options.onRead then options.onRead(world,kind,key) end
@@ -33,7 +33,8 @@ function F.Boot(root, options)
     end
     local function tracked(fields,kind,guid)
         return setmetatable({}, {__index=fields,__newindex=function(_,key,value)
-            write(kind..'.'..key,guid,value); fields[key]=value
+            write(kind..'.'..key,guid,value)
+            if not (options.visualWriteNoop and kind=='CCA' and key=='Visuals') then fields[key]=value end
         end})
     end
     function world.fire(name, ...)
@@ -44,6 +45,13 @@ function F.Boot(root, options)
     function world.flushTimers()
         local timers=world.timers; world.timers={}
         for _,fn in ipairs(timers) do fn() end
+    end
+    -- The original live probe observed native additions becoming readable only
+    -- after the command tick. Native engine work is not an Ext.Timer callback
+    -- and cannot be cancelled by Runtime's delayed-callback gate.
+    function world.flushNativeAdds()
+        local pending=world.nativeAdds;world.nativeAdds={}
+        for _,fn in ipairs(pending) do fn() end
     end
     function world.addCharacter(guid,cv,user,race,er)
         local entity = {Guid=guid, UserReservedFor={UserID=user or 1},
@@ -84,13 +92,30 @@ function F.Boot(root, options)
     env.Osi={GetHostCharacter=function() return ids.a end,
         IsPartyMember=function(guid) read('IsPartyMember',guid);return world.entities[guid] and 1 or 0 end,
         GetEquippedItem=function(guid,slot) read('GetEquippedItem',guid); return world.equipped and world.equipped[guid] and world.equipped[guid][slot] end,
-        Unequip=function(guid,item) write('Unequip',guid,item) end,
-        Equip=function(guid,item) write('Equip',guid,item) end,
+        Unequip=function(guid,item)
+            write('Unequip',guid,item)
+            if options.simulateInventory then
+                world.inventory=world.inventory or {};world.itemSlots=world.itemSlots or {}
+                for slot,value in pairs(world.equipped and world.equipped[guid] or {}) do
+                    if value==item then
+                        world.itemSlots[item]=slot;world.equipped[guid][slot]=nil;world.inventory[item]=guid
+                    end
+                end
+            end
+        end,
+        Equip=function(guid,item)
+            write('Equip',guid,item)
+            if options.simulateInventory and world.inventory and world.inventory[item]==guid then
+                world.equipped[guid][world.itemSlots[item]]=item;world.inventory[item]=nil
+            end
+        end,
         AddCustomVisualOverride=function(guid,ccsv)
             write('AddCustomVisualOverride',guid,ccsv)
             if options.addNoop then return end
-            local list=assert(world.entities[guid]).CharacterCreationAppearance.Visuals
-            list[#list+1]=ccsv
+            world.nativeAdds[#world.nativeAdds+1]=function()
+                local list=assert(world.entities[guid]).CharacterCreationAppearance.Visuals
+                list[#list+1]=ccsv
+            end
         end}
     env.Ext={Utils={Print=function(s) table.insert(world.logs,s) end,PrintWarning=function(s) table.insert(world.warnings,s) end,
         MonotonicTime=function() return 10000 end},

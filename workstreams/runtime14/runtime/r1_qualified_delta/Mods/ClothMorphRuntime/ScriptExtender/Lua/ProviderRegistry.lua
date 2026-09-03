@@ -142,11 +142,11 @@ local function result(descriptor, status, ok, failures)
         ownerModuleUuid = descriptor and descriptor.ownerModuleUuid or nil,
         canonicalDigest = descriptor and descriptor.canonicalDigest or nil,
         activationState = descriptor and descriptor.activationState or "rejected",
-        failureCodes = failures or {}, restartRequired = false,
+        failureCodes = failures or {}, restartRequired = descriptor ~= nil and descriptor.restartRequired == true or false,
     }
 end
 
-local function normalizeMaps(maps)
+local function normalizeMaps(maps, allowEmpty)
     if type(maps) ~= "table" then return nil, "MAPS_INVALID" end
     local normalized, sourceSet, targets = {}, {}, {}
     for _, choice in ipairs(CHOICES) do normalized[choice], targets[choice] = {}, {} end
@@ -166,7 +166,7 @@ local function normalizeMaps(maps)
             count = count + 1
         end
     end
-    if count == 0 then return nil, "MAPS_EMPTY" end
+    if count == 0 and not allowEmpty then return nil, "MAPS_EMPTY" end
     local sources = mapKeys(sourceSet)
     for _, choice in ipairs(CHOICES) do table.sort(targets[choice]) end
     return normalized, nil, sources, targets
@@ -193,6 +193,7 @@ local function hasDuplicateBodyCcsv(values)
 end
 
 function Registry:SetState(state)
+    if self.state==state then return end
     self.state = state
     if type(self.state.RollbackPrepared) == "table"
         and self.state.RollbackPrepared.status == "PREPARED" then
@@ -200,6 +201,43 @@ function Registry:SetState(state)
     end
     -- State validation belongs to Schema7. Diagnostics and registry binding
     -- must never repair malformed persistence into a subsequently writable save.
+    if type(state.ProviderDescriptors)=="table" and state.CleanupState=="idle"
+        and next(self.processDescriptors)~=nil then self:AttachProcessDescriptors() end
+end
+
+function Registry:MutationBlocked()
+    return self.restartRequired==true or self.attaching==true
+end
+
+function Registry:AttachProcessDescriptors()
+    if self.attaching or self.restartRequired then return false end
+    self.attaching=true
+    local candidates=copy(self.state.ProviderDescriptors)
+    local failure
+    for id,descriptor in pairs(self.processDescriptors) do
+        local saved=candidates[id]
+        if saved and (saved.ownerModuleUuid~=descriptor.ownerModuleUuid or saved.canonicalDigest~=descriptor.canonicalDigest) then
+            failure=descriptor;break
+        end
+        if not saved then candidates[id]=copy(descriptor) end
+    end
+    if not failure then
+        for _,id in ipairs(mapKeys(self.processDescriptors)) do
+            local descriptor=self.processDescriptors[id]
+            local called,valid=pcall(self._preflight,self,descriptor,candidates)
+            if not called or not valid then failure=descriptor;break end
+        end
+    end
+    if failure then
+        self.restartRequired=true
+        self:_failure(copy(failure),"PROVIDER_PROFILE_RESTART_REQUIRED")
+        self.attaching=false
+        return false
+    end
+    self.state.ProviderDescriptors=candidates
+    self.sequence=self.sequence+1
+    self.attaching=false
+    return true
 end
 
 function Registry:_buildExternal(sourceName, maps, info)
@@ -208,20 +246,36 @@ function Registry:_buildExternal(sourceName, maps, info)
     if sourceName == "" then return nil, "SOURCE_NAME_INVALID" end
     local providerId = tostring(info.providerId or ("legacy.external." .. sourceName:lower():gsub("[^%w]+", ".")))
     if providerId == "" then return nil, "PROVIDER_ID_INVALID" end
-    local explicitOwner = info.ownerModuleUuid or info.sourceModUuid
-    local owner = explicitOwner or self.meta.runtimeUuid
-    if not validUuid(owner) then return nil, "OWNER_INVALID" end
+    local explicitOwner = info.ownerModuleUuid
+    local owner = explicitOwner or ""
+    if explicitOwner ~= nil and not validUuid(owner) then return nil, "OWNER_INVALID" end
     local normalized, failure, sources, targets = normalizeMaps(maps)
     if normalized == nil then return nil, failure end
     local required = normalizeUuidArray(info.requiredModuleUuids)
     local forbidden = normalizeUuidArray(info.forbiddenModuleUuids)
     if required == nil or forbidden == nil then return nil, "MODULE_UUID_INVALID" end
+    if explicitOwner then
+        local ownerKey=tostring(explicitOwner):lower()
+        local found=false;for _,uuid in ipairs(required) do if uuid==ownerKey then found=true end end
+        if not found then required[#required+1]=ownerKey;table.sort(required) end
+    end
+    if info.sourceModUuid~=nil then
+        if not validUuid(info.sourceModUuid) then return nil,"SOURCE_MODULE_UUID_INVALID" end
+        local source=info.sourceModUuid:lower()
+        local found=false;for _,uuid in ipairs(required) do if uuid==source then found=true end end
+        if not found then required[#required+1]=source;table.sort(required) end
+    end
     local bodyCcsvs = sorted(info.bodyCcsvs)
+    if explicitOwner==nil and #bodyCcsvs>0 then return nil,"BODY_CCSV_OWNER_UNRESOLVED" end
     if hasDuplicateBodyCcsv(bodyCcsvs) then return nil, "BODY_CCSV_DUPLICATE" end
+    local canonicalInfo=copy(info)
+    canonicalInfo.canonicalDigest=nil
     local payload = {
-        kind = "external_refits", providerId = providerId, familyId = "",
+        kind = "external_refits", providerId = providerId, familyId = "", sourceName=sourceName,
         apiGeneration = "legacy_v1", ownerModuleUuid = tostring(owner):lower(),
         ownerUnresolved = explicitOwner == nil, requiredModuleUuids = required,
+        sourceModUuid=info.sourceModUuid,sourceModVersion=info.sourceModVersion or info.sourceVersion,
+        credit=info.credit,info=canonicalInfo,
         forbiddenModuleUuids = forbidden, maps = normalized,
         sourceKeys = sources, targetKeysByChoice = targets,
         revealingKeys = sorted(info.revealingKeys), exclusions = sorted(info.exclusions),
@@ -242,19 +296,32 @@ end
 
 function Registry:_failure(descriptor, code)
     descriptor = descriptor or { activationState = "rejected" }
+    descriptor.restartRequired=self.restartRequired==true
     descriptor.activationState = "rejected"
     self.sequence = self.sequence + 1
     self.rejected[#self.rejected + 1] = {
         providerId = descriptor.providerId, ownerModuleUuid = descriptor.ownerModuleUuid,
+        ownerUnresolved=descriptor.ownerUnresolved==true,
         canonicalDigest = descriptor.canonicalDigest, status = code,
-        activationState = "rejected", failureCodes = { code }, restartRequired = false,
+        activationState = "rejected", failureCodes = { code }, restartRequired = descriptor.restartRequired,
     }
     return result(descriptor, code, false, { code })
 end
 
-function Registry:_preflight(descriptor)
+function Registry:_preflight(descriptor, descriptorPool)
+    descriptorPool=descriptorPool or self.state.ProviderDescriptors
     if sha256(canonicalJson(descriptor.canonicalPayload)) ~= descriptor.canonicalDigest then
         return false, "DIGEST_DRIFT"
+    end
+    if descriptor.kind=="body_family" and self.deps.validateLegacyFamily then
+        local valid,why=self.deps.validateLegacyFamily(descriptor.canonicalPayload.spec,true)
+        if not valid then return false,why or "BODY_PROFILE_INVALID" end
+    end
+    if descriptor.kind=="family_refits" then
+        local body=descriptorPool["legacy.body."..descriptor.familyId]
+        if not body or body.activationState~="active"
+            or body.ownerModuleUuid~=descriptor.ownerModuleUuid
+            or self.activated[body.providerId]~=body.canonicalDigest then return false,"BODY_PROVIDER_NOT_ACTIVE" end
     end
     for _, uuid in ipairs(descriptor.requiredModuleUuids) do
         if self.deps.isModuleLoaded ~= nil and not self.deps.isModuleLoaded(uuid) then
@@ -268,7 +335,7 @@ function Registry:_preflight(descriptor)
     end
     for _, bodyCcsv in ipairs(descriptor.bodyCcsvs) do
         local wanted = tostring(bodyCcsv):lower()
-        for providerId, existing in pairs(self.state.ProviderDescriptors) do
+        for providerId, existing in pairs(descriptorPool) do
             if providerId ~= descriptor.providerId
                 and (existing.activationState == "active" or existing.activationState == "queued") then
                 for _, owned in ipairs(existing.bodyCcsvs or {}) do
@@ -284,7 +351,7 @@ function Registry:_preflight(descriptor)
             if self.deps.resourceExists ~= nil and not self.deps.resourceExists(target) then
                 return false, "TARGET_UNAVAILABLE"
             end
-            if self.deps.existingTarget ~= nil then
+            if descriptor.kind=="external_refits" and self.deps.existingTarget ~= nil then
                 local existing = self.deps.existingTarget(choice, source)
                 if existing ~= nil and tostring(existing):lower() ~= tostring(target):lower() then
                     return false, "SOURCE_COLLISION"
@@ -302,6 +369,8 @@ function Registry:_activate(descriptor)
     if not called or accepted ~= true then return self:_failure(descriptor, "DELEGATE_REJECTED") end
     descriptor.activationState = "active"
     self.state.ProviderDescriptors[descriptor.providerId] = copy(descriptor)
+    self.activated[descriptor.providerId]=descriptor.canonicalDigest
+    self.processDescriptors[descriptor.providerId]=copy(descriptor)
     self.sequence = self.sequence + 1
     if self.deps.persist ~= nil then self.deps.persist(self.state, "provider-active") end
     return result(descriptor, "ACTIVE", true)
@@ -316,10 +385,30 @@ function Registry:RegisterExternalRefits(sourceName, maps, info)
     end
     local descriptor, failure = self:_buildExternal(sourceName, maps, info)
     if descriptor == nil then return self:_failure(nil, failure) end
+    return self:_submit(descriptor)
+end
+
+function Registry:_submit(descriptor)
+    if self.restartRequired then return self:_failure(descriptor,"PROVIDER_PROFILE_RESTART_REQUIRED") end
+    if self.state.Version~=7 or type(self.state.ProviderDescriptors)~="table" then
+        return self:_failure(descriptor,"REJECTED_INVALID_SCHEMA")
+    end
+    if self.state.RollbackPrepared~=nil then return self:_failure(descriptor,"REJECTED_ROLLBACK_PREPARED") end
+    if self.state.CleanupState ~= "idle" then
+        return self:_failure(descriptor, "REJECTED_CLEANUP_DISABLED")
+    end
     local existing = self.state.ProviderDescriptors[descriptor.providerId]
     if existing ~= nil then
         if tostring(existing.ownerModuleUuid or ""):lower() == descriptor.ownerModuleUuid
             and tostring(existing.canonicalDigest or ""):upper() == descriptor.canonicalDigest then
+            if existing.activationState=="active" and self.activated[descriptor.providerId]~=descriptor.canonicalDigest then
+                if self.state.MutationGateClosed then
+                    descriptor.activationState="queued"
+                    self.state.ProviderDescriptors[descriptor.providerId]=copy(descriptor)
+                    return result(descriptor,"QUEUED_MASTER_OFF",true)
+                end
+                return self:_activate(descriptor)
+            end
             if existing.activationState == "active" or existing.activationState == "queued" then
                 descriptor.activationState = existing.activationState
                 return result(descriptor, "IDEMPOTENT", true)
@@ -347,6 +436,109 @@ function Registry:RegisterExternalRefits(sourceName, maps, info)
     return self:_activate(descriptor)
 end
 
+local function jsonValue(value,seen)
+    local kind=type(value)
+    if kind=="nil" or kind=="boolean" or kind=="string" then return true end
+    if kind=="number" then return value==value and value~=math.huge and value~=-math.huge end
+    if kind~="table" then return false end
+    seen=seen or {}
+    if seen[value] then return false end
+    seen[value]=true
+    for key,item in pairs(value) do
+        if (type(key)~="string" and (type(key)~="number" or key<1 or key%1~=0)) or not jsonValue(item,seen) then
+            seen[value]=nil;return false
+        end
+    end
+    seen[value]=nil;return true
+end
+
+function Registry:_legacy(kind,sourceName,familyId,maps,owner,extra)
+    if type(sourceName)~="string" or sourceName=="" or (not validUuid(owner) and not (kind=="revealing" and owner=="")) or not jsonValue(extra) then
+        return nil,"LEGACY_DESCRIPTOR_INVALID"
+    end
+    local normalized,failure,sources,targets=normalizeMaps(maps,true)
+    if not normalized then return nil,failure end
+    local id=kind=="body_family" and ("legacy.body."..familyId)
+        or kind=="family_refits" and ("legacy.family_refits."..familyId)
+        or ("legacy.revealing."..sha256(canonicalJson(extra.revealingKeys)))
+    local payload={kind=kind,providerId=id,familyId=familyId,sourceName=sourceName,
+        apiGeneration="legacy_v1",ownerModuleUuid=owner:lower(),ownerUnresolved=kind=="revealing",
+        maps=normalized,requiredModuleUuids=kind=="revealing" and {} or {owner:lower()},
+        forbiddenModuleUuids={},sourceKeys=sources,targetKeysByChoice=targets,revealingKeys={},
+        exclusions={},bodyCcsvs={},bodyVisualResources={},mintedEquipmentRaces={},
+        resourceManifestDigest="",restartRequired=false}
+    for key,value in pairs(extra) do payload[key]=copy(value) end
+    local descriptor=copy(payload)
+    descriptor.canonicalPayload=copy(payload)
+    descriptor.canonicalDigest=sha256(canonicalJson(payload))
+    descriptor.activationState="pending"
+    return descriptor
+end
+
+local function legacyResult(response)
+    return response.ok==true,response.status,response
+end
+
+function Registry:RegisterBodyFamily(sourceName,spec)
+    if self.state.CleanupState~="idle" then return legacyResult(self:_failure(nil,"REJECTED_CLEANUP_DISABLED")) end
+    if type(spec)~="table" or not jsonValue(spec) or not self.deps.validateLegacyFamily then
+        return legacyResult(self:_failure(nil,"BODY_SPEC_INVALID"))
+    end
+    local valid,why=self.deps.validateLegacyFamily(spec,false)
+    if not valid then return legacyResult(self:_failure(nil,why or "BODY_SPEC_INVALID")) end
+    local visuals,ccsvs,races={},{},{}
+    for _,choice in ipairs(CHOICES) do
+        local profile=spec.profiles[choice]
+        visuals[#visuals+1]=profile.visual;ccsvs[#ccsvs+1]=profile.ccsv;races[#races+1]=profile.equipmentRace
+    end
+    local descriptor,failure=self:_legacy("body_family",sourceName,spec.familyId,
+        {vanilla={},sbbf={},bcb={}},spec.moduleUuid,
+        {spec=spec,bodyVisualResources=visuals,bodyCcsvs=ccsvs,mintedEquipmentRaces=races})
+    if not descriptor then return legacyResult(self:_failure(nil,failure)) end
+    return legacyResult(self:_submit(descriptor))
+end
+
+function Registry:RegisterFamilyRefits(sourceName,familyId,maps,info)
+    if self.state.CleanupState~="idle" then return legacyResult(self:_failure(nil,"REJECTED_CLEANUP_DISABLED")) end
+    local body=type(self.state.ProviderDescriptors)=="table" and self.state.ProviderDescriptors["legacy.body."..tostring(familyId)]
+    if not body or body.canonicalPayload.sourceName~=sourceName
+        or (body.activationState~="queued" and body.activationState~="active") then
+        return legacyResult(self:_failure(nil,"BODY_PROVIDER_OWNER_MISMATCH"))
+    end
+    if type(maps)~="table" then return legacyResult(self:_failure(nil,"MAPS_INVALID")) end
+    for _,choice in ipairs(CHOICES) do if type(maps[choice])~="table" then return legacyResult(self:_failure(nil,"CHOICE_INVALID")) end end
+    local descriptor,failure=self:_legacy("family_refits",sourceName,familyId,maps,body.ownerModuleUuid,{info=info or {}})
+    if not descriptor then return legacyResult(self:_failure(nil,failure)) end
+    return legacyResult(self:_submit(descriptor))
+end
+
+function Registry:RegisterRevealing(ids)
+    if self.state.CleanupState~="idle" then return legacyResult(self:_failure(nil,"REJECTED_CLEANUP_DISABLED")) end
+    if type(ids)~="table" or not jsonValue(ids) or #ids==0 then return legacyResult(self:_failure(nil,"REVEALING_IDS_INVALID")) end
+    local count=0
+    for key,value in pairs(ids) do
+        if type(key)~="number" or key<1 or key%1~=0 or key>#ids or not validUuid(value) then
+            return legacyResult(self:_failure(nil,"REVEALING_IDS_INVALID"))
+        end
+        count=count+1
+    end
+    if count~=#ids then return legacyResult(self:_failure(nil,"REVEALING_IDS_INVALID")) end
+    local descriptor,failure=self:_legacy("revealing","legacy.revealing","",{vanilla={},sbbf={},bcb={}},
+        "",{revealingKeys=sorted(ids)})
+    if not descriptor then return legacyResult(self:_failure(nil,failure)) end
+    return legacyResult(self:_submit(descriptor))
+end
+
+function Registry:IsFamilyReady(familyId)
+    local descriptors=self.state.ProviderDescriptors
+    if type(descriptors)~="table" then return false end
+    local body,refits=descriptors["legacy.body."..familyId],descriptors["legacy.family_refits."..familyId]
+    return body~=nil and refits~=nil and body.activationState=="active" and refits.activationState=="active"
+        and body.ownerModuleUuid==refits.ownerModuleUuid
+        and self.activated[body.providerId]==body.canonicalDigest
+        and self.activated[refits.providerId]==refits.canonicalDigest
+end
+
 function Registry:ActivateQueued()
     local results = {}
     for _, providerId in ipairs(mapKeys(self.state.ProviderDescriptors)) do
@@ -361,7 +553,7 @@ end
 local function snapshotDescriptor(descriptor)
     local out = {}
     for _, field in ipairs({
-        "kind", "providerId", "familyId", "apiGeneration", "ownerModuleUuid",
+        "kind", "providerId", "familyId", "apiGeneration", "ownerModuleUuid", "ownerUnresolved",
         "canonicalDigest", "activationState", "requiredModuleUuids",
         "forbiddenModuleUuids", "sourceKeys", "targetKeysByChoice",
         "revealingKeys", "exclusions", "bodyCcsvs", "bodyVisualResources",
@@ -373,7 +565,21 @@ end
 function Registry:GetSnapshot()
     local descriptors = {}
     for _, providerId in ipairs(mapKeys(self.state.ProviderDescriptors)) do
-        descriptors[#descriptors + 1] = snapshotDescriptor(self.state.ProviderDescriptors[providerId])
+        local descriptor=snapshotDescriptor(self.state.ProviderDescriptors[providerId])
+        if self.restartRequired and self.activated[providerId]~=descriptor.canonicalDigest then
+            descriptor.activationState="rejected";descriptor.restartRequired=true
+        end
+        descriptors[#descriptors+1]=descriptor
+    end
+    if self.restartRequired then
+        for _,id in ipairs(mapKeys(self.processDescriptors)) do
+            local descriptor=self.processDescriptors[id]
+            local saved=self.state.ProviderDescriptors[id]
+            if not saved or saved.canonicalDigest~=descriptor.canonicalDigest or saved.ownerModuleUuid~=descriptor.ownerModuleUuid then
+                local active=snapshotDescriptor(descriptor);active.restartRequired=true
+                descriptors[#descriptors+1]=active
+            end
+        end
     end
     return copy({
         apiVersion = 1, snapshotSequence = self.sequence,
@@ -382,7 +588,7 @@ function Registry:GetSnapshot()
         PersistentSchema = self.state.Version,
         mutationGateClosed = self.state.MutationGateClosed,
         cleanupState = self.state.CleanupState,
-        restartRequired = false,
+        restartRequired = self.restartRequired==true,
         descriptors = descriptors,
         rejectedAttempts = self.rejected,
     })
@@ -405,6 +611,7 @@ function Registry:ClaimForCcsv(ccsv, cvGuid, resourceKind)
         end
     end
     if match == nil then return nil, "CCSV_OWNER_NOT_REGISTERED" end
+    if match.ownerUnresolved==true or not validUuid(match.ownerModuleUuid) then return nil,"CCSV_OWNER_UNRESOLVED" end
     return {
         ProviderId = match.providerId,
         OwnerModuleUuid = match.ownerModuleUuid,
@@ -415,7 +622,8 @@ function Registry:ClaimForCcsv(ccsv, cvGuid, resourceKind)
 end
 
 function M.New(state, deps, meta)
-    local registry = setmetatable({ deps = deps or {}, meta = meta or {}, rejected = {}, sequence = 0 }, Registry)
+    local registry = setmetatable({ deps = deps or {}, meta = meta or {}, rejected = {}, sequence = 0,
+        activated={},processDescriptors={},restartRequired=false,attaching=false }, Registry)
     registry:SetState(state)
     return registry
 end

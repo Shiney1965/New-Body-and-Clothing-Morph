@@ -5,7 +5,7 @@
 -- the per-character nude-body override and persists the choice in PersistentVars.
 --
 -- VERIFIED MECHANISM (in-game, 2026-06-24):
---   * APPLY a body  : Osi.AddCustomVisualOverride(char, ccsv)
+--   * HISTORICAL APPLY: Osi.AddCustomVisualOverride(char, ccsv)
 --       -> APPENDS the CCSV GUID to entity.CharacterCreationAppearance.Visuals
 --          and renders it. (ccsv = a CharacterCreationSharedVisual GUID.)
 --   * There is NO Osiris remove. RemoveCustomVisualOverride does not exist.
@@ -16,6 +16,10 @@
 --       entity:Replicate("CharacterCreationAppearance")  -- syncs + re-renders.
 --     Confirmed: assigning a Lua array to .Visuals + Replicate works and the body
 --     visibly reverts.
+--   * R1 QUALIFIED APPLY uses this same writable CCA.Visuals surface plus
+--     replication for a synchronous, verified append. The historical native
+--     call can become visible only after this command tick and cannot safely
+--     be paired with immediate ownership readback or an External transition.
 --
 -- Because overrides persist in the save, we do NOT re-apply on load (that would
 -- stack). We DO strip-before-apply on every change so we never accumulate.
@@ -53,6 +57,7 @@ local SCHEMA_VERSION = 7
 
 local R1Runtime
 local R1Capability
+local ActiveManagedTransitions = {}
 local SetDesiredBody
 local BaseRestoreToken = {}
 local SharedReapplyDepth = 0
@@ -67,6 +72,10 @@ local function R1CanWrite(entryPoint, char)
         ["body-base"]=true, ["equip-reconcile"]=true,
         ["EquipRace.SetClothed"]=true, ["EquipRace.RunBlanketPass"]=true,
         ["EquipRace.ForceSetEquipRace"]=true,
+        ["EquipRace.RegisterExternalRefits"]=true,
+        ["BodyFamilyEquipRace.RegisterFamilyRefits"]=true,
+        ["BodyFamilyRegistry.RegisterBodyFamily"]=true,
+        ["BodyFamilyRegistry.UnregisterBodyFamily"]=true,
         ["EquipRace.RefreshEquipment"]=true,
         ["BodyFamilyEquipRace.SetClothed"]=true,
         ["BodyFamilyEquipRace.RunBlanketPass"]=true,
@@ -82,9 +91,16 @@ end
 
 local function R1WithCapability(capability, char, fn)
     local previous = R1Capability
+    local priorTransition=char and ActiveManagedTransitions[char] or nil
     R1Capability = { kind=capability, char=char }
+    if char and (capability=="explicit_managed" or capability=="ordinary_reenable") then
+        local rec=PersistentVars.Bodies and PersistentVars.Bodies[char]
+        ActiveManagedTransitions[char]=rec and rec.Transition and rec.Transition.RequestedChoice
+            or (rec and rec.Choice)
+    end
     local ok, a, b = pcall(fn)
     R1Capability = previous
+    if char then ActiveManagedTransitions[char]=priorTransition end
     if not ok then error(a) end
     return a, b
 end
@@ -94,6 +110,19 @@ local function IsTrustedSchema6BodyOriginal(guid, cvGuid)
     local needle = tostring(guid):lower()
     if needle == "3bc12bd9-6c5e-5067-a20f-b17e45647a10"
         or needle == "a4891ad7-53b0-5448-8d9c-9fabfdb067b6" then return false end
+    -- Exact managed targets from the immutable accepted Tiefling API1
+    -- descriptor. A provider-owned definition may point into BCBPak; that
+    -- SourceFile does not turn its minted VR identifier into an original.
+    if needle=="bfec2869-70cf-51a7-9806-1bbf02ff1bbe"
+        or needle=="ed2d8876-26c8-5844-827f-def771068f63"
+        or needle=="eab8e30e-0207-58d8-8764-e3b4477133fa" then return false end
+    local definition=BodyFamilyRegistry.GetOfficialDefinition()
+    local provider=BodyFamilyRegistry.GetProvider(definition.id)
+    if provider then
+        for _,profile in pairs(provider.profiles or {}) do
+            if tostring(profile.visual):lower()==needle then return false end
+        end
+    end
     for _, ccsv in pairs(Shared.CCSV_MAP or {}) do
         local visual
         pcall(function()
@@ -465,6 +494,17 @@ local function StripOurOverride(char, retirement, targetGuid)
     for guid,value in pairs(rec.OwnedCcsvs or {}) do
         if tostring(guid):lower()==tostring(target):lower() then claim=value end
     end
+    if claim==nil and rec.AppliedCcsv==nil and rec.DesiredCcsv==target then
+        local live,readable=ReadVisuals(GetCCA(GetEntity(char)))
+        if readable then
+            local present=false
+            for _,visual in ipairs(live) do if tostring(visual):lower()==tostring(target):lower() then present=true end end
+            if not present then
+                if retirement=="permanent" then rec.DesiredCcsv=nil end
+                return true
+            end
+        end
+    end
     if claim==nil or tostring(claim.AddedForCvGuid):lower()~=tostring(rec.CvGuid):lower() then
         return false,"ccsv-not-owned"
     end
@@ -531,17 +571,31 @@ local function ApplyCcsv(char, ccsv, choiceLabel)
         Warn("ApplyCcsv: prior CCSV retirement failed; refusing to stack a new write")
         return false, "ccsv-retirement-failed"
     end
-    local before, readable = ReadVisuals(GetCCA(GetEntity(char)))
+    local entity=GetEntity(char)
+    local cca=GetCCA(entity)
+    local before, readable = ReadVisuals(cca)
     if not readable then return false,"ccsv-before-read-failed" end
     for _,visual in ipairs(before) do
         if tostring(visual):lower()==tostring(ccsv):lower() then
             return false,"ccsv-already-present-unowned"
         end
     end
-    local okApply = pcall(function() Osi.AddCustomVisualOverride(char, ccsv) end)
+    -- Preserve the exact current unowned entries, order and duplicates. Never
+    -- restore a stale captured OriginalVisuals array or claim an existing
+    -- unowned target. This is the same synchronous array-write surface already
+    -- used by R0 removal; replication propagates it, not a completed-render
+    -- acknowledgement. No native addition is left queued across External.
+    local boundCv
+    pcall(function() boundCv=tostring(entity.ServerCharacter.Template.CharacterVisualResourceID) end)
+    if boundCv==nil or boundCv:lower()~=tostring(rec.CvGuid):lower()
+        or not R1CanWrite("body-ccsv",char) then return false,"ccsv-write-gate-changed" end
+    local expected={}
+    for _,visual in ipairs(before) do expected[#expected+1]=visual end
+    expected[#expected+1]=ccsv
+    local okApply = pcall(function() cca.Visuals=expected end)
     if not okApply then
-        Warn("ApplyCcsv: AddCustomVisualOverride failed " .. tostring(ccsv))
-        return false
+        Warn("ApplyCcsv: CCA append failed " .. tostring(ccsv))
+        return false,"ccsv-add-write-rejected"
     end
     local after, afterReadable=ReadVisuals(GetCCA(GetEntity(char)))
     if not afterReadable or #after~=#before+1 or tostring(after[#after]):lower()~=tostring(ccsv):lower() then
@@ -550,12 +604,31 @@ local function ApplyCcsv(char, ccsv, choiceLabel)
     for i,visual in ipairs(before) do
         if tostring(after[i]):lower()~=tostring(visual):lower() then return false,"ccsv-add-readback-failed" end
     end
+    local claimCv
+    pcall(function() claimCv=tostring(GetEntity(char).ServerCharacter.Template.CharacterVisualResourceID) end)
+    if claimCv==nil or claimCv:lower()~=tostring(rec.CvGuid):lower()
+        or not R1CanWrite("body-ccsv",char) then return false,"ccsv-claim-gate-changed" end
     -- Update fields IN PLACE (v4: the record also carries ClothedChoice /
     -- OrigEquipRace for the EquipmentRace half - do not wipe them).
     rec.OwnedCcsvs = rec.OwnedCcsvs or {}
     rec.OwnedCcsvs[ccsv] = providerClaim or OwnershipLedger.LegacyRuntimeClaim(rec.CvGuid)
     rec.Choice, rec.AppliedCcsv, rec.DesiredCcsv = choiceLabel or "custom", ccsv, ccsv
     pv.Bodies[char] = rec
+    -- The server-array assignment/readback above is the proof of this write.
+    -- Later propagation failure must retain that proof until owned rollback is
+    -- verified; it must not leave the actual append falsely unowned.
+    local propagated=pcall(function() entity:Replicate("CharacterCreationAppearance") end)
+    if not propagated then
+        rec.RestoreFailures=rec.RestoreFailures or {}
+        rec.RestoreFailures[#rec.RestoreFailures+1]="CCSV_PROPAGATION_FAILED"
+        if rec.Transition==nil and R1Runtime then
+            -- Direct managed debug/reconcile callers have no enclosing state
+            -- transaction. Use the existing exact-owned External journal and
+            -- restoration, preserving current unrelated visuals on retry.
+            R1Runtime:SetExternal(char)
+        end
+        return false,"ccsv-propagation-failed"
+    end
     Log(("ApplyCcsv: %s -> %s (choice=%s)")
         :format(tostring(char), tostring(ccsv), tostring(choiceLabel or "custom")))
     return true
@@ -712,6 +785,22 @@ end
 
 -- Write the base-body VR into the char's CV (one-step) with readback verify.
 -- targetVr == nil restores the recorded original (vanilla choice).
+local function RetireSharedFallbacks(cv,char,pv)
+    if SharedReapplyDepth~=0 or not SetDesiredBody then return true end
+    SharedReapplyDepth=1
+    local complete=true
+    for other,record in pairs(pv.Bodies) do
+        if other~=char and record.CvGuid==cv and GetCharCV(other)==cv
+            and (record.AppliedCcsv~=nil or record.DesiredCcsv~=nil)
+            and R1Runtime:CanManagedWrite("shared-primary-peer",other) then
+            local called,ok=pcall(SetDesiredBody,other,record.Choice)
+            if not called or ok~=true then complete=false end
+        end
+    end
+    SharedReapplyDepth=0
+    return complete
+end
+
 local function SetBaseBody(char, choice, targetVr)
     if not R1CanWrite("body-base", char) then return false, "write-gate-closed" end
     if MECHANISM ~= "C" then return false, "mechanism-off" end
@@ -725,9 +814,11 @@ local function SetBaseBody(char, choice, targetVr)
     -- was recorded (template swap / appearance mod), the stale orig belongs
     -- to ANOTHER CV - drop it and re-record against the current CV.
     if rec.CvGuid ~= nil and rec.CvGuid ~= cv then
-        Warn(("SetBaseBody: %s CV changed %s -> %s; re-recording original")
+        Warn(("SetBaseBody: %s CV changed %s -> %s; preserving original evidence and gating")
             :format(tostring(char), tostring(rec.CvGuid), cv))
-        rec.OrigBodySetVisual, rec.CvGuid = nil, nil
+        rec.RestoreState="blocked"
+        rec.RestoreFailures={"body-cv-mismatch"}
+        return false,"body-cv-mismatch"
     end
     local bw = BaseWrites[cv]
     -- Record the pristine original ONCE per save record. Prefer the process
@@ -742,35 +833,39 @@ local function SetBaseBody(char, choice, targetVr)
         rec.OrigBodySetVisual = candidate
         rec.CvGuid = cv
     end
-    local orig = (bw and bw.orig) or rec.OrigBodySetVisual or cur
+    local orig = rec.OrigBodySetVisual or (bw and bw.orig) or cur
     local target = targetVr
     if target == nil then target = orig end
     local claims={[char]=target}
     local sharedConflict=false
     for other,otherRecord in pairs(pv.Bodies) do
-        if other~=char and otherRecord.CvGuid==cv and GetEntity(other)~=nil then
+        if other~=char and otherRecord.CvGuid==cv and GetEntity(other)~=nil and GetCharCV(other)==cv then
             local otherTarget
-            if otherRecord.Choice~="external" and otherRecord.RestoreState=="clean"
-                and otherRecord.Transition==nil and otherRecord.ProviderTransition==nil then
+            local otherChoice=ActiveManagedTransitions[other] or otherRecord.Choice
+            if otherChoice~="external" and otherRecord.ProviderTransition==nil
+                and (ActiveManagedTransitions[other] or (otherRecord.RestoreState=="clean" and otherRecord.Transition==nil)) then
                 local entity=GetEntity(other)
                 local race,bt,bs=Shared.ReadCharStats(entity)
                 local family=BodyFamilyRegistry.ResolveOfficialFamily(race,bt,bs)
                 if family then
-                    local profile=BodyFamilyRegistry.ResolveProfile(family,otherRecord.Choice)
+                    local profile=BodyFamilyRegistry.ResolveProfile(family,otherChoice)
                     otherTarget=profile and profile.visual
-                elseif otherRecord.Choice=="vanilla" then otherTarget=ResolveVanillaBodyVr(entity)
-                else otherTarget=ResolveBodyVr(otherRecord.Choice,race,bt,bs) end
+                elseif otherChoice=="vanilla" then otherTarget=ResolveVanillaBodyVr(entity)
+                else otherTarget=ResolveBodyVr(otherChoice,race,bt,bs) end
             end
             claims[other]=otherTarget or "external"
             if otherTarget~=target then sharedConflict=true end
         end
     end
     if sharedConflict then
+        -- Once the shared CV was released, another owner's later body choice
+        -- is not a Runtime write to restore. Keep that live baseline intact.
+        if bw==nil or bw.released==true then orig=cur end
         if cur~=orig then
             local wrote=pcall(function() GetCVRes(cv).VisualSet.BodySetVisual=orig end)
             if not wrote or ReadBaseBody(cv)~=orig then return false,"shared-cv-restore-failed" end
         end
-        BaseWrites[cv]={orig=orig,cur=orig,char=char,claims=claims}
+        BaseWrites[cv]={orig=orig,cur=orig,char=char,claims=claims,released=true}
         if SharedReapplyDepth==0 and SetDesiredBody then
             SharedReapplyDepth=1
             local failed=false
@@ -788,7 +883,8 @@ local function SetBaseBody(char, choice, targetVr)
         return false,"shared-cv-fallback-required"
     end
     if cur == target then
-        BaseWrites[cv] = { orig = orig, cur = cur, char = char, claims=claims }
+        BaseWrites[cv] = { orig = orig, cur = cur, char = char, claims=claims,released=target==orig }
+        if not RetireSharedFallbacks(cv,char,pv) then return false,"shared-cv-fallback-retirement-failed" end
         return true, "already"
     end
     local okW = pcall(function()
@@ -801,8 +897,9 @@ local function SetBaseBody(char, choice, targetVr)
             :format(tostring(char), cv, tostring(target), tostring(after)))
         return false, "write-rejected"
     end
-    BaseWrites[cv] = { orig = orig, cur = target, char = char, claims=claims }
+    BaseWrites[cv] = { orig = orig, cur = target, char = char, claims=claims,released=target==orig }
     ForceVisualRebuild(char)
+    if not RetireSharedFallbacks(cv,char,pv) then return false,"shared-cv-fallback-retirement-failed" end
     Log(("SetBaseBody: %s cv=%s %s -> %s (choice=%s)")
         :format(tostring(char), cv, tostring(cur), tostring(target), tostring(choice)))
     return true, "written"
@@ -1050,7 +1147,7 @@ ReapplyBaseBodies = function(reason)
                     :format(tostring(char), tostring(choice)))
             end
             if entity ~= nil then
-                local vr
+                local vr, fallbackCcsv
                 local race, bt, bs
                 pcall(function() race, bt, bs = Shared.ReadCharStats(entity) end)
                 local familyId = BodyFamilyRegistry.ResolveOfficialFamily(race, bt, bs)
@@ -1058,6 +1155,7 @@ ReapplyBaseBodies = function(reason)
                     local profile, why = BodyFamilyRegistry.ResolveProfile(familyId, choice)
                     if profile ~= nil then
                         vr = profile.visual
+                        fallbackCcsv=profile.ccsv
                         rec.BodyFamilyId = familyId
                         if rec.UnavailableFamilyChoice ~= nil then
                             rec.Choice = choice
@@ -1088,7 +1186,7 @@ ReapplyBaseBodies = function(reason)
                     -- restore-original behavior for this char; no warn.
                     vr = ResolveVanillaBodyVr(entity)
                 else
-                    vr = ResolveBodyVr(choice, race, bt, bs)
+                    vr, fallbackCcsv = ResolveBodyVr(choice, race, bt, bs)
                     if vr == nil then
                         Warn(("ReapplyBaseBodies: %s choice=%s has no resolvable body VR (race=%s) - base body left vanilla")
                             :format(tostring(char), tostring(choice), tostring(race)))
@@ -1108,6 +1206,13 @@ ReapplyBaseBodies = function(reason)
                                 rec.DesiredCcsv = nil
                                 Log(("ReapplyBaseBodies: migrated %s off the legacy CCSV overlay")
                                     :format(tostring(char)))
+                            end
+                        elseif fallbackCcsv~=nil and R1CanWrite("load-body-reapply",char) then
+                            rec.DesiredCcsv=fallbackCcsv
+                            local reconciled=Reconcile(char,reason.."-fallback")
+                            if not reconciled then
+                                rec.RestoreState="blocked"
+                                rec.RestoreFailures={"shared-cv-conflict-fallback-failed"}
                             end
                         end
                     end
@@ -1364,6 +1469,7 @@ SetDesiredBody = function(char, choice)
     end
     R1Runtime:RefreshState()
     if R1Runtime.schemaFailure ~= nil then return false, R1Runtime.schemaFailure end
+    if R1Runtime.ProviderRegistry:MutationBlocked() then return false,"PROVIDER_PROFILE_RESTART_REQUIRED" end
     if PersistentVars.CleanupState ~= "idle" then return false, "cleanup-state" end
     if choice == "external" then
         if PersistentVars.Bodies[char]==nil then
@@ -1422,10 +1528,10 @@ R1Runtime = R1Foundation.Install(MOD, EnsurePV(), {
         for _,visual in ipairs(visuals) do
             if not (rec.OwnedCcsvs or {})[visual] then originalVisuals[#originalVisuals+1]=visual end
         end
-        rec.CvGuid,rec.OrigBodySetVisual=cv,body
-        rec.OrigEquipRace=equipment
         local race,bt,bs=Shared.ReadCharStats(entity)
         if race==nil or bt==nil or bs==nil then return false,"character-tuple-unreadable" end
+        rec.CvGuid,rec.OrigBodySetVisual=cv,body
+        rec.OrigEquipRace=equipment
         if BodyFamilyRegistry.ResolveOfficialFamily(race,bt,bs)~=nil then rec.FamilyOrigEquipRace=equipment end
         rec.OriginalVisuals=originalVisuals
         return true
@@ -1435,6 +1541,34 @@ R1Runtime = R1Foundation.Install(MOD, EnsurePV(), {
         return R1WithCapability(capability, char, function()
             return SetDesiredBodyManaged(char, choice)
         end)
+    end,
+    verifyManaged = function(char,record,choice)
+        local entity=GetEntity(char)
+        local cv=GetCharCV(char)
+        if not entity or not cv or cv~=record.CvGuid then return false end
+        local race,bt,bs=Shared.ReadCharStats(entity)
+        local family=BodyFamilyRegistry.ResolveOfficialFamily(race,bt,bs)
+        local body,ccsv,equipment
+        if family then
+            local profile=BodyFamilyRegistry.ResolveProfile(family,choice)
+            if not profile then return false end
+            body,ccsv,equipment=profile.visual,profile.ccsv,profile.equipmentRace
+        else
+            equipment=EquipRace.MINTED[choice]
+            if choice=="vanilla" then body=ResolveVanillaBodyVr(entity)
+            else body,ccsv=ResolveBodyVr(choice,race,bt,bs) end
+        end
+        if not equipment or EquipRace.ReadEquipRace(char)~=equipment or not body then return false end
+        if ReadBaseBody(cv)==body then return true end
+        if ccsv then
+            local claim=(record.OwnedCcsvs or {})[ccsv]
+            local visuals,readable=ReadVisuals(GetCCA(entity))
+            if readable and claim and claim.AddedForCvGuid==cv then
+                for _,visual in ipairs(visuals) do if tostring(visual):lower()==ccsv:lower() then return true end end
+            end
+            if record.DesiredCcsv==ccsv and not ShouldRenderNakedBody(char) then return true end
+        end
+        return false
     end,
     isCharacterAvailable = function(char) return GetEntity(char) ~= nil end,
     readVisuals = function(char)
@@ -1456,11 +1590,27 @@ R1Runtime = R1Foundation.Install(MOD, EnsurePV(), {
     validateBodyOriginal = function(guid, cvGuid)
         return IsTrustedSchema6BodyOriginal(guid, cvGuid)
     end,
+    isBaseReleased = function(char,cvGuid)
+        local write=BaseWrites[cvGuid]
+        if write and write.released==true then return true end
+        if write==nil then
+            for other,record in pairs(PersistentVars.Bodies or {}) do
+                if other~=char and record.Choice=="external" and record.RestoreState=="clean"
+                    and record.CvGuid==cvGuid and GetCharCV(other)==cvGuid then return true end
+            end
+        end
+        return false
+    end,
     writeBodySetVisual = function(char, cvGuid, guid)
         local ok = pcall(function()
             local resource = GetCVRes(cvGuid)
             resource.VisualSet.BodySetVisual = guid
         end)
+        if ok and ReadBaseBody(cvGuid)==guid and BaseWrites[cvGuid] then
+            BaseWrites[cvGuid].cur=guid
+            BaseWrites[cvGuid].released=true
+            if BaseWrites[cvGuid].claims then BaseWrites[cvGuid].claims[char]="external" end
+        end
         if ok then ForceVisualRebuild(char) end
         return ok
     end,
@@ -1492,14 +1642,49 @@ R1Runtime = R1Foundation.Install(MOD, EnsurePV(), {
     end,
     activateProvider = function(descriptor)
         local payload = descriptor.canonicalPayload or {}
+        local function commit()
         if descriptor.kind == "external_refits" then
             return EquipRace.RegisterExternalRefits(
-                payload.sourceName or descriptor.providerId, payload.maps, {
-                    ownerModuleUuid = descriptor.ownerModuleUuid,
-                    canonicalDigest = descriptor.canonicalDigest,
-                })
+                payload.sourceName or descriptor.providerId, payload.maps, payload.info or {
+                    ownerModuleUuid = descriptor.ownerModuleUuid, canonicalDigest = descriptor.canonicalDigest})
+        end
+        if descriptor.kind=="body_family" then
+            return BodyFamilyRegistry.RegisterBodyFamily(payload.sourceName,payload.spec)
+        end
+        if descriptor.kind=="family_refits" then
+            return BodyFamilyEquipRace.RegisterFamilyRefits(payload.sourceName,payload.familyId,payload.maps,payload.info)
+        end
+        if descriptor.kind=="revealing" then
+            for _,id in ipairs(payload.revealingKeys) do REVEALING_TORSO[id:lower()]=true end
+            return true
         end
         return false
+        end
+        if PersistentVars.MasterState=="enabling" then
+            return R1WithCapability("ordinary_reenable",nil,commit)
+        end
+        return commit()
+    end,
+    validateLegacyFamily = function(spec,resources)
+        if type(spec)~="table" or type(spec.profiles)~="table" then return false,"BODY_SPEC_INVALID" end
+        local definition=BodyFamilyRegistry.GetOfficialDefinition()
+        if spec.familyId~=definition.id or spec.sourceEquipRace~=definition.sourceEquipRace
+            or tostring(spec.bodyType)~=definition.bodyType or tostring(spec.bodyShape)~=definition.bodyShape then
+            return false,"BODY_FAMILY_TUPLE_INVALID"
+        end
+        for _,choice in ipairs({"vanilla","sbbf","bcb"}) do
+            local profile=spec.profiles[choice]
+            if type(profile)~="table" or type(profile.ccsv)~="string" or type(profile.visual)~="string"
+                or Targeting.NormGuid(profile.ccsv)~=profile.ccsv:lower()
+                or Targeting.NormGuid(profile.visual)~=profile.visual:lower()
+                or profile.equipmentRace~=definition.minted[choice] then return false,"BODY_PROFILE_INVALID" end
+            if resources then
+                local ccsv=Ext.StaticData.Get(profile.ccsv,"CharacterCreationSharedVisual")
+                if not ccsv or tostring(ccsv.VisualResource):lower()~=profile.visual:lower()
+                    or not Ext.Resource.Get(profile.visual,"Visual") then return false,"BODY_RESOURCE_UNAVAILABLE" end
+            end
+        end
+        return true
     end,
     providerResourceExists = function(guid)
         local resource
@@ -1522,8 +1707,16 @@ R1Runtime = R1Foundation.Install(MOD, EnsurePV(), {
 })
 
 Ext.Require("PassThroughState.lua").BindModules({
-    EquipRace=EquipRace, BodyFamilyEquipRace=BodyFamilyEquipRace,
+    EquipRace=EquipRace, BodyFamilyEquipRace=BodyFamilyEquipRace, BodyFamilyRegistry=BodyFamilyRegistry,
 }, R1CanWrite)
+
+local ResolveFamilyProfile = BodyFamilyRegistry.ResolveProfile
+BodyFamilyRegistry.ResolveProfile = function(familyId,choice)
+    if type(familyId)~="string" or not R1Runtime.ProviderRegistry:IsFamilyReady(familyId) then
+        return nil,"provider-registration-incomplete"
+    end
+    return ResolveFamilyProfile(familyId,choice)
+end
 
 MOD.SetCharacterMode = function(characterGuid, choice, source)
     if type(characterGuid) ~= "string" or Targeting.NormGuid(characterGuid) == nil then
@@ -1532,10 +1725,12 @@ MOD.SetCharacterMode = function(characterGuid, choice, source)
     return SetDesiredBody(Targeting.NormGuid(characterGuid), choice)
 end
 MOD.GetOwnershipStatus = function(characterGuid)
-    local pv = EnsurePV()
-    local rec = pv.Bodies and pv.Bodies[NormGuid(characterGuid)] or nil
+    local pv, failure = EnsurePV()
+    local rec = type(pv.Bodies)=="table" and pv.Bodies[NormGuid(characterGuid)] or nil
+    if type(rec)~="table" then rec=nil end
     local failures = {}
     for i,code in ipairs(rec and rec.RestoreFailures or {}) do failures[i]=code end
+    if failure then failures[#failures+1]=failure end
     local allowed = R1Runtime:CanManagedWrite("status",NormGuid(characterGuid))
     return {configuredChoice=rec and rec.Choice, preferredChoice=rec and rec.PreferredChoice,
         effectiveMode=allowed and rec and rec.Choice or "external", masterEnabled=pv.MasterEnabled,
@@ -1548,6 +1743,7 @@ end
 -- own bodies, the ClothMorphRuntime VisualBank pak loaded so the CCSV resolves).
 -- ---------------------------------------------------------------------------
 local function ApplyBody(char, choice)
+    if choice~="vanilla" and not R1CanWrite("debug-apply-body",char) then return false,"write-gate-closed" end
     -- DEBUG-only nude-CCSV helper (exposed as MOD.ApplyBody); NOT wired to any
     -- command/MCM/net path. Its "vanilla"=full-revert semantic is intentional here
     -- and is DISTINCT from the mainline body pick (SetDesiredBody -> minted-vanilla
@@ -1577,10 +1773,39 @@ local function DumpStatus(char)
     local entity = GetEntity(char)
     local race, bt, bs
     pcall(function() race, bt, bs = Shared.ReadCharStats(entity) end)
-    local rec = pv.Bodies[char] or {}
+    local rec = type(pv.Bodies)=="table" and pv.Bodies[char] or nil
+    if type(rec)~="table" then rec={} end
     local cca = GetCCA(entity)
     local vis = ReadVisuals(cca)
     Log("---- cm_status ----")
+    local ownership=MOD.GetOwnershipStatus(char)
+    local version=MOD.GetStateDiagnostics()
+    local cv=GetCharCV(char)
+    local function display(label,value)
+        if type(value)=="table" then
+            local ok,encoded=pcall(function() return Ext.Json.Stringify(value,{Beautify=false}) end)
+            value=ok and encoded or "unavailable"
+        end
+        Log(label..": "..tostring(value))
+    end
+    display("ConfiguredChoice",ownership.configuredChoice)
+    display("PreferredChoice",ownership.preferredChoice)
+    display("EffectiveMode",ownership.effectiveMode)
+    display("MasterEnabled",ownership.masterEnabled)
+    display("Transition",rec.Transition)
+    display("RestoreState",ownership.restoreState)
+    display("RestoreFailures",ownership.failureCodes)
+    display("CvGuid",cv)
+    display("LiveBodySetVisual",ReadBaseBody(cv))
+    display("OriginalBodySetVisual",rec.OrigBodySetVisual)
+    display("LiveEquipmentRace",EquipRace.ReadEquipRace(char))
+    display("OriginalEquipmentRace",rec.FamilyOrigEquipRace or rec.OrigEquipRace)
+    display("BodyFamilyId",rec.BodyFamilyId)
+    display("ClothMorphOwnedCcsvs",rec.OwnedCcsvs or {})
+    display("LiveVisuals",vis)
+    for _,field in ipairs({"PackageVersion64","PackageSemver","RuntimeCodeVersion","PersistentSchema",
+        "ScriptExtenderRequiredVersion","PassThroughApiVersion","ExternalRefitApiVersion","BodyFamilyApiVersion",
+        "ProviderRegistrySnapshotApiVersion","CleanupApiVersion"}) do display(field,version[field]) end
     Log("  Character : " .. tostring(char))
     Log("  Race      : " .. tostring(race))
     Log("  BodyType  : " .. tostring(bt) .. "  BodyShape: " .. tostring(bs))
@@ -1804,6 +2029,8 @@ local function Cmd_SetERace(_cmd, guid, charArg)
             if family then rec.FamilyOrigEquipRace=normalized end
             return EquipRace.ReadEquipRace(char)==normalized
         end)
+    end,nil,function()
+        return EquipRace.ReadEquipRace(char)==normalized and rec.OrigEquipRace==normalized
     end)
 end
 
@@ -2035,6 +2262,7 @@ local function DispatchNetCmd(a, b, c)
     data = data or {}
     local cmd = data.cmd
     if cmd == "master" or cmd == "mcm_setmaster" then
+        if cmd=="master" and data.arg=="status" then return Cmd_Master("cm_master","status") end
         if not AuthorizeTattooPolicyUser(user) then
             pcall(function() MCM.Set("master_enabled", PersistentVars.MasterEnabled, ModuleUUID, false) end)
             return
@@ -2104,11 +2332,15 @@ NotifyApplied = function(char, choice, ok)
     -- echo (mcm_setbody) still reaches NetApply, it dedupes instead of
     -- double-applying. (Primary B1 defense is client-side MCM.Set(...,false).)
     if ok == true then
-        pcall(function() McmGlue.NoteApplied(choice) end)
+        pcall(function() McmGlue.NoteApplied(choice,char) end)
     end
     pcall(function()
+        local ownership=MOD.GetOwnershipStatus(char)
         Channel:Broadcast({ cmd = "cm_applied", char = tostring(char),
-                            choice = tostring(choice), ok = ok ~= false })
+            choice = tostring(ownership.configuredChoice or choice),
+            effectiveMode=ownership.effectiveMode, masterEnabled=ownership.masterEnabled,
+            masterState=PersistentVars.MasterState, restoreState=ownership.restoreState,
+            ok = ok ~= false })
     end)
 end
 
@@ -2257,6 +2489,8 @@ local MCM_DEPS = { Log = Log, Warn = Warn, IsValid = Shared.IsValidBodyChoice,
 pcall(function()
     Ext.Osiris.RegisterListener("LevelGameplayStarted", 2, "after", function(_level, _isEditor)
         local pv = EnsurePV()
+        R1Runtime:RefreshState()
+        if R1Runtime.ProviderRegistry:MutationBlocked() then return end
         -- v4.15 SF-2: restore-then-reapply here too - a NEW GAME in the same
         -- process fires LevelGameplayStarted without SavegameLoaded, and must
         -- not inherit another save's CV edits (origin CVs are shared pak
@@ -2290,6 +2524,8 @@ pcall(function()
     end)
     Ext.Osiris.RegisterListener("SavegameLoaded", 0, "after", function()
         local pv = EnsurePV()
+        R1Runtime:RefreshState()
+        if R1Runtime.ProviderRegistry:MutationBlocked() then return end
         -- v4.15: cross-save hygiene THEN re-apply this save's choices.
         pcall(function()
             R1WithCapability("maintenance_restore", nil, function()
@@ -2318,19 +2554,24 @@ McmGlue.InstallServer(MCM_DEPS)
 -- consumer: ClothMorphSCO). Exposed as a ModTable global so an add-on's SE
 -- module can call Mods.ClothMorphRuntime.RegisterExternalRefits(name, maps).
 RegisterExternalRefits = function(sourceName, maps, info)
-    return R1Runtime.ProviderRegistry:RegisterExternalRefits(sourceName, maps, info)
+    R1Runtime:RefreshState()
+    if R1Runtime.schemaFailure then return false,"REJECTED_INVALID_SCHEMA" end
+    local result=R1Runtime.ProviderRegistry:RegisterExternalRefits(sourceName,maps,info)
+    return result.ok==true,result.status,result
 end
 
 -- Test-only body-family provider hooks. The registry accepts only the exact
 -- ordinary female Tiefling BT1 definition; missing resources fail closed.
 MOD.BodyFamilyApiVersion = 1
 RegisterBodyFamily = function(sourceName, spec)
-    if not R1CanWrite("register-body-family", nil) then return false end
-    return BodyFamilyRegistry.RegisterBodyFamily(sourceName, spec)
+    R1Runtime:RefreshState()
+    if R1Runtime.schemaFailure then return false,"REJECTED_INVALID_SCHEMA" end
+    return R1Runtime.ProviderRegistry:RegisterBodyFamily(sourceName,spec)
 end
 RegisterFamilyRefits = function(sourceName, familyId, maps, info)
-    if not R1CanWrite("register-family-refits", nil) then return false end
-    return BodyFamilyEquipRace.RegisterFamilyRefits(sourceName, familyId, maps, info)
+    R1Runtime:RefreshState()
+    if R1Runtime.schemaFailure then return false,"REJECTED_INVALID_SCHEMA" end
+    return R1Runtime.ProviderRegistry:RegisterFamilyRefits(sourceName,familyId,maps,info)
 end
 MOD.RegisterBodyFamily = RegisterBodyFamily
 MOD.RegisterFamilyRefits = RegisterFamilyRefits
@@ -2350,17 +2591,9 @@ MOD.ReapplyBodyFamilies = ReapplyBodyFamilies
 -- template id, OR a Human-F source VisualResource id -- the same keys
 -- ItemIsRevealing() matches on. Additive; safe to call at SessionLoaded.
 RegisterExternalRevealing = function(ids)
-    if not R1CanWrite("register-revealing", nil) then return false end
-    if type(ids) ~= "table" then
-        Warn("RegisterExternalRevealing: ids is not a table"); return false
-    end
-    local n = 0
-    for _, id in ipairs(ids) do
-        local k = tostring(id):lower()
-        if k ~= "" and REVEALING_TORSO[k] == nil then REVEALING_TORSO[k] = true; n = n + 1 end
-    end
-    Log(("RegisterExternalRevealing: added %d revealing id(s)."):format(n))
-    return n > 0
+    R1Runtime:RefreshState()
+    if R1Runtime.schemaFailure then return false,"REJECTED_INVALID_SCHEMA" end
+    return R1Runtime.ProviderRegistry:RegisterRevealing(ids)
 end
 
 Log("BootstrapServer v4.22-s7-foundation loaded (schema 7 + ordinary master state + per-character External + ownership ledger + common mutation gate). Commands: !cm_setbody <vanilla|sbbf|bcb|external> | !cm_master <on|off> | !cm_state | !cm_cyclebody |"

@@ -46,3 +46,28 @@ The hashes of harnesses in the immutable lineage contract identify the historica
 copied input files, not their adapted current versions. Current adapted harnesses
 are recorded separately in contracts/adapted_harnesses.json, computed from actual
 tracked bytes. Historical pins are never rewritten to make qualification pass.
+
+## Executable trace and remaining boundaries
+
+The exact-source runner freezes the current harness files and their SHA256
+receipts, then composes an independently verified source stage. The evidence JSON
+records each suite's actual result. This trace identifies coverage, not a waiver
+or a claim that a single synthetic engine fixture proves all possible gameplay.
+
+| Requirement group | Executable evidence / status boundary |
+|---|---|
+| enums, signatures, authority, feedback, versions | `test_r1_production.lua`, `test_r1_client.lua`, `test_r1_diagnostics.lua`, `test_r1_controls.py` |
+| migration, top-level/body schema, original trust, recorded legacy claim | `test_r1_schema.lua`, production migration/CV cases; saved AppliedCcsv plus saved CvGuid only, including accepted provider/absent resource cases |
+| ownership merge, shared CV, fallback retirement | production shared-CV cases, `test_r1_master_journals.lua`, `test_r1_master_resume.lua`, `test_r1_native_visual_timing.lua` |
+| ordinary interruptions, failed restoration/readback, late characters | `test_r1_failure_matrix.lua`, `test_r1_master_journals.lua`, `test_r1_master_resume.lua`; non-null provider transitions remain gated |
+| ordinary off preferences and re-enable | production/master/journal suites; queued provider activation precedes character apply |
+| mature/family managed behavior | `test_r1_managed_regression.lua`, genuine accepted provider execution in `test_r1_registration.lua`; geometry/gameplay NOT_RUN |
+| mutator/event/delay gates, tattoo, debug | `test_r1_mutator_inventory.lua`, `test_r1_event_matrix.lua`, `test_r1_debug.lua`, production timer/tattoo cases |
+| equipped identity across pending refresh | **UNRESOLVED RED** `test_r1_pending_refresh.lua`; gating a delayed re-equip alone leaves an item unequipped; no acceptance or exclusion |
+| native CCSV timing | native add deferred in fixture; RED 1/3, 2/8, then propagation/rollback RED 8/11; final source-backed synchronous append and proven-write rollback cases 11/11 in receipt `5df5dd83c5434f88983eaa2c3d4948f1` |
+| queued legacy metadata / exact callers / snapshots | `test_r1_registration.lua`, `test_r1_external_legacy.lua`; legacy unknown owner stays empty string + ownerUnresolved, never v2/cleanup assurance |
+| cross-save process mappings | registration cases distinguish persisted ACTIVE from process activation, fresh exact-descriptor reattachment, and saved conflicting digest/owner restart requirement; exact mutation spies |
+| protected source and embedded maps | `test_qualification.py`, `test_qualified_exact.py`, original provenance integrations; historical R0/R1 unchanged |
+| 13.1.9 provider remint/reverse transaction | **DEFERRED_TO_TASK5**; Task 2 only preserves/validates fields and gates ordinary entrypoints; not passed |
+| 13.1.10 full rollback preparation/qualification | **DEFERRED_TO_TASK5**; current refusal/rollback-prepared gates retained; not passed |
+| independent review / release | **NOT_ACCEPTED**; mandatory review and unresolved refresh resolution before Task 3; no PAK or gameplay claim |

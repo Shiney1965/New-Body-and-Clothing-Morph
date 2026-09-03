@@ -10,8 +10,9 @@ function M.BindModules(modules, allowed)
     local entries = {
         EquipRace={SetClothed=1,ForceSetEquipRace=1,RefreshEquipment=1,OnEquipped=2,
             RunBlanketPass=0,CheckContentPresence=0,CheckExternalSources=0,
-            RetryPendingExternalRefits=0,SetBCBPakPresent=0,SetOptout=0},
-        BodyFamilyEquipRace={SetClothed=1,Restore=1,RefreshEquipment=1,OnEquipped=2,RunBlanketPass=0},
+            RetryPendingExternalRefits=0,SetBCBPakPresent=0,SetOptout=0,RegisterExternalRefits=0},
+        BodyFamilyEquipRace={SetClothed=1,Restore=1,RecoverUnavailable=1,RefreshEquipment=1,OnEquipped=2,RunBlanketPass=0,RegisterFamilyRefits=0},
+        BodyFamilyRegistry={RegisterBodyFamily=0,UnregisterBodyFamily=0},
     }
     for moduleName, methods in pairs(entries) do
         local module = modules[moduleName]

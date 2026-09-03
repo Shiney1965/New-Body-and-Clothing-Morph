@@ -73,6 +73,9 @@ function M.CheckWriteGate(state, capability, charGuid)
     end
     local record = charGuid ~= nil and state.Bodies and state.Bodies[charGuid] or nil
     if record and record.ProviderTransition ~= nil then return false,"provider-transition-pending" end
+    if record and hasFailureCode(record,"CCSV_PROPAGATION_FAILED")
+        and capability~="external_restore" and capability~="ordinary_restore"
+        and capability~="maintenance_restore" then return false,"ccsv-propagation-pending" end
     if capability == "external_restore" and state.MasterEnabled == false then
         return state.MutationGateClosed == true, "explicit-off-restore"
     end
@@ -174,13 +177,23 @@ function Runtime:SetMasterEnabled(enabled)
         self.state.CleanupState = "idle"
         self.state.MasterTransition = {
             schema = 1, Kind = "master_off", Phase = "restoring",
+            Direction="disable",Started=true,PendingCharacters={},
             CleanGuids = {}, PartialGuids = {}, BlockedGuids = {},
         }
+        for guid,record in pairs(self.state.Bodies) do
+            if record.Choice~="external" or record.RestoreState~="clean" or record.Transition~=nil then
+                self.state.MasterTransition.PendingCharacters[guid]=true
+            end
+        end
         persist(self, "master-off-gated")
 
         local clean, partial, blocked, pending = {}, {}, {}, {}
         for _, guid in ipairs(sortedGuids(self.state.Bodies)) do
             local record = self.state.Bodies[guid]
+            if record.Choice=="external" and record.RestoreState=="clean" and record.Transition==nil then
+                clean[#clean+1]=guid
+                goto continue_disable
+            end
             record.Transition={Direction="to_external",Phase="gated",PreserveChoice=true}
             record.RestoreState="pending"
             persist(self,"master-character-gated")
@@ -203,6 +216,7 @@ function Runtime:SetMasterEnabled(enabled)
             elseif status == "partial" then partial[#partial + 1] = guid
             elseif status == "pending" then pending[#pending+1]=guid
             else blocked[#blocked + 1] = guid end
+            ::continue_disable::
         end
 
         self.state.PassThroughRestoreComplete = recomputeComplete(self.state)
@@ -211,14 +225,20 @@ function Runtime:SetMasterEnabled(enabled)
             self.state.MasterTransition = nil
         elseif #partial > 0 or #clean > 0 then
             self.state.MasterState = "off_partial"
+            local unfinished={}
+            for guid,record in pairs(self.state.Bodies) do if record.RestoreState~="clean" then unfinished[guid]=true end end
             self.state.MasterTransition = {
                 schema = 1, Kind = "master_off", Phase = "complete",
+                Direction="disable",Started=true,PendingCharacters=unfinished,
                 CleanGuids = clean, PartialGuids = partial, BlockedGuids = blocked,
             }
         else
             self.state.MasterState = "off_blocked"
+            local unfinished={}
+            for guid,record in pairs(self.state.Bodies) do if record.RestoreState~="clean" then unfinished[guid]=true end end
             self.state.MasterTransition = {
                 schema = 1, Kind = "master_off", Phase = "complete",
+                Direction="disable",Started=true,PendingCharacters=unfinished,
                 CleanGuids = clean, PartialGuids = partial, BlockedGuids = blocked,
             }
         end
@@ -235,8 +255,16 @@ function Runtime:SetMasterEnabled(enabled)
     self.state.MutationGateClosed = true
     self.state.MasterState = "enabling"
     self.state.PassThroughRestoreComplete = false
-    self.state.MasterTransition = { schema = 1, Kind = "master_on", Phase = "applying" }
+    self.state.MasterTransition = { schema = 1, Kind = "master_on", Phase = "applying",
+        Direction="enable",Started=true,PendingCharacters={},RequestedChoices={} }
+    for guid,record in pairs(self.state.Bodies) do
+        if record.Choice~="external" then
+            self.state.MasterTransition.PendingCharacters[guid]=true
+            self.state.MasterTransition.RequestedChoices[guid]=record.Choice
+        end
+    end
     persist(self, "master-on-gated")
+    local providerResults=self.deps.beforeEnable and self.deps.beforeEnable() or {}
     local managed, external, pending = {}, {}, {}
     for _, guid in ipairs(sortedGuids(self.state.Bodies)) do
         local record = self.state.Bodies[guid]
@@ -257,7 +285,7 @@ function Runtime:SetMasterEnabled(enabled)
                 local accepted = self:RunExplicitManaged(guid,choice,function()
                     if self.deps.applyManaged == nil then return false end
                     return self.deps.applyManaged(guid, record, choice) == true
-                end)
+                end,"ordinary_reenable")
                 okApply = accepted == true
             end
             if okApply then
@@ -272,6 +300,7 @@ function Runtime:SetMasterEnabled(enabled)
                 }
                 external[#external + 1] = guid
             end
+            self.state.MasterTransition.PendingCharacters[guid]=nil
         end
         ::continue_enable::
     end
@@ -282,6 +311,7 @@ function Runtime:SetMasterEnabled(enabled)
     return {
         ok = true, status = "COMPLETE", masterState = "enabled",
         managedGuids = managed, externalGuids = external, pendingGuids=pending,
+        providerActivationResults=providerResults,
     }
 end
 
@@ -315,19 +345,22 @@ function Runtime:SetExternal(charGuid)
     return result
 end
 
-function Runtime:RunExplicitManaged(charGuid, choice, fn)
+function Runtime:RunExplicitManaged(charGuid, choice, fn, internalCapability, internalVerifier)
     if not MANAGED_CHOICES[choice] then return false, "invalid-choice" end
-    local capability=self.state.MasterState=="enabling" and "ordinary_reenable" or "explicit_managed"
+    local capability=internalCapability or "explicit_managed"
     local allowed, why = M.CheckWriteGate(self.state, capability, charGuid)
     if not allowed then return false, why end
     local record = self.state.Bodies[charGuid] or {
         Choice="external",PreferredChoice=choice,OriginalVisuals={},OwnedCcsvs={},
         RemovedOriginalVisuals={},HistoricalOriginals={},RestoreFailures={},RestoreState="clean"}
     self.state.Bodies[charGuid] = record
+    local priorCleanExternal=record.Choice=="external" and record.RestoreState=="clean" and record.Transition==nil
+    local priorTransition=deepCopy(record.Transition)
     local wasManaged = MANAGED_CHOICES[record.Choice] == true and M.CheckWriteGate(self.state,"managed",charGuid)==true
     record.PreferredChoice = choice
     record.Choice = "external"
     record.Transition={Direction="to_managed",RequestedChoice=choice,Phase="gated"}
+    if internalCapability=="ordinary_reenable" then record.Transition.PreserveChoice=true end
     record.RestoreState, record.RestoreFailures = "pending", {}
     persist(self, "explicit-managed-gated")
     local captured, failure = false,"baseline-capture-unavailable"
@@ -337,16 +370,22 @@ function Runtime:RunExplicitManaged(charGuid, choice, fn)
         failure=called and why or "baseline-capture-failed"
     end
     if not captured then
-        record.RestoreState,record.RestoreFailures="blocked",{failure or "managed-preflight-failed"}
+        record.RestoreState=priorCleanExternal and "clean" or "blocked"
+        record.RestoreFailures={failure or "managed-preflight-failed"}
+        record.Transition=priorCleanExternal and nil or priorTransition
         persist(self,"explicit-managed-preflight-blocked")
         return false,failure
     end
     record.Transition.Phase="captured";persist(self,"explicit-managed-captured")
     record.Transition.Phase="applying";persist(self,"explicit-managed-applying")
     local called, result = pcall(fn)
-    local ok = called and result == true
+    local ok = called and result == true and not hasFailureCode(record,"CCSV_PROPAGATION_FAILED")
     record.Transition.Phase="verifying";persist(self,"explicit-managed-verifying")
-    if ok and self.deps.verifyManaged then ok=self.deps.verifyManaged(charGuid,record,choice)==true end
+    local verifier=internalVerifier or self.deps.verifyManaged
+    if ok and verifier then
+        local checked,valid=pcall(verifier,charGuid,record,choice)
+        ok=checked and valid==true
+    end
     if ok then
         record.Choice,record.PreferredChoice=choice,choice
         record.RestoreState = "clean"
@@ -369,12 +408,30 @@ end
 
 function Runtime:ResumePending()
     if self.schemaFailure or self.state.CleanupState~="idle" then return false end
+    local master=self.state.MasterTransition
+    local resumeEnable=self.state.MasterState=="enabling" and type(master)=="table"
+    local resumeDisable=self.state.MasterEnabled==false and type(master)=="table"
+        and (master.Direction=="disable" or master.Kind=="master_off")
+    if resumeEnable or resumeDisable then
+        for _,guid in ipairs(sortedGuids(self.state.Bodies)) do
+            local rec=self.state.Bodies[guid]
+            if master.PendingCharacters and master.PendingCharacters[guid] and rec.Transition==nil then
+                local choice=master.RequestedChoices and master.RequestedChoices[guid] or rec.Choice
+                rec.Transition=resumeEnable
+                    and {Direction="to_managed",Phase="gated",RequestedChoice=choice,Deferred=true,PreserveChoice=true}
+                    or {Direction="to_external",Phase="gated",PreserveChoice=true}
+                rec.RestoreState="pending"
+            end
+        end
+        persist(self,"master-resume-gated")
+    end
     local hasPending=false
     for _,guid in ipairs(sortedGuids(self.state.Bodies)) do
         local rec=self.state.Bodies[guid]
         if rec.ProviderTransition==nil and (rec.Transition~=nil or rec.RestoreState=="pending") then
             hasPending=true
-            local deferred=rec.Transition and rec.Transition.Deferred and rec.Transition.RequestedChoice
+            local deferred=rec.Transition and (rec.Transition.Deferred or (resumeEnable and rec.Transition.PreserveChoice))
+                and rec.Transition.RequestedChoice
             if rec.Transition and rec.Transition.Direction=="to_managed" and not deferred then rec.Choice="external" end
             local preserve=rec.Transition and rec.Transition.PreserveChoice
             local choice=rec.Choice
@@ -385,7 +442,7 @@ function Runtime:ResumePending()
             if preserve then rec.Choice=choice end
             if status=="clean" then
                 rec.Transition=nil
-                if deferred and self.state.MasterEnabled==true then
+                if deferred and self.state.MasterEnabled==true and not resumeEnable then
                     self:RunExplicitManaged(guid,deferred,function()
                         return self.deps.applyManaged and self.deps.applyManaged(guid,rec,deferred)==true
                     end)
@@ -401,6 +458,26 @@ function Runtime:ResumePending()
         self.state.MasterState=self.state.PassThroughRestoreComplete and "off_restored" or "off_partial"
         if self.state.PassThroughRestoreComplete then self.state.MasterTransition=nil end
         persist(self,"resume-master-summary")
+    end
+    if resumeEnable then
+        if self.deps.beforeEnable then self.deps.beforeEnable() end
+        for _,guid in ipairs(sortedGuids(master.PendingCharacters or {})) do
+            local rec=self.state.Bodies[guid]
+            local choice=master.RequestedChoices and master.RequestedChoices[guid]
+                or (rec and rec.PreferredChoice)
+            if rec and MANAGED_CHOICES[choice] then
+                if self.deps.isCharacterAvailable and not self.deps.isCharacterAvailable(guid) then
+                    rec.RestoreState="pending"
+                    rec.Transition={Direction="to_managed",Phase="gated",RequestedChoice=choice,Deferred=true,PreserveChoice=true}
+                elseif rec.RestoreState=="clean" then
+                    self:RunExplicitManaged(guid,choice,function()
+                        return self.deps.applyManaged and self.deps.applyManaged(guid,rec,choice)==true
+                    end,"ordinary_reenable")
+                end
+            end
+        end
+        self.state.MasterState="enabled";self.state.MutationGateClosed=false;self.state.MasterTransition=nil
+        persist(self,"master-resume-complete")
     end
     return true
 end

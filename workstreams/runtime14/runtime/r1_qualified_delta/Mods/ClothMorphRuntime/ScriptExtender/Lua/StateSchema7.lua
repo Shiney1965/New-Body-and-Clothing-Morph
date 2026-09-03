@@ -7,16 +7,34 @@ M.R0_PACKAGE_SHA256 = "6610090CEE01091F802273D70FAEE071DCBA891900D77479ABBD828FC
 local MANAGED_CHOICES = { vanilla = true, sbbf = true, bcb = true }
 
 local function validDigest(value)
+    if type(value)~="string" then return false end
     local text = tostring(value or "")
     return #text == 64 and text:match("^%x+$") ~= nil
 end
 
 local function validGuid(value)
+    if type(value)~="string" then return false end
     local text = tostring(value or "")
     if #text ~= 36 or text:sub(9, 9) ~= "-" or text:sub(14, 14) ~= "-"
         or text:sub(19, 19) ~= "-" or text:sub(24, 24) ~= "-" then return false end
     local compact = text:gsub("-", "")
     return #compact == 32 and compact:match("^%x+$") ~= nil
+end
+
+local function arrayOf(value, predicate)
+    if type(value)~="table" then return false end
+    local count=0
+    for key,item in pairs(value) do
+        if type(key)~="number" or key<1 or key%1~=0 or key>#value or not predicate(item) then return false end
+        count=count+1
+    end
+    return count==#value
+end
+
+local function nonemptyString(value) return type(value)=="string" and value~="" end
+local function providerClaim(value)
+    return type(value)=="table" and nonemptyString(value.ProviderId)
+        and validGuid(value.OwnerModuleUuid) and validDigest(value.ProviderDigest)
 end
 
 local function validateClaim(guid, claim, cvGuid)
@@ -42,6 +60,15 @@ local function validateSchema7(state)
     if not masters[state.MasterState] or not cleanup[state.CleanupState] then
         return false,'SCHEMA7_STATE_INVALID'
     end
+    if state.CleanupState=="idle" then
+        if state.MasterEnabled then
+            if state.MasterState=="enabled" then
+                if state.MutationGateClosed or state.MasterTransition~=nil then return false,"SCHEMA7_MASTER_PREDICATES_INVALID" end
+            elseif state.MasterState~="enabling" or not state.MutationGateClosed then return false,"SCHEMA7_MASTER_PREDICATES_INVALID" end
+        elseif not state.MutationGateClosed or state.MasterState:sub(1,4)~="off_" then
+            return false,"SCHEMA7_MASTER_PREDICATES_INVALID"
+        end
+    end
     if state.BodyTattooPolicy~='match' and state.BodyTattooPolicy~='always_show' and state.BodyTattooPolicy~='always_hide' then
         return false,'SCHEMA7_TATTOO_POLICY_INVALID'
     end
@@ -50,6 +77,16 @@ local function validateSchema7(state)
     end
     for _,key in ipairs({'MasterTransition','CleanupTransaction','CleanupAudit'}) do
         if state[key]~=nil and type(state[key])~='table' then return false,'SCHEMA7_'..key..'_INVALID' end
+    end
+    for id,descriptor in pairs(state.ProviderDescriptors) do
+        local unresolved=type(descriptor)=="table" and descriptor.apiGeneration=="legacy_v1"
+            and descriptor.ownerModuleUuid=="" and descriptor.ownerUnresolved==true
+            and type(descriptor.canonicalPayload)=="table" and descriptor.canonicalPayload.ownerUnresolved==true
+            and descriptor.canonicalPayload.ownerModuleUuid==""
+        if not nonemptyString(id) or type(descriptor)~="table" or descriptor.providerId~=id
+            or (not unresolved and not validGuid(descriptor.ownerModuleUuid)) or not validDigest(descriptor.canonicalDigest)
+            or (descriptor.activationState~="active" and descriptor.activationState~="queued" and descriptor.activationState~="rejected")
+            or type(descriptor.canonicalPayload)~="table" then return false,"SCHEMA7_PROVIDER_DESCRIPTOR_INVALID" end
     end
     if type(state.Bodies) ~= "table" then return false, "SCHEMA7_BODIES_INVALID" end
     for charGuid, rec in pairs(state.Bodies) do
@@ -64,6 +101,20 @@ local function validateSchema7(state)
         end
         for _,key in ipairs({'OriginalVisuals','OwnedCcsvs','RemovedOriginalVisuals','RestoreFailures','HistoricalOriginals'}) do
             if type(rec[key])~='table' then return false,'SCHEMA7_'..key..'_INVALID:'..tostring(charGuid) end
+        end
+        if not arrayOf(rec.OriginalVisuals,validGuid) or not arrayOf(rec.RestoreFailures,nonemptyString)
+            or not arrayOf(rec.HistoricalOriginals,function(row) return type(row)=="table" end) then
+            return false,"SCHEMA7_RECORD_ARRAY_INVALID:"..tostring(charGuid)
+        end
+        for guid,value in pairs(rec.RemovedOriginalVisuals) do
+            if not validGuid(guid) or type(value)~="boolean" then return false,"SCHEMA7_REMOVED_VISUAL_INVALID" end
+        end
+        if rec.ActiveProvider~=nil and not providerClaim(rec.ActiveProvider) then return false,"SCHEMA7_ACTIVE_PROVIDER_INVALID" end
+        if rec.Transition~=nil then
+            local transition=rec.Transition
+            local phases={gated=true,captured=true,restoring=true,applying=true,verifying=true}
+            if type(transition)~="table" or (transition.Direction~="to_external" and transition.Direction~="to_managed")
+                or not phases[transition.Phase] then return false,"SCHEMA7_OWNERSHIP_TRANSITION_INVALID" end
         end
         if rec.RestoreState~='clean' and rec.RestoreState~='pending' and rec.RestoreState~='partial' and rec.RestoreState~='blocked' then
             return false,'SCHEMA7_RESTORE_STATE_INVALID:'..tostring(charGuid)
@@ -171,19 +222,13 @@ local function migrateRecord(rec, charGuid, deps)
     rec.OriginalVisuals = cloneArray(rec.OriginalVisuals)
     rec.OwnedCcsvs = {}
     local legacyCcsvMissingCv = false
-    local legacyCcsvUntrusted = false
     if rec.AppliedCcsv ~= nil and rec.AppliedCcsv ~= "" then
         if rec.CvGuid ~= nil and rec.CvGuid ~= "" then
-            local trusted = true
-            if deps.isRuntimeOwnedCcsv ~= nil then
-                local ok, result = pcall(deps.isRuntimeOwnedCcsv, rec.AppliedCcsv, rec, charGuid)
-                trusted = ok and result == true
-            end
-            if trusted then
-                rec.OwnedCcsvs[rec.AppliedCcsv] = legacyClaim(rec.CvGuid)
-            else
-                legacyCcsvUntrusted = true
-            end
+            -- The trusted schema-6 AppliedCcsv field records the Runtime's
+            -- successful write, not physical ownership of the source mesh.
+            -- It may therefore name the accepted provider's CCSV even when
+            -- that provider resource is currently absent. Infer no other claim.
+            rec.OwnedCcsvs[rec.AppliedCcsv] = legacyClaim(rec.CvGuid)
         else
             legacyCcsvMissingCv = true
         end
@@ -198,10 +243,6 @@ local function migrateRecord(rec, charGuid, deps)
     rec.RestoreState, rec.RestoreFailures = initialRestoreHealth(rec)
     if legacyCcsvMissingCv then
         rec.RestoreFailures[#rec.RestoreFailures + 1] = "LEGACY_CCSV_CV_GUID_MISSING"
-        rec.RestoreState = "blocked"
-    end
-    if legacyCcsvUntrusted then
-        rec.RestoreFailures[#rec.RestoreFailures + 1] = "LEGACY_CCSV_UNTRUSTED"
         rec.RestoreState = "blocked"
     end
     return rec
@@ -241,6 +282,11 @@ function M.Migrate(state, deps)
     if state.Bodies~=nil and type(state.Bodies)~='table' then return nil,'SCHEMA6_BODIES_INVALID' end
     for charGuid,record in pairs(state.Bodies or {}) do
         if type(record)~='table' then return nil,'SCHEMA6_BODY_RECORD_INVALID:'..tostring(charGuid) end
+        for _,key in ipairs({'AppliedCcsv','CvGuid'}) do
+            if record[key]~=nil and not validGuid(record[key]) then
+                return nil,'SCHEMA6_'..key..'_INVALID:'..tostring(charGuid)
+            end
+        end
     end
     state.Bodies = type(state.Bodies) == "table" and state.Bodies or {}
     state.OptoutTemplates = type(state.OptoutTemplates) == "table" and state.OptoutTemplates or {}

@@ -70,9 +70,28 @@ def _verify_stage(verified, stage):
     return rows
 
 
+def _check_embedded_data(stage, delta):
+    """A newly hashed Lua delta cannot implicitly approve changed R0 map data."""
+    name=_LUA_ROOT+'EquipRace.lua'
+    if name not in {row.path for row in delta}:
+        return
+    original=(Path(stage.output)/name).read_bytes()
+    qualified=(_DELTA_ROOT/name).read_bytes()
+    for marker in (b'M.MINTED = {',b'M.KNOWN_ORIG = {',b'local PARENT = {',b'M.REFIT_BY_VR = {'):
+        def block(data):
+            try:
+                start=data.index(marker)
+                return data[start:data.index(b'\n}',start)+2]
+            except ValueError as error:
+                raise base.LineageError('Embedded immutable EquipRace data missing') from error
+        if block(original)!=block(qualified):
+            raise base.LineageError('Embedded immutable EquipRace data changed: '+marker.decode())
+
+
 def compose_qualified_stage(verified, stage, output):
     rows = _verify_stage(verified, stage)
     revision, contract_digest, delta = _verified_delta()
+    _check_embedded_data(stage,delta)
     output = Path(output)
     if not output.is_absolute() or '..' in output.parts:
         raise base.LineageError('Explicit non-traversing output required')

@@ -124,7 +124,7 @@ local function doRestore(charGuid, record, deps, options)
             record.AppliedCcsv, record.DesiredCcsv = nil, nil
             for _,guid in ipairs(restoredOriginals) do record.RemovedOriginalVisuals[guid]=nil end
         else
-            addFailure(failures, "CCSV_WRITE_OR_READBACK_FAILED")
+            addFailure(failures, "ccsv-strip-write-rejected")
         end
     end
 
@@ -132,10 +132,13 @@ local function doRestore(charGuid, record, deps, options)
     local liveCv = deps.readCvGuid and deps.readCvGuid(charGuid) or nil
     if record.CvGuid == nil or liveCv == nil or lower(record.CvGuid) ~= lower(liveCv) then
         addFailure(failures, "BODY_CV_MISMATCH")
+    elseif deps.isBaseReleased and deps.isBaseReleased(charGuid,liveCv)==true then
+        bodyOk=deps.readBodySetVisual~=nil and deps.readBodySetVisual(charGuid,liveCv)~=nil
+        if not bodyOk then addFailure(failures,"base-unreadable") end
     elseif record.OrigBodySetVisual == nil
         or deps.validateBodyOriginal == nil
         or deps.validateBodyOriginal(record.OrigBodySetVisual, liveCv, record, charGuid) ~= true then
-        addFailure(failures, "ORIGINAL_BODY_UNTRUSTED_OR_MISSING")
+        addFailure(failures, "base-original-untrusted")
     else
         local writeOk = deps.writeBodySetVisual ~= nil
             and deps.writeBodySetVisual(charGuid, liveCv, record.OrigBodySetVisual) == true
@@ -144,7 +147,7 @@ local function doRestore(charGuid, record, deps, options)
         if writeOk and lower(after) == lower(record.OrigBodySetVisual) then
             bodyOk = true
         else
-            addFailure(failures, "BODY_WRITE_OR_READBACK_FAILED")
+            addFailure(failures, "base-restore-write-rejected")
         end
     end
 
@@ -157,7 +160,7 @@ local function doRestore(charGuid, record, deps, options)
     local equipOk = false
     if targetEquip == nil or deps.validateEquipRaceOriginal == nil
         or deps.validateEquipRaceOriginal(targetEquip, record, charGuid) ~= true then
-        addFailure(failures, "ORIGINAL_EQUIP_RACE_UNTRUSTED_OR_MISSING")
+        addFailure(failures, "equipment-original-untrusted")
     else
         local writeOk = deps.writeEquipRace ~= nil and deps.writeEquipRace(charGuid, targetEquip) == true
         local after = writeOk and deps.readEquipRace and deps.readEquipRace(charGuid) or nil
@@ -165,7 +168,7 @@ local function doRestore(charGuid, record, deps, options)
             equipOk = true
             record.ClothedChoice = "off"
         else
-            addFailure(failures, "EQUIP_RACE_WRITE_OR_READBACK_FAILED")
+            addFailure(failures, "equipment-restore-write-rejected")
         end
     end
 
@@ -173,6 +176,11 @@ local function doRestore(charGuid, record, deps, options)
     local status
     if #failures == 0 and visualsOk and bodyOk and equipOk then
         status = "clean"
+        record.BodyFamilyId=nil
+        record.FamilyClothedChoice=nil
+        record.ClothedChoice=nil
+        record.UnavailableFamilyChoice=nil
+        record.NeedsRecovery=nil
     elseif bodyOk or equipOk then
         status = "partial"
     else

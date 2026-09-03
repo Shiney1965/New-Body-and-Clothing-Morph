@@ -1,5 +1,6 @@
 /runtime/r1_foundation/** -text
 /runtime/r0_reference/*.lua -text
+/runtime/r0_reference/recluse/** -text
 /runtime/r0_reference/accepted_tiefling_bootstrap.lua whitespace=-blank-at-eof
 /contracts/lineage.json text eol=lf
 /runtime/r1_qualified_delta/** -text

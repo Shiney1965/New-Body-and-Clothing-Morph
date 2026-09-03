@@ -1,0 +1,7 @@
+{
+  "kind": "INSPECTED_EXISTING_RECLUSE_CALLER_NOT_GAMEPLAY_ACCEPTANCE",
+  "files": [
+    {"path": "runtime/r0_reference/recluse/BootstrapServer.lua", "bytes": 1921, "sha256": "40BB56EEC92B2664FAF4B3BBDDA1601CBA8FE83B98D9F41BB523270D48E69119"},
+    {"path": "runtime/r0_reference/recluse/RefitMaps.lua", "bytes": 519, "sha256": "924CC062A5BAD1A0AA17B476149D8856B72D1DC02AD1CF767A0EA1E3535B25E6"}
+  ]
+}

@@ -105,3 +105,30 @@ def test_adapted_harness_manifest_binds_current_bytes_separately_from_historical
         data=(root/row['path']).read_bytes()
         assert len(data)==row['bytes']
         assert sha(data)==row['sha256']
+
+
+@pytest.mark.parametrize('change_protected',[False,True])
+def test_allowed_lua_override_cannot_reauthorize_embedded_protected_maps(api,fixture,qualification,monkeypatch,change_protected):
+    name='Mods/ClothMorphRuntime/ScriptExtender/Lua/EquipRace.lua'
+    data=b'M.MINTED = {\n    key = "minted"\n}\nM.KNOWN_ORIG = {\n    key = "original"\n}\nlocal PARENT = {\n    key = "parent"\n}\nM.REFIT_BY_VR = {\n    protected = "target"\n}\n'
+    fixture.base[name]=data
+    (fixture.roots['r0']/name).write_bytes(data)
+    fixture.contract['r0'].append({'path':name,'bytes':len(data),'sha256':sha(data)})
+    verified=api.verify_lineage_inputs(fixture.config)
+    stage=api.compose_runtime_stage(verified,fixture.output)
+    delta=fixture.output.parent.parent/'protected-delta'
+    target=delta/name;target.parent.mkdir(parents=True)
+    candidate=b'local qualified_control = true\n'+data
+    if change_protected: candidate=candidate.replace(b'protected = "target"',b'protected = "different"')
+    target.write_bytes(candidate)
+    contract={'schema':1,'revision':'SYNTHETIC_TEST','allowedPaths':[name],
+              'files':[{'path':name,'bytes':len(candidate),'sha256':sha(candidate)}]}
+    monkeypatch.setattr(qualification,'_load_contract',lambda:contract)
+    monkeypatch.setattr(qualification,'_DELTA_ROOT',delta)
+    monkeypatch.setattr(qualification,'_OUTPUT_ROOT',fixture.output.parent/'qualified')
+    output=fixture.output.parent/'qualified'/'protected-check'
+    if change_protected:
+        with pytest.raises(ValueError,match='[Ee]mbedded'): qualification.compose_qualified_stage(verified,stage,output)
+        assert not output.exists()
+    else:
+        assert qualification.compose_qualified_stage(verified,stage,output).revision=='SYNTHETIC_TEST'

@@ -15,7 +15,7 @@ It also records the controller freeze/reference/matrix provenance digests.
 
 Verification reads all actual bytes, obtains a fresh listing from the pinned
 Divine executable, and checks the complete path/size/hash sets. It rejects unsafe
-Windows paths, casefold duplicates, links/reparse paths, unreadable inventory,
+Windows paths, casefold duplicates, symlinks/reparse redirects, unreadable inventory,
 extra/missing files, or byte drift. The raw controller manifest paths are not
 portable authority; only their recorded hashes and sanitized file metadata are
 tracked here.
@@ -75,3 +75,38 @@ no source-free adapter or active-load-order conclusion is made.
 
 No Runtime behavior has been changed in Task 1. Tasks 2-6 and the broader release
 source, route, permission, geometry, package, and gameplay gates remain open.
+
+## Task 2 qualification candidate
+
+`runtime/r1_qualified_delta/` is a separate revisioned candidate; the frozen R1
+source and lineage pins above remain immutable. `compose_qualified_stage` verifies
+the complete Task-1 receipt/stage, restricts every override path, and exclusively
+creates a new stage. It independently preserves the embedded R0 minted races,
+known originals, parent map, and complete refit map even if someone regenerates
+the allowed-delta hashes. Full output and historical input bytes are reverified.
+
+Read-only hard-linked input files are supported when their bytes verify; this is
+not a claim of unique file ownership. The current adapted historical harness
+hashes are separately recorded in `contracts/adapted_harnesses.json`, not by
+rewriting historical input hashes.
+
+The explicit exact-source test now freezes its executable harnesses and genuine
+legacy caller fixtures before composing the stage, checks their hashes again
+after execution, and records all outputs beside the stage. Its production fixture
+loads real Shared, body/refit/targeting/policy modules and actual server/client
+bootstraps; only the engine boundary is simulated. It covers ordinary ownership,
+shared CVs, timers, journals, malformed state, legacy registration queues and
+source revalidation, diagnostics, debug controls, and current managed body keys.
+
+General R1 unresolved legacy ownership is documented in
+[LEGACY_OWNER_CLARIFICATION.md](LEGACY_OWNER_CLARIFICATION.md). That representation
+does not authorize an unknown-owner API2 descriptor or the later exact-build
+native legacy bridge. API2/remint/rollback work remains in Tasks 3-5. No runtime
+qualification fixture is gameplay proof, and no PAK is built or installed here.
+
+The exact-source aggregate includes the mandatory stateful pending-equipment
+refresh regression. It currently fails because an immediate Off/External gate
+can suppress re-equip after managed refresh already unequipped the item; zero
+delayed writes alone does not preserve equipped state. See
+[PENDING_REFRESH_INVESTIGATION.md](PENDING_REFRESH_INVESTIGATION.md) and
+[TASK_2_CHECKPOINT.md](TASK_2_CHECKPOINT.md). The candidate is not Task 2 accepted.

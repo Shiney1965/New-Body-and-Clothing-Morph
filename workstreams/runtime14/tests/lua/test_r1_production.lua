@@ -233,6 +233,30 @@ test('External can be selected before a character was ever managed',function()
     eq(rec.OrigBodySetVisual,F.ids.body,'unmanaged External baseline')
     eq(#w.writes,0,'unmanaged External gameplay writes')
 end)
+test('a deferred but never-added fallback can be superseded without claiming an unowned CCSV',function()
+    local reject=true
+    local w=F.Boot(root,{onWrite=function(_,kind,_,value)
+        if reject and kind=='CV.BodySetVisual' and value~=F.ids.body then error('read-only body') end
+    end})
+    w.equipped={[F.ids.a]={Breast='opaque-garment'}}
+    assert(w.mod.SetDesiredBody(F.ids.a,'bcb'))
+    local rec=w.state.Bodies[F.ids.a]
+    assert(rec.DesiredCcsv and rec.AppliedCcsv==nil,'deferred path not exercised')
+    reject=false;w.equipped={}
+    assert(w.mod.SetDesiredBody(F.ids.a,'vanilla'),'absent unowned desired CCSV blocked mode change')
+    assert(w.entities[F.ids.a].CharacterCreationAppearance.Visuals[1]==F.ids.external,'unowned visual removed')
+end)
+test('resolving different shared-CV targets retires the peers obsolete owned fallback',function()
+    local state={Version=6,Bodies={
+        [F.ids.a]={Choice='sbbf',CvGuid=F.ids.cv,OrigBodySetVisual=F.ids.body,OrigEquipRace=F.ids.er},
+        [F.ids.b]={Choice='bcb',CvGuid=F.ids.cv,OrigBodySetVisual=F.ids.body,OrigEquipRace=F.ids.er}}}
+    local w=F.Boot(root,{state=state,sharedCv=true})
+    assert(w.mod.SetDesiredBody(F.ids.a,'sbbf'))
+    assert(w.state.Bodies[F.ids.b].AppliedCcsv,'different-target peer fallback not installed')
+    assert(w.mod.SetDesiredBody(F.ids.a,'bcb'))
+    assert(w.resources[F.ids.cv].VisualSet.BodySetVisual==F.ids.bcb,'shared target not applied')
+    assert(w.state.Bodies[F.ids.b].AppliedCcsv==nil,'obsolete fallback still overlays shared primary body')
+end)
 local failed=0
 for _,row in ipairs(tests) do
     local ok,why=pcall(row[2])
