@@ -210,6 +210,10 @@ def test_current_hash_locked_evidence_generates_truthful_master_ledger():
     # Alan's exact Nexus 2617 permissions-tab quote; BCB core trio (BCBPak/UniqueTav/
     # BCBScantily) joins via Alan 2026-07-11 Nexus 2351 review (Sindae required-dependency
     # grant). BCBPak vs BCBUniqueTav is body-path XOR / mutual exclusivity (not additive).
+    # Imports/NightreignStylePak 096665c7 + SindaeTexturePak 873d1b73 join as paired
+    # freeze-promote (TexturePak dependency-only / not garment-source twin).
+    # ClothMorph Runtime/BCB/SCO/External providers join as first-party freeze-promote
+    # (roles runtime/provider; not garment-source twins; SerpentineShel public author).
     # BASE_GAME closes from retained base_game_profile_20260902 capture digests via the
     # aggregate census release_profile_complete path (not a new mod package freeze).
     expected_complete = sorted(freeze_bound)
@@ -219,8 +223,8 @@ def test_current_hash_locked_evidence_generates_truthful_master_ledger():
     assert audit["freeze_bound_source_profiles"] == sorted(freeze_bound)
     assert audit["freeze_missing_source_profiles"] == sorted(required_profiles - freeze_bound)
     assert audit["census_incomplete_source_profiles"] == []
-    assert len(mod_freeze_bound) == 13
-    assert len(expected_complete) == 14
+    assert len(mod_freeze_bound) == 19
+    assert len(expected_complete) == 20
     assert BASE_GAME_SOURCE_PROFILE_UNRESOLVED in expected_complete
     assert BASE_GAME_SOURCE_PROFILE_UNRESOLVED not in audit["freeze_missing_source_profiles"]
     bcb_profiles = {
@@ -228,7 +232,19 @@ def test_current_hash_locked_evidence_generates_truthful_master_ledger():
         "SOURCE_PROFILE:28c82588-4ad0-4907-afac-6567817c6b13:36028797018963968",
         "SOURCE_PROFILE:75934b95-f697-4d5b-890c-fe198b799484:36028797018963968",
     }
+    imports_texture_profiles = {
+        "SOURCE_PROFILE:096665c7-75aa-4747-9548-6ccafba985c8:36028797018963968",
+        "SOURCE_PROFILE:873d1b73-6adf-4f0c-9e8f-51a78fc3d9c5:36028797018963968",
+    }
+    clothmorph_provider_profiles = {
+        "SOURCE_PROFILE:20aca985-e3e9-41d7-bf8f-10f2a3c413e4:36451009484029952",
+        "SOURCE_PROFILE:78f1571f-ffb5-5646-8a5b-63aac7ce2ecd:36028797018963968",
+        "SOURCE_PROFILE:0d73fe2f-49ae-528e-9a9b-160e7f124afc:36451009484029952",
+        "SOURCE_PROFILE:fdb658be-223c-55c8-a12f-3542a9c6e2fb:36169534507384832",
+    }
     assert bcb_profiles <= set(expected_complete)
+    assert imports_texture_profiles <= set(expected_complete)
+    assert clothmorph_provider_profiles <= set(expected_complete)
     assert len(audit["registered_inventories"]["source_observations"]) == 3172
     assert audit["missing_from_ledger"] == []
     assert audit["duplicate_identity"] == []

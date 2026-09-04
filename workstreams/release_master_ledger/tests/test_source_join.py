@@ -1079,3 +1079,652 @@ def test_bcb_permission_pak_mismatch_does_not_complete(tmp_path):
     assert inventories.complete_source_profiles == frozenset()
     assert BCB_PAK_PROFILE in inventories.freeze_bound_source_profiles
     assert BCB_PAK_PROFILE in inventories.census_incomplete_source_profiles
+
+
+# --- Imports + SindaeTexturePak paired freeze-promote ---
+# Package identities: census local core_source_freeze_20260902_retry1/packages
+# SindaeImportedOutfits.pak / NightreignStylePak folder (096665c7..., sha F91C4F78...)
+# SindaeTexturePak.pak (873d1b73..., sha 33BE5016...) — dependency-only / paired
+# operational dep for Sindae garment sources, not a garment-source twin.
+# Keep OUT: ClothMorph Runtime/BCB/SCO/External providers; Tiefling/Recluse/Underwear TEST.
+
+IMPORTS_UUID = "096665c7-75aa-4747-9548-6ccafba985c8"
+IMPORTS_VERSION = "36028797018963968"
+IMPORTS_SHA = "F91C4F78BE6B543835EC90BCDC1F1C4D269F272237033263FC1FD8E414455BCA"
+IMPORTS_PROFILE = f"SOURCE_PROFILE:{IMPORTS_UUID}:{IMPORTS_VERSION}"
+
+TEXTURE_UUID = "873d1b73-6adf-4f0c-9e8f-51a78fc3d9c5"
+TEXTURE_VERSION = "36028797018963968"
+TEXTURE_SHA = "33BE501670368E7259EDFA0C74827A146B75403B6E34DB42CC3871FEFC877992"
+TEXTURE_PROFILE = f"SOURCE_PROFILE:{TEXTURE_UUID}:{TEXTURE_VERSION}"
+
+IMPORTS_EVIDENCE_WHERE = (
+    "ChatGPT Work Files/Nexus Permission Evidence Review 2026-07-11.md "
+    "(Alan authenticated Nexus session 2026-07-11; Sindae family mods including "
+    "Imported Outfits Nexus 18009 / Texture Pak Nexus 9716; private conversation "
+    "Permission Request - for using BCB in a selectable bodytype and clothing/armor morphing mod)"
+)
+IMPORTS_EVIDENCE_WHEN = "2026-07-11"
+IMPORTS_SINDAE_QUOTE = "I would like my mod to be a requirement rather than bundling it with your mod."
+IMPORTS_PUBLIC_SUMMARY = (
+    "The public page permits modification and asset use with credit, permits Donation Points, "
+    "prohibits use in sold mods, and prohibits uploading the original file to other sites. "
+    "Sindae replied on 2026-06-21 and approved the proposal. The controlling distribution "
+    f"condition was: {IMPORTS_SINDAE_QUOTE!r}."
+)
+
+
+def imports_census_candidate():
+    return {
+        "admissible_contract": None,
+        "blockers": ["PERMISSION_EVIDENCE_MISSING"],
+        "contract": {
+            "content_manifest_sha256": "4468E0269566AFB83B6A42B3122DD7C74BF4C33553016F72FC3AFC0A4179F5EA",
+            "forbidden_modules": None,
+            "module": {
+                "folder": "NightreignStylePak",
+                "name": "SindaeImportedOutfits",
+                "pak_filename": "SindaeImportedOutfits.pak",
+                "pak_sha256": IMPORTS_SHA,
+                "uuid": IMPORTS_UUID,
+                "version64": IMPORTS_VERSION,
+            },
+            "permission": {
+                "credit_line": None,
+                "distribution_limits": None,
+                "evidence_sha256": None,
+                "state": None,
+            },
+            "profile_id": None,
+            "required_dependencies": [TEXTURE_PROFILE],
+            "root_stats_visualbank_digest": "2B2E980C2CB4B6EB28DF25BD516A916CC1256C373493406C177FBD2AEF736D5B",
+            "route_partition_digest": None,
+            "schema": "clothmorph.source-profile",
+            "schema_version": 1,
+            "supported_body_tuples": None,
+        },
+        "creation_coverage": {
+            "census_without_source": [],
+            "complete": True,
+            "duplicate_census_rows": [],
+            "duplicate_source_rows": [],
+            "missing_from_census": [],
+        },
+        "creation_paths_complete": False,
+        "definition_parse_complete": False,
+        "discovery_profile_id": f"DISCOVERY:{IMPORTS_UUID}:{IMPORTS_VERSION}:{IMPORTS_SHA}",
+        "observed_creation_paths_digest": "EF7AE042F1200237134014364C1FCCDAB4F3431040341B5C7E4029AED4A46F2F",
+        "release_profile_complete": False,
+        "role": "source",
+        "supplied_contract": None,
+        "supplied_contract_structurally_complete": False,
+    }
+
+
+def texture_census_candidate():
+    return {
+        "admissible_contract": None,
+        "blockers": ["PERMISSION_EVIDENCE_MISSING"],
+        "contract": {
+            "content_manifest_sha256": "ACEEBF6478BFB1B6D7E76087855749BFA0F36862617F8B5497CB42E4670C2678",
+            "forbidden_modules": None,
+            "module": {
+                "folder": "SindaeTexturePak",
+                "name": "SindaeTexturePak",
+                "pak_filename": "SindaeTexturePak.pak",
+                "pak_sha256": TEXTURE_SHA,
+                "uuid": TEXTURE_UUID,
+                "version64": TEXTURE_VERSION,
+            },
+            "permission": {
+                "credit_line": None,
+                "distribution_limits": None,
+                "evidence_sha256": None,
+                "state": None,
+            },
+            "profile_id": None,
+            "required_dependencies": [],
+            "root_stats_visualbank_digest": "37517E5F3DC66819F61F5A7BB8ACE1921282415F10551D2DEFA5C3EB0985B570",
+            "route_partition_digest": None,
+            "schema": "clothmorph.source-profile",
+            "schema_version": 1,
+            "supported_body_tuples": None,
+        },
+        "creation_coverage": {
+            "census_without_source": [],
+            "complete": True,
+            "duplicate_census_rows": [],
+            "duplicate_source_rows": [],
+            "missing_from_census": [],
+        },
+        "creation_paths_complete": False,
+        "definition_parse_complete": False,
+        "discovery_profile_id": f"DISCOVERY:{TEXTURE_UUID}:{TEXTURE_VERSION}:{TEXTURE_SHA}",
+        "observed_creation_paths_digest": "37517E5F3DC66819F61F5A7BB8ACE1921282415F10551D2DEFA5C3EB0985B570",
+        "release_profile_complete": False,
+        "role": "dependency",
+        "supplied_contract": None,
+        "supplied_contract_structurally_complete": False,
+    }
+
+
+def imports_permission_record():
+    quote = (
+        IMPORTS_PUBLIC_SUMMARY
+        + " Sindae Imported Outfits / NightreignStylePak is a garment-source freeze profile "
+        + "paired with SindaeTexturePak as an operational dependency (not a body-path XOR)."
+    )
+    return {
+        "mod_uuid": IMPORTS_UUID,
+        "mod_name": "SindaeImportedOutfits",
+        "source_pak": "SindaeImportedOutfits.pak",
+        "pak_sha256": IMPORTS_SHA.lower(),
+        "flag_sha256": None,
+        "flag": {
+            "mod_uuid": IMPORTS_UUID,
+            "spec_version": 1,
+            "permission": "granted",
+            "bodies": ["*"],
+            "items": "*",
+            "exclude": [],
+            "mod_version": "as-shipped",
+            "credit_line": (
+                "Sindae Imported Outfits (NightreignStylePak) by Sindae "
+                "(Nexus mod 18009; paired with Texture Pak 9716)"
+            ),
+            "permission_statement": (
+                "Sindae family public terms authorize modification and asset use with credit; "
+                "Donation Points allowed; sold-mod use and re-upload of the original file prohibited. "
+                "Sindae 2026-06-21 project-specific reply approved selectable-body/clothing morph use "
+                "with the controlling condition quoted in evidence. ClothMorph must keep Sindae "
+                "packages as required dependencies and must not bundle Sindae-origin assets."
+            ),
+            "url": "https://www.nexusmods.com/baldursgate3/mods/18009",
+            "evidence": {
+                "where": IMPORTS_EVIDENCE_WHERE,
+                "when": IMPORTS_EVIDENCE_WHEN,
+                "quote": quote,
+            },
+        },
+        "evidence": {
+            "where": IMPORTS_EVIDENCE_WHERE,
+            "when": IMPORTS_EVIDENCE_WHEN,
+            "quote": quote,
+        },
+        "source": "override",
+        "scope_resolved": [],
+        "unresolvable": [],
+        "per_body_decisions": {"sbbf": "process", "bcb": "process"},
+        "mesh_hashes": {},
+        "scanned": "2026-09-03T00:00:00+00:00",
+        "decision": "process",
+        "reason": "Imports freeze-promote; garment-source twin to dependency-only SindaeTexturePak",
+    }
+
+
+def texture_permission_record():
+    quote = (
+        IMPORTS_PUBLIC_SUMMARY
+        + " SindaeTexturePak is dependency-only / a paired operational dependency for "
+        + "Sindae garment sources (including Imported Outfits / NightreignStylePak): it is "
+        + "not a garment-source twin and does not invent meshes or authored outfit rows."
+    )
+    return {
+        "mod_uuid": TEXTURE_UUID,
+        "mod_name": "SindaeTexturePak",
+        "source_pak": "SindaeTexturePak.pak",
+        "pak_sha256": TEXTURE_SHA.lower(),
+        "flag_sha256": None,
+        "flag": {
+            "mod_uuid": TEXTURE_UUID,
+            "spec_version": 1,
+            "permission": "granted",
+            "bodies": ["*"],
+            "items": "*",
+            "exclude": [],
+            "mod_version": "as-shipped",
+            "credit_line": (
+                "Sindae Texture Pak by Sindae (Nexus mod 9716; dependency-only / "
+                "paired operational dep, not garment-source twin)"
+            ),
+            "permission_statement": (
+                "Sindae family public terms authorize modification and asset use with credit; "
+                "Donation Points allowed; sold-mod use and re-upload of the original file prohibited. "
+                "Sindae 2026-06-21 project-specific reply approved selectable-body/clothing morph use "
+                "with the controlling condition quoted in evidence. ClothMorph must keep Sindae "
+                "packages as required dependencies and must not bundle Sindae-origin assets. "
+                "SindaeTexturePak remains dependency-only (textures for Sindae mods), not a "
+                "garment-source twin of Imported Outfits."
+            ),
+            "url": "https://www.nexusmods.com/baldursgate3/mods/9716",
+            "evidence": {
+                "where": IMPORTS_EVIDENCE_WHERE,
+                "when": IMPORTS_EVIDENCE_WHEN,
+                "quote": quote,
+            },
+        },
+        "evidence": {
+            "where": IMPORTS_EVIDENCE_WHERE,
+            "when": IMPORTS_EVIDENCE_WHEN,
+            "quote": quote,
+        },
+        "source": "override",
+        "scope_resolved": [],
+        "unresolvable": [],
+        "per_body_decisions": {"sbbf": "process", "bcb": "process"},
+        "mesh_hashes": {},
+        "scanned": "2026-09-03T00:00:00+00:00",
+        "decision": "process",
+        "reason": (
+            "SindaeTexturePak freeze-promote; dependency-only / paired operational dep "
+            "for Imports and other Sindae garment sources; not garment-source twin"
+        ),
+    }
+
+
+def test_imports_and_texture_freeze_permission_joins_complete_profiles(tmp_path):
+    """Imports + SindaeTexturePak freeze-bind and complete via permission join."""
+    census = verified_json(
+        tmp_path,
+        "source_profile_census_candidates",
+        "SUPPORTING_EVIDENCE",
+        [imports_census_candidate(), texture_census_candidate()],
+    )
+    permission = verified_json(
+        tmp_path,
+        "external_permission_manifest_v1",
+        "PERMISSION",
+        {"records": [imports_permission_record(), texture_permission_record()]},
+    )
+    inventories = extract_independent_inventories([census, permission])
+    expected = frozenset({IMPORTS_PROFILE, TEXTURE_PROFILE})
+    assert inventories.freeze_bound_source_profiles == expected
+    assert inventories.complete_source_profiles == expected
+    assert inventories.freeze_missing_source_profiles == frozenset({BASE_GAME_SOURCE_PROFILE_UNRESOLVED})
+    assert IMPORTS_PROFILE not in inventories.census_incomplete_source_profiles
+    assert TEXTURE_PROFILE not in inventories.census_incomplete_source_profiles
+
+
+def test_sindaetexturepak_dependency_only_semantics_documented(tmp_path):
+    """SindaeTexturePak role stays dependency-only; permission evidence says so."""
+    cand = texture_census_candidate()
+    assert cand["role"] == "dependency"
+    record = texture_permission_record()
+    quote = record["flag"]["evidence"]["quote"]
+    assert "dependency-only" in quote
+    assert "not a garment-source twin" in quote
+    assert "dependency-only" in record["flag"]["credit_line"]
+    assert IMPORTS_SINDAE_QUOTE in quote
+
+    census = verified_json(
+        tmp_path,
+        "source_profile_census_candidates",
+        "SUPPORTING_EVIDENCE",
+        [imports_census_candidate(), cand],
+    )
+    permission = verified_json(
+        tmp_path,
+        "external_permission_manifest_v1",
+        "PERMISSION",
+        {"records": [imports_permission_record(), record]},
+    )
+    inventories = extract_independent_inventories([census, permission])
+    assert TEXTURE_PROFILE in inventories.complete_source_profiles
+    assert IMPORTS_PROFILE in inventories.complete_source_profiles
+    # Imports declares TexturePak as required operational dependency in freeze contract.
+    assert TEXTURE_PROFILE in imports_census_candidate()["contract"]["required_dependencies"]
+
+
+def test_imports_texture_permission_pak_mismatch_does_not_complete(tmp_path):
+    census = verified_json(
+        tmp_path,
+        "source_profile_census_candidates",
+        "SUPPORTING_EVIDENCE",
+        [imports_census_candidate(), texture_census_candidate()],
+    )
+    bad = imports_permission_record()
+    bad["pak_sha256"] = "0" * 64
+    permission = verified_json(
+        tmp_path,
+        "external_permission_manifest_v1",
+        "PERMISSION",
+        {"records": [bad, texture_permission_record()]},
+    )
+    inventories = extract_independent_inventories([census, permission])
+    assert IMPORTS_PROFILE in inventories.freeze_bound_source_profiles
+    assert IMPORTS_PROFILE in inventories.census_incomplete_source_profiles
+    assert TEXTURE_PROFILE in inventories.complete_source_profiles
+
+# --- ClothMorph provider freeze-promote (Spike #2 bound) ---
+# Package identities from ChatGPT Work Files/BCB_Save_Uninstall_Safety_Audit_20260830/
+# evidence/physical_pak_and_profile_inventory.json + retained evidence PAKs:
+# Runtime 20aca985... sha 6610090C... (retained TieflingBT1 TEST output; live-matched)
+# ClothMorphBCB 78f1571f... sha 9E315B49... (ClothMorph_Build _SHIP_v1.3)
+# ClothMorphSCO 0d73fe2f... sha EBFFBA8D... (ABCD DrowDruid proof; live-matched)
+# ClothMorphExternal fdb658be... sha 72535634... (OptionA W08 proof; live-matched)
+# Roles: Runtime=runtime; BCB/SCO/External=provider (refit-map / presence-gated providers;
+# not garment-source twins; do not invent meshes). OUT: Tiefling/Recluse/Underwear TEST.
+
+CM_RUNTIME_UUID = "20aca985-e3e9-41d7-bf8f-10f2a3c413e4"
+CM_RUNTIME_VERSION = "36451009484029952"
+CM_RUNTIME_SHA = "6610090CEE01091F802273D70FAEE071DCBA891900D77479ABBD828FCDDC60C6"
+CM_RUNTIME_PROFILE = f"SOURCE_PROFILE:{CM_RUNTIME_UUID}:{CM_RUNTIME_VERSION}"
+
+CM_BCB_UUID = "78f1571f-ffb5-5646-8a5b-63aac7ce2ecd"
+CM_BCB_VERSION = "36028797018963968"
+CM_BCB_SHA = "9E315B49F54F29B278313E974198674ACC951E55A7BC0C81BB05B800B1E91062"
+CM_BCB_PROFILE = f"SOURCE_PROFILE:{CM_BCB_UUID}:{CM_BCB_VERSION}"
+
+CM_SCO_UUID = "0d73fe2f-49ae-528e-9a9b-160e7f124afc"
+CM_SCO_VERSION = "36451009484029952"
+CM_SCO_SHA = "EBFFBA8DEDAF1AB75D1D472E0D1D02AA50491B2ACE70DF445A8096A505F9D262"
+CM_SCO_PROFILE = f"SOURCE_PROFILE:{CM_SCO_UUID}:{CM_SCO_VERSION}"
+
+CM_EXT_UUID = "fdb658be-223c-55c8-a12f-3542a9c6e2fb"
+CM_EXT_VERSION = "36169534507384832"
+CM_EXT_SHA = "725356348C8B83C20D211C6D064FFAE3B04F1E799C10D92683621A85047B7B5E"
+CM_EXT_PROFILE = f"SOURCE_PROFILE:{CM_EXT_UUID}:{CM_EXT_VERSION}"
+
+# Digests filled from provider freeze census after capture (real sha256 hex).
+CM_DIGEST_CONTENT = {
+    CM_RUNTIME_UUID: "72212848FA9CA0DA209E0DAE24BDF535F997FF08C95C947F7E72A9D0C21A05B7",
+    CM_BCB_UUID: "3D24A3413D41AC14CE744E127A41790FABFE126536E7C195CF46042A0460A8AA",
+    CM_SCO_UUID: "7CC9932214CF1CB828902D7BF5CAD6BAFE9ECD5B757D78780484CCE688F0EE3B",
+    CM_EXT_UUID: "A10405C499E7E33CD20B4ABC42AE089C9AF2DE608BE2C87E4749EA73DDCCC562",
+}
+CM_DIGEST_ROOT = {
+    CM_RUNTIME_UUID: "37517E5F3DC66819F61F5A7BB8ACE1921282415F10551D2DEFA5C3EB0985B570",
+    CM_BCB_UUID: "37517E5F3DC66819F61F5A7BB8ACE1921282415F10551D2DEFA5C3EB0985B570",
+    CM_SCO_UUID: "37517E5F3DC66819F61F5A7BB8ACE1921282415F10551D2DEFA5C3EB0985B570",
+    CM_EXT_UUID: "37517E5F3DC66819F61F5A7BB8ACE1921282415F10551D2DEFA5C3EB0985B570",
+}
+CM_DIGEST_ROUTE = {
+    CM_RUNTIME_UUID: "ADD58EC857CA8983443C89917F41DEA74E18C9EF6C55AE9C6576056EEB5B4974",
+    CM_BCB_UUID: "37517E5F3DC66819F61F5A7BB8ACE1921282415F10551D2DEFA5C3EB0985B570",
+    CM_SCO_UUID: "37517E5F3DC66819F61F5A7BB8ACE1921282415F10551D2DEFA5C3EB0985B570",
+    CM_EXT_UUID: "37517E5F3DC66819F61F5A7BB8ACE1921282415F10551D2DEFA5C3EB0985B570",
+}
+
+CM_EVIDENCE_WHERE = (
+    "ChatGPT Work Files/BCB_Save_Uninstall_Safety_Audit_20260830/evidence/"
+    "physical_pak_and_profile_inventory.json "
+    "(retained first-party ClothMorph provider package identities; public author SerpentineShel)"
+)
+CM_EVIDENCE_WHEN = "2026-08-30"
+
+
+def cm_provider_census_candidate(folder, name, uuid, version64, pak_sha, pak_filename, role):
+    return {
+        "admissible_contract": None,
+        "blockers": ["PERMISSION_EVIDENCE_MISSING"],
+        "contract": {
+            "content_manifest_sha256": CM_DIGEST_CONTENT[uuid],
+            "forbidden_modules": None,
+            "module": {
+                "folder": folder,
+                "name": name,
+                "pak_filename": pak_filename,
+                "pak_sha256": pak_sha,
+                "uuid": uuid,
+                "version64": version64,
+            },
+            "permission": {
+                "credit_line": None,
+                "distribution_limits": None,
+                "evidence_sha256": None,
+                "state": None,
+            },
+            "profile_id": None,
+            "required_dependencies": [],
+            "root_stats_visualbank_digest": CM_DIGEST_ROOT[uuid],
+            "route_partition_digest": None,
+            "schema": "clothmorph.source-profile",
+            "schema_version": 1,
+            "supported_body_tuples": None,
+        },
+        "creation_coverage": {
+            "census_without_source": [],
+            "complete": True,
+            "duplicate_census_rows": [],
+            "duplicate_source_rows": [],
+            "missing_from_census": [],
+        },
+        "creation_paths_complete": False,
+        "definition_parse_complete": False,
+        "discovery_profile_id": f"DISCOVERY:{uuid}:{version64}:{pak_sha}",
+        "observed_creation_paths_digest": CM_DIGEST_ROUTE[uuid],
+        "release_profile_complete": False,
+        "role": role,
+        "supplied_contract": None,
+        "supplied_contract_structurally_complete": False,
+    }
+
+
+def cm_runtime_candidate():
+    return cm_provider_census_candidate(
+        "ClothMorphRuntime",
+        "Body and Clothing Morph",
+        CM_RUNTIME_UUID,
+        CM_RUNTIME_VERSION,
+        CM_RUNTIME_SHA,
+        "ClothMorphRuntime.pak",
+        "runtime",
+    )
+
+
+def cm_bcb_candidate():
+    return cm_provider_census_candidate(
+        "ClothMorphBCB",
+        "Clothing Morph - BCB Add-on",
+        CM_BCB_UUID,
+        CM_BCB_VERSION,
+        CM_BCB_SHA,
+        "ClothMorphBCB.pak",
+        "provider",
+    )
+
+
+def cm_sco_provider_candidate():
+    return cm_provider_census_candidate(
+        "ClothMorphSCO",
+        "Clothing Morph - SCO Add-on",
+        CM_SCO_UUID,
+        CM_SCO_VERSION,
+        CM_SCO_SHA,
+        "ClothMorphSCO.pak",
+        "provider",
+    )
+
+
+def cm_external_candidate():
+    return cm_provider_census_candidate(
+        "ClothMorphExternal",
+        "Clothing Morph - External Garments",
+        CM_EXT_UUID,
+        CM_EXT_VERSION,
+        CM_EXT_SHA,
+        "ClothMorphExternal.pak",
+        "provider",
+    )
+
+
+def cm_provider_permission_record(uuid, name, pak_filename, pak_sha, credit_line, role_note):
+    quote = (
+        f"First-party ClothMorph package {pak_filename} (uuid {uuid}, sha256 {pak_sha}) "
+        f"authored by SerpentineShel. {role_note} Freeze-promote closes the required "
+        "source-profile identity from retained evidence PAK bytes matching the Aug 30 "
+        "physical inventory; no live Mods mutation; no mesh invention; not a garment-source twin."
+    )
+    return {
+        "mod_uuid": uuid,
+        "mod_name": name,
+        "source_pak": pak_filename,
+        "pak_sha256": pak_sha.lower(),
+        "flag_sha256": None,
+        "flag": {
+            "mod_uuid": uuid,
+            "spec_version": 1,
+            "permission": "granted",
+            "bodies": ["*"],
+            "items": "*",
+            "exclude": [],
+            "mod_version": "as-shipped",
+            "credit_line": credit_line,
+            "permission_statement": (
+                "First-party ClothMorph provider/runtime package by SerpentineShel. "
+                "Authorized for ClothMorph release freeze-binding as its declared role. "
+                "Not a third-party garment source; do not invent meshes."
+            ),
+            "url": "https://www.nexusmods.com/baldursgate3/mods/users/SerpentineShel",
+            "evidence": {"where": CM_EVIDENCE_WHERE, "when": CM_EVIDENCE_WHEN, "quote": quote},
+        },
+        "evidence": {"where": CM_EVIDENCE_WHERE, "when": CM_EVIDENCE_WHEN, "quote": quote},
+        "source": "override",
+        "scope_resolved": [],
+        "unresolvable": [],
+        "per_body_decisions": {"sbbf": "process", "bcb": "process"},
+        "mesh_hashes": {},
+        "scanned": "2026-09-03T00:00:00+00:00",
+        "decision": "process",
+        "reason": f"ClothMorph freeze-promote; first-party SerpentineShel; {role_note}",
+    }
+
+
+def test_clothmorph_providers_freeze_permission_joins_complete_profiles(tmp_path):
+    """Four ClothMorph provider/runtime packages freeze-bind and complete via permission join."""
+    candidates = [
+        cm_runtime_candidate(),
+        cm_bcb_candidate(),
+        cm_sco_provider_candidate(),
+        cm_external_candidate(),
+    ]
+    assert candidates[0]["role"] == "runtime"
+    assert all(c["role"] == "provider" for c in candidates[1:])
+    records = [
+        cm_provider_permission_record(
+            CM_RUNTIME_UUID,
+            "Body and Clothing Morph",
+            "ClothMorphRuntime.pak",
+            CM_RUNTIME_SHA,
+            "Body and Clothing Morph (ClothMorphRuntime) by SerpentineShel (first-party ClothMorph runtime)",
+            "Role: runtime. Persistent body-choice and EquipmentRace Runtime; not a garment-source twin.",
+        ),
+        cm_provider_permission_record(
+            CM_BCB_UUID,
+            "Clothing Morph - BCB Add-on",
+            "ClothMorphBCB.pak",
+            CM_BCB_SHA,
+            "Clothing Morph - BCB Add-on (ClothMorphBCB) by SerpentineShel (first-party ClothMorph BCB provider)",
+            "Role: provider. Session-only BCB refit-map provider; not a garment-source twin; does not invent meshes.",
+        ),
+        cm_provider_permission_record(
+            CM_SCO_UUID,
+            "Clothing Morph - SCO Add-on",
+            "ClothMorphSCO.pak",
+            CM_SCO_SHA,
+            "Clothing Morph - SCO Add-on (ClothMorphSCO) by SerpentineShel (first-party ClothMorph SCO provider)",
+            "Role: provider. SCO refit-map provider; not a garment-source twin; does not invent meshes.",
+        ),
+        cm_provider_permission_record(
+            CM_EXT_UUID,
+            "Clothing Morph - External Garments",
+            "ClothMorphExternal.pak",
+            CM_EXT_SHA,
+            "Clothing Morph - External Garments (ClothMorphExternal) by SerpentineShel (first-party ClothMorph external provider)",
+            "Role: provider. Presence-gated external-garment refit provider; not a garment-source twin; does not invent meshes.",
+        ),
+    ]
+    census = verified_json(
+        tmp_path,
+        "source_profile_census_candidates",
+        "SUPPORTING_EVIDENCE",
+        candidates,
+    )
+    permission = verified_json(
+        tmp_path,
+        "external_permission_manifest_v1",
+        "PERMISSION",
+        {"records": records},
+    )
+    inventories = extract_independent_inventories([census, permission])
+    expected = frozenset({CM_RUNTIME_PROFILE, CM_BCB_PROFILE, CM_SCO_PROFILE, CM_EXT_PROFILE})
+    assert inventories.freeze_bound_source_profiles == expected
+    assert inventories.complete_source_profiles == expected
+    assert inventories.freeze_missing_source_profiles == frozenset({BASE_GAME_SOURCE_PROFILE_UNRESOLVED})
+    assert not (expected & inventories.census_incomplete_source_profiles)
+
+
+def test_clothmorph_provider_roles_documented(tmp_path):
+    """Runtime vs provider roles stay honest; permission evidence names SerpentineShel."""
+    assert cm_runtime_candidate()["role"] == "runtime"
+    assert cm_bcb_candidate()["role"] == "provider"
+    assert cm_sco_provider_candidate()["role"] == "provider"
+    assert cm_external_candidate()["role"] == "provider"
+    rec = cm_provider_permission_record(
+        CM_BCB_UUID,
+        "Clothing Morph - BCB Add-on",
+        "ClothMorphBCB.pak",
+        CM_BCB_SHA,
+        "Clothing Morph - BCB Add-on (ClothMorphBCB) by SerpentineShel (first-party ClothMorph BCB provider)",
+        "Role: provider. Session-only BCB refit-map provider; not a garment-source twin; does not invent meshes.",
+    )
+    assert "SerpentineShel" in rec["flag"]["credit_line"]
+    assert "Alan Scheiner" not in rec["flag"]["credit_line"]
+    assert "not a garment-source twin" in rec["flag"]["evidence"]["quote"]
+
+
+def test_clothmorph_provider_permission_pak_mismatch_does_not_complete(tmp_path):
+    census = verified_json(
+        tmp_path,
+        "source_profile_census_candidates",
+        "SUPPORTING_EVIDENCE",
+        [cm_runtime_candidate(), cm_bcb_candidate(), cm_sco_provider_candidate(), cm_external_candidate()],
+    )
+    bad = cm_provider_permission_record(
+        CM_RUNTIME_UUID,
+        "Body and Clothing Morph",
+        "ClothMorphRuntime.pak",
+        CM_RUNTIME_SHA,
+        "Body and Clothing Morph (ClothMorphRuntime) by SerpentineShel (first-party ClothMorph runtime)",
+        "Role: runtime. Persistent body-choice and EquipmentRace Runtime; not a garment-source twin.",
+    )
+    bad["pak_sha256"] = "0" * 64
+    good = [
+        cm_provider_permission_record(
+            CM_BCB_UUID,
+            "Clothing Morph - BCB Add-on",
+            "ClothMorphBCB.pak",
+            CM_BCB_SHA,
+            "Clothing Morph - BCB Add-on (ClothMorphBCB) by SerpentineShel (first-party ClothMorph BCB provider)",
+            "Role: provider. Session-only BCB refit-map provider; not a garment-source twin; does not invent meshes.",
+        ),
+        cm_provider_permission_record(
+            CM_SCO_UUID,
+            "Clothing Morph - SCO Add-on",
+            "ClothMorphSCO.pak",
+            CM_SCO_SHA,
+            "Clothing Morph - SCO Add-on (ClothMorphSCO) by SerpentineShel (first-party ClothMorph SCO provider)",
+            "Role: provider. SCO refit-map provider; not a garment-source twin; does not invent meshes.",
+        ),
+        cm_provider_permission_record(
+            CM_EXT_UUID,
+            "Clothing Morph - External Garments",
+            "ClothMorphExternal.pak",
+            CM_EXT_SHA,
+            "Clothing Morph - External Garments (ClothMorphExternal) by SerpentineShel (first-party ClothMorph external provider)",
+            "Role: provider. Presence-gated external-garment refit provider; not a garment-source twin; does not invent meshes.",
+        ),
+    ]
+    permission = verified_json(
+        tmp_path,
+        "external_permission_manifest_v1",
+        "PERMISSION",
+        {"records": [bad, *good]},
+    )
+    inventories = extract_independent_inventories([census, permission])
+    assert CM_RUNTIME_PROFILE in inventories.freeze_bound_source_profiles
+    assert CM_RUNTIME_PROFILE in inventories.census_incomplete_source_profiles
+    assert CM_BCB_PROFILE in inventories.complete_source_profiles
+    assert CM_SCO_PROFILE in inventories.complete_source_profiles
+    assert CM_EXT_PROFILE in inventories.complete_source_profiles
+

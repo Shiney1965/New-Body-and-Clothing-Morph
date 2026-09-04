@@ -540,6 +540,13 @@ def _census_profiles(
     alternate body-path source profiles. They are mutually exclusive installs (XOR),
     not additive dual-body; ledger completeness does not authorize co-loading.
     All garments present in each pak are in-scope (no forced 200-item cap).
+    SindaeTexturePak (873d1b73-...) may freeze-bind as dependency-only / paired
+    operational dep for Sindae garment sources (including Imports/NightreignStylePak
+    096665c7-...); it is not a garment-source twin and does not invent meshes.
+    ClothMorphRuntime (20aca985-...) may freeze-bind as role=runtime; ClothMorphBCB
+    (78f1571f-...), ClothMorphSCO (0d73fe2f-...), and ClothMorphExternal (fdb658be-...)
+    may freeze-bind as role=provider. These first-party packages (public author
+    SerpentineShel) are not garment-source twins and do not invent meshes.
     """
     required: set[str] = set()
     complete: set[str] = set()
