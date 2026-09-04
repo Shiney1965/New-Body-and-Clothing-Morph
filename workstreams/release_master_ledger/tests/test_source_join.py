@@ -1403,7 +1403,8 @@ def test_imports_texture_permission_pak_mismatch_does_not_complete(tmp_path):
 # ClothMorphSCO 0d73fe2f... sha EBFFBA8D... (ABCD DrowDruid proof; live-matched)
 # ClothMorphExternal fdb658be... sha 72535634... (OptionA W08 proof; live-matched)
 # Roles: Runtime=runtime; BCB/SCO/External=provider (refit-map / presence-gated providers;
-# not garment-source twins; do not invent meshes). OUT: Tiefling/Recluse/Underwear TEST.
+# not garment-source twins; do not invent meshes).
+# Later slice closes Tiefling/Recluse/Underwear TEST (see TEST contract three section).
 
 CM_RUNTIME_UUID = "20aca985-e3e9-41d7-bf8f-10f2a3c413e4"
 CM_RUNTIME_VERSION = "36451009484029952"
@@ -1728,3 +1729,591 @@ def test_clothmorph_provider_permission_pak_mismatch_does_not_complete(tmp_path)
     assert CM_SCO_PROFILE in inventories.complete_source_profiles
     assert CM_EXT_PROFILE in inventories.complete_source_profiles
 
+
+# --- TEST contract three freeze-promote (Tiefling / Recluse / Underwear) ---
+# Retained PAK identities from ChatGPT Work Files + physical inventory.
+# Tiefling NEVER exclude; Recluse UUID conflict e204398d vs registry dc0bef6b
+# (Imports 096665c7 distinct dependency); Underwear historical/contract only.
+# Doc: local/TEST_CONTRACT_THREE.md
+
+TIEFLING_UUID = "b57bab2c-5679-5445-8fee-ca8c282990a5"
+TIEFLING_VERSION = "36028797018963968"
+TIEFLING_SHA = "01E96CF236607F5A4B9E4DD2D7A6BE2CA8A9013456706000DC3248543390F141"
+TIEFLING_PROFILE = f"SOURCE_PROFILE:{TIEFLING_UUID}:{TIEFLING_VERSION}"
+TIEFLING_CONTENT = "527C8428A9D663A99E5E73DE76EA46977B2B4C8ACBE62E74818A6908BA5F1BDD"
+TIEFLING_ROOT = "37517E5F3DC66819F61F5A7BB8ACE1921282415F10551D2DEFA5C3EB0985B570"
+TIEFLING_ROUTE = "B5E6B6BA9513B25602A2B0496B3E302D575C056EB1749D80686F632F75CF4248"
+
+RECLUSE_TEST_UUID = "e204398d-b389-5381-8957-2a7a228a5ff7"
+RECLUSE_TEST_VERSION = "36028797018963968"
+RECLUSE_TEST_SHA = "D326000F792EC5E963CE43B1CED0C36C8189CC3954903282608E30030D06148B"
+RECLUSE_TEST_PROFILE = f"SOURCE_PROFILE:{RECLUSE_TEST_UUID}:{RECLUSE_TEST_VERSION}"
+RECLUSE_TEST_CONTENT = "5F41F7BDDB9BBFC0049F2E18ED16272F30A37F3CB8A23D4FF1EB47BC21D16906"
+RECLUSE_TEST_ROOT = "37517E5F3DC66819F61F5A7BB8ACE1921282415F10551D2DEFA5C3EB0985B570"
+RECLUSE_TEST_ROUTE = "37517E5F3DC66819F61F5A7BB8ACE1921282415F10551D2DEFA5C3EB0985B570"
+RECLUSE_REGISTRY_PRIOR_UUID = "dc0bef6b-f76d-598b-a2db-6fd118da18df"
+RECLUSE_IMPORTS_SOURCE_UUID = "096665c7-75aa-4747-9548-6ccafba985c8"
+
+UNDERWEAR_TEST_UUID = "fb6466cc-b4d5-4023-90ea-057d97aa4957"
+UNDERWEAR_TEST_VERSION = "36028797018963968"
+UNDERWEAR_TEST_SHA = "BEC2336D3423FF6A39A148944672EA326FE4929E1EB0D2B897DFF77D6F00B304"
+UNDERWEAR_TEST_PROFILE = f"SOURCE_PROFILE:{UNDERWEAR_TEST_UUID}:{UNDERWEAR_TEST_VERSION}"
+UNDERWEAR_TEST_CONTENT = "E87C2CB66BD34C1636CE584037ACCB365609F7156677EAA11DCFE2B4C7505F66"
+UNDERWEAR_TEST_ROOT = "37517E5F3DC66819F61F5A7BB8ACE1921282415F10551D2DEFA5C3EB0985B570"
+UNDERWEAR_TEST_ROUTE = "37517E5F3DC66819F61F5A7BB8ACE1921282415F10551D2DEFA5C3EB0985B570"
+
+TEST3_EVIDENCE_WHERE = (
+    "ChatGPT Work Files/BCB_Save_Uninstall_Safety_Audit_20260830/evidence/"
+    "physical_pak_and_profile_inventory.json "
+    "+ retained TEST PAK bytes; public author SerpentineShel; see local/TEST_CONTRACT_THREE.md"
+)
+TEST3_EVIDENCE_WHEN = "2026-09-04"
+
+
+def make_test3_census_candidate(folder, name, uuid, version64, pak_sha, pak_filename, content, root, route, role="provider"):
+    return {
+        "admissible_contract": None,
+        "blockers": ["PERMISSION_EVIDENCE_MISSING"],
+        "contract": {
+            "content_manifest_sha256": content,
+            "forbidden_modules": None,
+            "module": {
+                "folder": folder,
+                "name": name,
+                "pak_filename": pak_filename,
+                "pak_sha256": pak_sha,
+                "uuid": uuid,
+                "version64": version64,
+            },
+            "permission": {
+                "credit_line": None,
+                "distribution_limits": None,
+                "evidence_sha256": None,
+                "state": None,
+            },
+            "profile_id": None,
+            "required_dependencies": [],
+            "root_stats_visualbank_digest": root,
+            "route_partition_digest": None,
+            "schema": "clothmorph.source-profile",
+            "schema_version": 1,
+            "supported_body_tuples": None,
+        },
+        "creation_coverage": {
+            "census_without_source": [],
+            "complete": True,
+            "duplicate_census_rows": [],
+            "duplicate_source_rows": [],
+            "missing_from_census": [],
+        },
+        "creation_paths_complete": False,
+        "definition_parse_complete": False,
+        "discovery_profile_id": f"DISCOVERY:{uuid}:{version64}:{pak_sha}",
+        "observed_creation_paths_digest": route,
+        "release_profile_complete": False,
+        "role": role,
+        "supplied_contract": None,
+        "supplied_contract_structurally_complete": False,
+    }
+
+
+def tiefling_candidate():
+    return make_test3_census_candidate(
+        "ClothMorphTieflingBT1Test",
+        "Cloth Morph Tiefling BT1 TEST",
+        TIEFLING_UUID,
+        TIEFLING_VERSION,
+        TIEFLING_SHA,
+        "ClothMorphTieflingBT1_TEST.pak",
+        TIEFLING_CONTENT,
+        TIEFLING_ROOT,
+        TIEFLING_ROUTE,
+    )
+
+
+def recluse_test_candidate():
+    return make_test3_census_candidate(
+        "ClothMorphSindaeImportedOutfitsRecluseWave2Test",
+        "Body and Clothing Morph - Sindae Imported Outfits Recluse Wave 2 TEST",
+        RECLUSE_TEST_UUID,
+        RECLUSE_TEST_VERSION,
+        RECLUSE_TEST_SHA,
+        "ClothMorphSindaeImportedOutfits_Recluse_Wave2_20260822_TEST.pak",
+        RECLUSE_TEST_CONTENT,
+        RECLUSE_TEST_ROOT,
+        RECLUSE_TEST_ROUTE,
+    )
+
+
+def underwear_test_candidate():
+    return make_test3_census_candidate(
+        "ClothMorphUnderwearBCBPakTest",
+        "Cloth Morph Underwear BCBPak TEST",
+        UNDERWEAR_TEST_UUID,
+        UNDERWEAR_TEST_VERSION,
+        UNDERWEAR_TEST_SHA,
+        "ClothMorphUnderwearBCBPak_TEST.pak",
+        UNDERWEAR_TEST_CONTENT,
+        UNDERWEAR_TEST_ROOT,
+        UNDERWEAR_TEST_ROUTE,
+    )
+
+
+def make_test3_permission_record(uuid, name, pak_filename, pak_sha, credit_line, role_note):
+    quote = (
+        f"First-party ClothMorph TEST package {pak_filename} (uuid {uuid}, sha256 {pak_sha}) "
+        f"authored by SerpentineShel. {role_note}"
+    )
+    return {
+        "mod_uuid": uuid,
+        "mod_name": name,
+        "source_pak": pak_filename,
+        "pak_sha256": pak_sha.lower(),
+        "flag_sha256": None,
+        "flag": {
+            "mod_uuid": uuid,
+            "spec_version": 1,
+            "permission": "granted",
+            "bodies": ["*"],
+            "items": "*",
+            "exclude": [],
+            "mod_version": "as-shipped",
+            "credit_line": credit_line,
+            "permission_statement": (
+                "First-party ClothMorph TEST/provider package by SerpentineShel. "
+                "Authorized for ClothMorph release freeze-binding as declared TEST/contract role. "
+                "Not a third-party garment source; do not invent meshes."
+            ),
+            "url": "https://www.nexusmods.com/baldursgate3/mods/users/SerpentineShel",
+            "evidence": {"where": TEST3_EVIDENCE_WHERE, "when": TEST3_EVIDENCE_WHEN, "quote": quote},
+        },
+        "evidence": {"where": TEST3_EVIDENCE_WHERE, "when": TEST3_EVIDENCE_WHEN, "quote": quote},
+        "source": "override",
+        "scope_resolved": [],
+        "unresolvable": [],
+        "per_body_decisions": {"sbbf": "process", "bcb": "process"},
+        "mesh_hashes": {},
+        "scanned": "2026-09-04T00:00:00+00:00",
+        "decision": "process",
+        "reason": f"TEST contract freeze-promote; first-party SerpentineShel; {role_note}",
+    }
+
+
+def test_test_contract_three_freeze_permission_joins_complete_profiles(tmp_path):
+    """Tiefling/Recluse/Underwear TEST packages freeze-bind and complete via permission join."""
+    candidates = [tiefling_candidate(), recluse_test_candidate(), underwear_test_candidate()]
+    assert all(c["role"] == "provider" for c in candidates)
+    assert candidates[0]["contract"]["module"]["pak_sha256"] == TIEFLING_SHA
+    records = [
+        make_test3_permission_record(
+            TIEFLING_UUID,
+            "Cloth Morph Tiefling BT1 TEST",
+            "ClothMorphTieflingBT1_TEST.pak",
+            TIEFLING_SHA,
+            "Cloth Morph Tiefling BT1 TEST by SerpentineShel (first-party; NEVER exclude)",
+            "Role: provider TEST. NEVER exclude; preserve accepted PAK byte identity; not a garment-source twin.",
+        ),
+        make_test3_permission_record(
+            RECLUSE_TEST_UUID,
+            "Body and Clothing Morph - Sindae Imported Outfits Recluse Wave 2 TEST",
+            "ClothMorphSindaeImportedOutfits_Recluse_Wave2_20260822_TEST.pak",
+            RECLUSE_TEST_SHA,
+            "ClothMorph Recluse Wave2 TEST by SerpentineShel (UUID conflict flagged vs registry dc0bef6b)",
+            (
+                f"Role: provider TEST. UUID conflict flagged (no silent winner): package-meta {RECLUSE_TEST_UUID} "
+                f"vs registry prior {RECLUSE_REGISTRY_PRIOR_UUID}; Imports source {RECLUSE_IMPORTS_SOURCE_UUID} "
+                "is distinct. Not a garment-source twin."
+            ),
+        ),
+        make_test3_permission_record(
+            UNDERWEAR_TEST_UUID,
+            "Cloth Morph Underwear BCBPak TEST",
+            "ClothMorphUnderwearBCBPak_TEST.pak",
+            UNDERWEAR_TEST_SHA,
+            "Cloth Morph Underwear BCBPak TEST by SerpentineShel (historical/contract closure only)",
+            "Role: provider TEST. Historical/contract closure only; not final true-underwear architecture; not a garment-source twin.",
+        ),
+    ]
+    census = verified_json(tmp_path, "source_profile_census_candidates", "SUPPORTING_EVIDENCE", candidates)
+    permission = verified_json(tmp_path, "external_permission_manifest_v1", "PERMISSION", {"records": records})
+    inventories = extract_independent_inventories([census, permission])
+    expected = frozenset({TIEFLING_PROFILE, RECLUSE_TEST_PROFILE, UNDERWEAR_TEST_PROFILE})
+    assert inventories.freeze_bound_source_profiles == expected
+    assert inventories.complete_source_profiles == expected
+    assert inventories.freeze_missing_source_profiles == frozenset({BASE_GAME_SOURCE_PROFILE_UNRESOLVED})
+    assert not (expected & inventories.census_incomplete_source_profiles)
+
+
+def test_tiefling_never_exclude_semantics_in_permission_and_identity(tmp_path):
+    """Tiefling permission evidence documents NEVER exclude and exact accepted SHA."""
+    rec = make_test3_permission_record(
+        TIEFLING_UUID,
+        "Cloth Morph Tiefling BT1 TEST",
+        "ClothMorphTieflingBT1_TEST.pak",
+        TIEFLING_SHA,
+        "Cloth Morph Tiefling BT1 TEST by SerpentineShel (first-party; NEVER exclude)",
+        "Role: provider TEST. NEVER exclude; preserve accepted PAK byte identity; not a garment-source twin.",
+    )
+    assert "NEVER exclude" in rec["flag"]["credit_line"] or "NEVER exclude" in rec["flag"]["evidence"]["quote"]
+    assert TIEFLING_SHA in rec["flag"]["evidence"]["quote"] or rec["pak_sha256"] == TIEFLING_SHA.lower()
+    assert "Alan Scheiner" not in rec["flag"]["credit_line"]
+    assert tiefling_candidate()["contract"]["module"]["pak_sha256"] == TIEFLING_SHA
+    # Exclusion validator still forbids attaching exclusions to accepted Tiefling.
+    from workstreams.release_master_ledger.exclusions import TIEFLING_PAK, TIEFLING_UUID as EX_UUID, TIEFLING_SHA256
+    assert EX_UUID == TIEFLING_UUID
+    assert TIEFLING_PAK == "ClothMorphTieflingBT1_TEST.pak"
+    assert TIEFLING_SHA256 == TIEFLING_SHA
+
+
+def test_recluse_wave2_uuid_conflict_flagged_honestly(tmp_path):
+    """Recluse Wave2 TEST documents e204398d vs registry dc0bef6b conflict; Imports 096665c7 distinct."""
+    rec = make_test3_permission_record(
+        RECLUSE_TEST_UUID,
+        "Body and Clothing Morph - Sindae Imported Outfits Recluse Wave 2 TEST",
+        "ClothMorphSindaeImportedOutfits_Recluse_Wave2_20260822_TEST.pak",
+        RECLUSE_TEST_SHA,
+        "ClothMorph Recluse Wave2 TEST by SerpentineShel (UUID conflict flagged vs registry dc0bef6b)",
+        (
+            f"Role: provider TEST. UUID conflict flagged (no silent winner): package-meta {RECLUSE_TEST_UUID} "
+            f"vs registry prior {RECLUSE_REGISTRY_PRIOR_UUID}; Imports source {RECLUSE_IMPORTS_SOURCE_UUID} "
+            "is distinct. Not a garment-source twin."
+        ),
+    )
+    quote = rec["flag"]["evidence"]["quote"]
+    assert RECLUSE_TEST_UUID in quote
+    assert RECLUSE_REGISTRY_PRIOR_UUID in quote
+    assert RECLUSE_IMPORTS_SOURCE_UUID in quote
+    assert "no silent winner" in quote or "conflict" in quote.lower()
+    # Freeze-bind identity remains package-meta e204398d, not registry prior.
+    assert recluse_test_candidate()["contract"]["module"]["uuid"] == RECLUSE_TEST_UUID
+    assert RECLUSE_REGISTRY_PRIOR_UUID != RECLUSE_TEST_UUID
+    assert RECLUSE_IMPORTS_SOURCE_UUID != RECLUSE_TEST_UUID
+
+
+def test_underwear_test_historical_contract_only_semantics(tmp_path):
+    """Underwear TEST is historical/contract closure only — not final true-underwear architecture."""
+    rec = make_test3_permission_record(
+        UNDERWEAR_TEST_UUID,
+        "Cloth Morph Underwear BCBPak TEST",
+        "ClothMorphUnderwearBCBPak_TEST.pak",
+        UNDERWEAR_TEST_SHA,
+        "Cloth Morph Underwear BCBPak TEST by SerpentineShel (historical/contract closure only)",
+        "Role: provider TEST. Historical/contract closure only; not final true-underwear architecture; not a garment-source twin.",
+    )
+    blob = rec["flag"]["credit_line"] + rec["flag"]["evidence"]["quote"] + rec["reason"]
+    assert "historical" in blob.lower()
+    assert "not final true-underwear" in blob.lower() or "not the final true-underwear" in blob.lower()
+    assert underwear_test_candidate()["contract"]["module"]["uuid"] == UNDERWEAR_TEST_UUID
+
+# --- Spike #2: supporting-evidence exact-identity evidence_path joins ---
+
+
+def test_coverage_raw_joins_by_exact_wearable_identity(tmp_path):
+    """coverage_raw attaches only onto coverage rows with the same identity string."""
+    identity = "mod|root|STAT|Body|vr|HUM_F"
+    other = "mod|root2|STAT2|Body|vr2|HUM_F"
+    master = verified_json(tmp_path, "coverage_master_registry_scoped", "COVERAGE", [
+        {"identity": identity, "root_template_uuid": "root", "stats_entry": "STAT", "disposition": "DEFERRED WITH CAUSE", "source_module": {"uuid": "mod"}, "source_visual_resource_uuid": "vr"},
+        {"identity": other, "root_template_uuid": "root2", "stats_entry": "STAT2", "disposition": "DEFERRED WITH CAUSE", "source_module": {"uuid": "mod"}, "source_visual_resource_uuid": "vr2"},
+    ])
+    raw = verified_json(tmp_path, "coverage_raw_registry_scoped", "SUPPORTING_EVIDENCE", [
+        {"identity": identity, "root_template_uuid": "root", "stats_entry": "STAT"},
+    ])
+    from workstreams.release_master_ledger.generate import generate
+    from workstreams.release_master_ledger.configuration import LocalConfiguration, EvidenceInput
+    import json
+    config = LocalConfiguration(
+        inputs=(
+            EvidenceInput(master.input_id, master.kind, master.path, master.expected_sha256),
+            EvidenceInput(raw.input_id, raw.kind, raw.path, raw.expected_sha256),
+        ),
+        output_path=tmp_path / "generated" / "REMAINING_TARGET_MASTER_LEDGER.json",
+    )
+    result = generate(config)
+    ledger = json.loads(result.ledger_path.read_text(encoding="utf-8"))
+    audit = json.loads(result.audit_path.read_text(encoding="utf-8"))
+    joined = [r for r in ledger["records"] if "input:coverage_raw_registry_scoped" in r["evidence_paths"]]
+    assert len(joined) == 1
+    assert "input:coverage_master_registry_scoped" in joined[0]["evidence_paths"]
+    assert "input:coverage_raw_registry_scoped" not in audit["unreferenced_prior_evidence"]
+
+
+def test_true_underwear_route_audit_joins_by_exact_route_key(tmp_path):
+    ledger_rows = [{
+        "stats_entry": "ARM_Underwear",
+        "root_template_uuid": "root-uw",
+        "source_visual_resource_uuid": "MISSING",
+        "module_uuid": "ed539163-bb70-431b-96a7-f5b2eda5376b",
+        "module_folder": "Shared",
+        "module_name": "Shared",
+        "version64": "1",
+        "section_9_contract": {
+            "content_manifest_sha256": "A" * 64,
+            "root_stats_visualbank_digest": "B" * 64,
+            "route_partition_digest": "C" * 64,
+            "required_dependencies": [],
+            "forbidden_modules": [],
+            "supported_body_tuples": [],
+        },
+    }]
+    audit_rows = {
+        "schema": "clothmorph-true-underwear-route-audit-v1",
+        "summary": {},
+        "audits": [{
+            "stats_entry": "ARM_Underwear",
+            "root_template_uuid": "root-uw",
+            "source_vr": "MISSING",
+            "status": "MISSING ROUTE / BUILD",
+        }],
+    }
+    primary = verified_json(tmp_path, "true_underwear_ledger_v2", "TRUE_UNDERWEAR", {"records": ledger_rows})
+    support = verified_json(tmp_path, "true_underwear_route_audit", "SUPPORTING_EVIDENCE", audit_rows)
+    from workstreams.release_master_ledger.generate import generate
+    from workstreams.release_master_ledger.configuration import LocalConfiguration, EvidenceInput
+    import json
+    config = LocalConfiguration(
+        inputs=(
+            EvidenceInput(primary.input_id, primary.kind, primary.path, primary.expected_sha256),
+            EvidenceInput(support.input_id, support.kind, support.path, support.expected_sha256),
+        ),
+        output_path=tmp_path / "generated" / "REMAINING_TARGET_MASTER_LEDGER.json",
+    )
+    result = generate(config)
+    ledger = json.loads(result.ledger_path.read_text(encoding="utf-8"))
+    audit = json.loads(result.audit_path.read_text(encoding="utf-8"))
+    joined = [r for r in ledger["records"] if "input:true_underwear_route_audit" in r["evidence_paths"]]
+    assert joined
+    assert "input:true_underwear_route_audit" not in audit["unreferenced_prior_evidence"]
+
+
+def test_vanitybody_route_protection_joins_by_exact_root_uuid(tmp_path):
+    primary = verified_json(tmp_path, "vanitybody_ledger_bcbpak", "VANITYBODY", {"records": [{
+        "root_uuid": "root-vb",
+        "named_stats_entry": "STAT_VB",
+        "disposition": "READY FOR TEST",
+        "section_9_contract": {
+            "content_manifest_sha256": "A" * 64,
+            "root_stats_visualbank_digest": "B" * 64,
+            "route_partition_digest": "C" * 64,
+            "required_dependencies": [],
+            "forbidden_modules": [],
+            "supported_body_tuples": [],
+        },
+    }]})
+    support = verified_json(tmp_path, "vanitybody_route_protection", "SUPPORTING_EVIDENCE", {
+        "schema_version": 1,
+        "records": [{"root_uuid": "root-vb", "mode": "vanilla", "target": {"visual_resource_uuid": "vr"}}],
+    })
+    from workstreams.release_master_ledger.generate import generate
+    from workstreams.release_master_ledger.configuration import LocalConfiguration, EvidenceInput
+    import json
+    config = LocalConfiguration(
+        inputs=(
+            EvidenceInput(primary.input_id, primary.kind, primary.path, primary.expected_sha256),
+            EvidenceInput(support.input_id, support.kind, support.path, support.expected_sha256),
+        ),
+        output_path=tmp_path / "generated" / "REMAINING_TARGET_MASTER_LEDGER.json",
+    )
+    result = generate(config)
+    ledger = json.loads(result.ledger_path.read_text(encoding="utf-8"))
+    audit = json.loads(result.audit_path.read_text(encoding="utf-8"))
+    joined = [r for r in ledger["records"] if "input:vanitybody_route_protection" in r["evidence_paths"]]
+    assert len(joined) == 1
+    assert "input:vanitybody_route_protection" not in audit["unreferenced_prior_evidence"]
+
+
+def test_bcbscantily_class_ledger_joins_by_exact_item_uuid(tmp_path):
+    item_uuid = "11111111-1111-1111-1111-111111111111"
+    primary = verified_json(tmp_path, "bcbscantily_item_contracts", "BCBSCANTILY", {"items": [{
+        "item_uuid": item_uuid,
+        "name": "Dress",
+        "stats": "Dress",
+        "disposition": "AMBIGUOUS_INCOMPLETE_EVIDENCE",
+    }]})
+    support = verified_json(tmp_path, "bcbscantily_class_ledger", "SUPPORTING_EVIDENCE", {
+        "protected_item_uuids": [item_uuid],
+        "classes": [],
+        "summary": {},
+    })
+    from workstreams.release_master_ledger.generate import generate
+    from workstreams.release_master_ledger.configuration import LocalConfiguration, EvidenceInput
+    import json
+    config = LocalConfiguration(
+        inputs=(
+            EvidenceInput(primary.input_id, primary.kind, primary.path, primary.expected_sha256),
+            EvidenceInput(support.input_id, support.kind, support.path, support.expected_sha256),
+        ),
+        output_path=tmp_path / "generated" / "REMAINING_TARGET_MASTER_LEDGER.json",
+    )
+    result = generate(config)
+    ledger = json.loads(result.ledger_path.read_text(encoding="utf-8"))
+    audit = json.loads(result.audit_path.read_text(encoding="utf-8"))
+    joined = [r for r in ledger["records"] if "input:bcbscantily_class_ledger" in r["evidence_paths"]]
+    assert joined
+    assert "input:bcbscantily_class_ledger" not in audit["unreferenced_prior_evidence"]
+
+
+def test_source_profile_module_inputs_join_by_exact_module_uuid(tmp_path):
+    module_uuid = "22222222-2222-2222-2222-222222222222"
+    version = "36028797018963968"
+    coverage = verified_json(tmp_path, "coverage_master_registry_scoped", "COVERAGE", [{
+        "identity": f"{module_uuid}|root|STAT|Body|vr|HUM_F",
+        "root_template_uuid": "root",
+        "stats_entry": "STAT",
+        "disposition": "DEFERRED WITH CAUSE",
+        "source_module": {"uuid": module_uuid, "version64": version, "folder": "Mod", "name": "Mod"},
+        "source_visual_resource_uuid": "vr",
+    }])
+    census = verified_json(tmp_path, "source_profile_census_candidates", "SUPPORTING_EVIDENCE", [{
+        "contract": {"module": {"uuid": module_uuid, "version64": version, "folder": "Mod", "name": "Mod", "pak_filename": "Mod.pak", "pak_sha256": "A" * 64}},
+        "role": "garment_source",
+        "blockers": [],
+    }])
+    inventory = verified_json(tmp_path, "source_profile_inventory", "SUPPORTING_EVIDENCE", {
+        "modules": [{"uuid": module_uuid, "version64": version, "folder": "Mod", "name": "Mod"}],
+    })
+    from workstreams.release_master_ledger.generate import generate
+    from workstreams.release_master_ledger.configuration import LocalConfiguration, EvidenceInput
+    import json
+    config = LocalConfiguration(
+        inputs=(
+            EvidenceInput(coverage.input_id, coverage.kind, coverage.path, coverage.expected_sha256),
+            EvidenceInput(census.input_id, census.kind, census.path, census.expected_sha256),
+            EvidenceInput(inventory.input_id, inventory.kind, inventory.path, inventory.expected_sha256),
+        ),
+        output_path=tmp_path / "generated" / "REMAINING_TARGET_MASTER_LEDGER.json",
+    )
+    result = generate(config)
+    ledger = json.loads(result.ledger_path.read_text(encoding="utf-8"))
+    audit = json.loads(result.audit_path.read_text(encoding="utf-8"))
+    paths = ledger["records"][0]["evidence_paths"]
+    assert "input:source_profile_census_candidates" in paths
+    assert "input:source_profile_inventory" in paths
+    assert "input:source_profile_census_candidates" not in audit["unreferenced_prior_evidence"]
+    assert "input:source_profile_inventory" not in audit["unreferenced_prior_evidence"]
+
+
+def test_base_game_aggregate_census_joins_by_exact_shared_module_uuid(tmp_path):
+    shared = "ed539163-bb70-431b-96a7-f5b2eda5376b"
+    primary = verified_json(tmp_path, "true_underwear_ledger_v2", "TRUE_UNDERWEAR", {"records": [{
+        "stats_entry": "ARM_Underwear",
+        "root_template_uuid": "root-uw",
+        "source_visual_resource_uuid": "MISSING",
+        "module_uuid": shared,
+        "module_folder": "Shared",
+        "module_name": "Shared",
+        "version64": "36029297386049870",
+        "section_9_contract": {
+            "content_manifest_sha256": "A" * 64,
+            "root_stats_visualbank_digest": "B" * 64,
+            "route_partition_digest": "C" * 64,
+            "required_dependencies": [],
+            "forbidden_modules": [],
+            "supported_body_tuples": [],
+        },
+    }]})
+    support = verified_json(tmp_path, "base_game_aggregate_census", "SUPPORTING_EVIDENCE", [{
+        "contract": {
+            "profile_id": "BASE_GAME_SOURCE_PROFILE_UNRESOLVED",
+            "module": {"uuid": shared, "version64": "36029297386049870", "folder": "Shared", "name": "Shared", "pak_filename": "Shared.pak", "pak_sha256": "A" * 64},
+            "content_manifest_sha256": "A" * 64,
+            "root_stats_visualbank_digest": "B" * 64,
+            "route_partition_digest": "C" * 64,
+            "permission": {"state": "release_cleared", "credit_line": "base", "distribution_limits": [], "evidence_sha256": "D" * 64},
+            "required_dependencies": [],
+            "forbidden_modules": [],
+            "supported_body_tuples": [],
+            "schema": "clothmorph.source-profile",
+            "schema_version": 1,
+        },
+        "role": "base_game_aggregate",
+        "release_profile_complete": True,
+        "blockers": [],
+    }])
+    from workstreams.release_master_ledger.generate import generate
+    from workstreams.release_master_ledger.configuration import LocalConfiguration, EvidenceInput
+    import json
+    config = LocalConfiguration(
+        inputs=(
+            EvidenceInput(primary.input_id, primary.kind, primary.path, primary.expected_sha256),
+            EvidenceInput(support.input_id, support.kind, support.path, support.expected_sha256),
+        ),
+        output_path=tmp_path / "generated" / "REMAINING_TARGET_MASTER_LEDGER.json",
+    )
+    result = generate(config)
+    ledger = json.loads(result.ledger_path.read_text(encoding="utf-8"))
+    audit = json.loads(result.audit_path.read_text(encoding="utf-8"))
+    joined = [r for r in ledger["records"] if "input:base_game_aggregate_census" in r["evidence_paths"]]
+    assert joined
+    assert "input:base_game_aggregate_census" not in audit["unreferenced_prior_evidence"]
+
+
+def test_supporting_joins_do_not_blind_fan_out_or_unregister(tmp_path):
+    """Unmatched supporting row must not attach; supporting ID stays registered as prior evidence."""
+    coverage = verified_json(tmp_path, "coverage_master_registry_scoped", "COVERAGE", [{
+        "identity": "mod|root|STAT|Body|vr|HUM_F",
+        "root_template_uuid": "root",
+        "stats_entry": "STAT",
+        "disposition": "DEFERRED WITH CAUSE",
+        "source_module": {"uuid": "mod"},
+        "source_visual_resource_uuid": "vr",
+    }])
+    raw = verified_json(tmp_path, "coverage_raw_registry_scoped", "SUPPORTING_EVIDENCE", [
+        {"identity": "other|root|STAT|Body|vr|HUM_F"},
+    ])
+    from workstreams.release_master_ledger.generate import generate
+    from workstreams.release_master_ledger.configuration import LocalConfiguration, EvidenceInput
+    import json
+    config = LocalConfiguration(
+        inputs=(
+            EvidenceInput(coverage.input_id, coverage.kind, coverage.path, coverage.expected_sha256),
+            EvidenceInput(raw.input_id, raw.kind, raw.path, raw.expected_sha256),
+        ),
+        output_path=tmp_path / "generated" / "REMAINING_TARGET_MASTER_LEDGER.json",
+    )
+    result = generate(config)
+    ledger = json.loads(result.ledger_path.read_text(encoding="utf-8"))
+    audit = json.loads(result.audit_path.read_text(encoding="utf-8"))
+    assert all("input:coverage_raw_registry_scoped" not in r["evidence_paths"] for r in ledger["records"])
+    assert "input:coverage_raw_registry_scoped" in audit["registered_inventories"]["prior_evidence"]
+    assert "input:coverage_raw_registry_scoped" in audit["unreferenced_prior_evidence"]
+
+
+def test_source_complete_true_only_when_unreferenced_prior_empty_and_profiles_complete():
+    """source_complete stays false while any supporting prior is unreferenced."""
+    from workstreams.release_master_ledger.audit import build_completeness_audit, InventorySets
+    from workstreams.release_master_ledger.reconcile import reconcile_observations
+    empty = reconcile_observations([])
+    inventories = InventorySets(
+        source_observations=frozenset(),
+        prior_evidence=frozenset({"support-path"}),
+        packaged_records=frozenset(),
+        required_source_profiles=frozenset({"P"}),
+        complete_source_profiles=frozenset({"P"}),
+        freeze_bound_source_profiles=frozenset({"P"}),
+        freeze_missing_source_profiles=frozenset(),
+        census_incomplete_source_profiles=frozenset(),
+    )
+    audit = build_completeness_audit(empty, inventories)
+    assert audit["unreferenced_prior_evidence"] == ["support-path"]
+    assert audit["source_complete"] is False
+    inventories2 = InventorySets(
+        source_observations=frozenset(),
+        prior_evidence=frozenset(),
+        packaged_records=frozenset(),
+        required_source_profiles=frozenset({"P"}),
+        complete_source_profiles=frozenset({"P"}),
+        freeze_bound_source_profiles=frozenset({"P"}),
+        freeze_missing_source_profiles=frozenset(),
+        census_incomplete_source_profiles=frozenset(),
+    )
+    audit2 = build_completeness_audit(empty, inventories2)
+    assert audit2["unreferenced_prior_evidence"] == []
+    assert audit2["source_complete"] is True
+
+
+def test_tiefling_still_never_exclude_after_supporting_join_slice():
+    from workstreams.release_master_ledger.exclusions import TIEFLING_PAK, TIEFLING_UUID as EX_UUID, TIEFLING_SHA256
+    assert EX_UUID == TIEFLING_UUID
+    assert TIEFLING_PAK == "ClothMorphTieflingBT1_TEST.pak"
+    assert TIEFLING_SHA256 == TIEFLING_SHA

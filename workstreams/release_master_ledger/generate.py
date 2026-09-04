@@ -696,6 +696,250 @@ def attach_named_target_evidence(
     return tuple(updated), mapping
 
 
+
+@dataclass(frozen=True)
+class SupportingEvidenceIndex:
+    input_id: str
+    evidence_path: str
+    wearable_identities: frozenset[str] = frozenset()
+    underwear_keys: frozenset[tuple[str, str, str]] = frozenset()
+    root_uuids: frozenset[str] = frozenset()
+    item_uuids: frozenset[str] = frozenset()
+    module_uuids: frozenset[str] = frozenset()
+
+
+def _records_payload(payload: object, *keys: str) -> list[Mapping[str, Any]]:
+    if isinstance(payload, list):
+        return [item for item in payload if isinstance(item, Mapping)]
+    if not isinstance(payload, Mapping):
+        return []
+    for key in keys:
+        value = payload.get(key)
+        if isinstance(value, list):
+            return [item for item in value if isinstance(item, Mapping)]
+    return []
+
+
+def _class_ledger_item_uuids(payload: object) -> set[str]:
+    values: set[str] = set()
+    if not isinstance(payload, Mapping):
+        return values
+    for key in ("protected_item_uuids", "negative_item_uuids", "deferred_item_uuids"):
+        raw = payload.get(key)
+        if isinstance(raw, list):
+            values.update(item for item in raw if isinstance(item, str) and item)
+    for row in _records_payload(payload, "random_test_queue", "resolved_additional_protections"):
+        item_uuid = row.get("item_uuid")
+        if isinstance(item_uuid, str) and item_uuid:
+            values.add(item_uuid)
+    for cls in _records_payload(payload, "classes"):
+        for member in cls.get("members") or []:
+            if isinstance(member, str) and member:
+                values.add(member)
+            elif isinstance(member, Mapping):
+                item_uuid = member.get("item_uuid")
+                if isinstance(item_uuid, str) and item_uuid:
+                    values.add(item_uuid)
+        for key in ("positive_gameplay_anchor", "protected_same_class_control"):
+            node = cls.get(key)
+            if isinstance(node, Mapping):
+                item_uuid = node.get("item_uuid")
+                if isinstance(item_uuid, str) and item_uuid:
+                    values.add(item_uuid)
+    bard = payload.get("bard_evidence")
+    if isinstance(bard, Mapping):
+        item_uuid = bard.get("item_uuid")
+        if isinstance(item_uuid, str) and item_uuid:
+            values.add(item_uuid)
+    return values
+
+
+def _module_uuids_from_payload(input_id: str, payload: object) -> set[str]:
+    values: set[str] = set()
+    if input_id == "source_profile_inventory" and isinstance(payload, Mapping):
+        for module in payload.get("modules") or []:
+            if isinstance(module, Mapping):
+                uuid = module.get("uuid")
+                if isinstance(uuid, str) and uuid:
+                    values.add(uuid)
+        return values
+    for row in _records_payload(payload):
+        contract = row.get("contract") if isinstance(row.get("contract"), Mapping) else row
+        if not isinstance(contract, Mapping):
+            continue
+        module = contract.get("module")
+        if isinstance(module, Mapping):
+            uuid = module.get("uuid")
+            if isinstance(uuid, str) and uuid:
+                values.add(uuid)
+    return values
+
+
+def _build_supporting_evidence_indexes(
+    verified_inputs: list[VerifiedInput],
+) -> list[SupportingEvidenceIndex]:
+    """Index SUPPORTING_EVIDENCE inputs by exact wearable/item/module/route identity."""
+    indexes: list[SupportingEvidenceIndex] = []
+    for input_ in verified_inputs:
+        if input_.kind.upper() != "SUPPORTING_EVIDENCE":
+            continue
+        if "protected_hash_manifest" in input_.input_id.lower():
+            continue  # attached via protected-manifest relations
+        try:
+            payload = json.loads(Path(input_.path).read_bytes().decode("utf-8-sig"))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
+            raise InventoryIntegrityError(f"SUPPORTING_EVIDENCE_UNREADABLE:{input_.input_id}") from error
+        wearable_identities: set[str] = set()
+        underwear_keys: set[tuple[str, str, str]] = set()
+        root_uuids: set[str] = set()
+        item_uuids: set[str] = set()
+        module_uuids: set[str] = set()
+        input_id = input_.input_id
+        if input_id == "coverage_raw_registry_scoped":
+            for row in _records_payload(payload):
+                identity = row.get("identity")
+                if isinstance(identity, str) and identity:
+                    wearable_identities.add(identity)
+        elif input_id == "true_underwear_route_audit":
+            for row in _records_payload(payload, "audits"):
+                stats = row.get("stats_entry")
+                root = row.get("root_template_uuid")
+                source_vr = row.get("source_vr") or row.get("source_visual_resource_uuid") or "MISSING"
+                if isinstance(stats, str) and isinstance(root, str) and isinstance(source_vr, str):
+                    underwear_keys.add((stats, root, source_vr))
+        elif input_id == "vanitybody_route_protection":
+            for row in _records_payload(payload, "records"):
+                root = row.get("root_uuid") or row.get("root_template_uuid")
+                if isinstance(root, str) and root:
+                    root_uuids.add(root)
+        elif input_id == "bcbscantily_class_ledger":
+            item_uuids = _class_ledger_item_uuids(payload)
+        elif input_id in {"source_profile_census_candidates", "source_profile_inventory", "base_game_aggregate_census"}:
+            module_uuids = _module_uuids_from_payload(input_id, payload)
+        else:
+            continue
+        indexes.append(SupportingEvidenceIndex(
+            input_id=input_id,
+            evidence_path=str(input_.path),
+            wearable_identities=frozenset(wearable_identities),
+            underwear_keys=frozenset(underwear_keys),
+            root_uuids=frozenset(root_uuids),
+            item_uuids=frozenset(item_uuids),
+            module_uuids=frozenset(module_uuids),
+        ))
+    return indexes
+
+
+def _observation_module_uuid(observation: Observation) -> str | None:
+    module_uuid = observation.identity_fields.source_module_uuid
+    if isinstance(module_uuid, str) and module_uuid and not module_uuid.startswith("UNKNOWN"):
+        return module_uuid
+    payload_module = observation.payload.get("source_module") if isinstance(observation.payload, Mapping) else None
+    if isinstance(payload_module, Mapping):
+        uuid = payload_module.get("uuid")
+        if isinstance(uuid, str) and uuid and not uuid.startswith("UNKNOWN"):
+            return uuid
+    raw = observation.raw_evidence if isinstance(observation.raw_evidence, Mapping) else {}
+    for key in ("mod_uuid", "module_uuid", "uuid"):
+        uuid = raw.get(key)
+        if isinstance(uuid, str) and uuid and not uuid.startswith("UNKNOWN"):
+            return uuid
+    flag = raw.get("flag")
+    if isinstance(flag, Mapping):
+        uuid = flag.get("mod_uuid")
+        if isinstance(uuid, str) and uuid:
+            return uuid
+    return None
+
+
+def _observation_wearable_identity(observation: Observation) -> str | None:
+    if observation.observation_kind != "COVERAGE_RECORD":
+        return None
+    # namespaced id is "{input_id}:{identity}"
+    oid = observation.observation_id
+    prefix = f"{observation.input_id}:"
+    if oid.startswith(prefix):
+        return oid[len(prefix):]
+    raw = observation.raw_evidence if isinstance(observation.raw_evidence, Mapping) else {}
+    identity = raw.get("identity")
+    if isinstance(identity, str) and identity:
+        return identity
+    return None
+
+
+def _observation_underwear_key(observation: Observation) -> tuple[str, str, str] | None:
+    if observation.observation_kind != "TRUE_UNDERWEAR_RECORD":
+        return None
+    stats = observation.identity_fields.stats_entry
+    root = observation.identity_fields.root_template_uuid
+    vrs = observation.identity_fields.ordered_source_vrs
+    source_vr = vrs[0] if vrs else "MISSING"
+    # Strip observation namespacing suffixes from stats if present.
+    if "__OBSERVATION__" in stats:
+        stats = stats.split("__OBSERVATION__", 1)[0]
+    if isinstance(stats, str) and isinstance(root, str) and isinstance(source_vr, str):
+        return (stats, root, source_vr)
+    return None
+
+
+def _observation_matches_supporting(observation: Observation, index: SupportingEvidenceIndex) -> bool:
+    if index.wearable_identities:
+        identity = _observation_wearable_identity(observation)
+        return bool(identity and identity in index.wearable_identities)
+    if index.underwear_keys:
+        key = _observation_underwear_key(observation)
+        return bool(key and key in index.underwear_keys)
+    if index.root_uuids:
+        if observation.observation_kind != "VANITYBODY_RECORD":
+            return False
+        return observation.identity_fields.root_template_uuid in index.root_uuids
+    if index.item_uuids:
+        if observation.observation_kind != "BCBSCANTILY_RECORD":
+            return False
+        candidates = {
+            observation.identity_fields.root_template_uuid,
+            observation.observation_id.split(":", 1)[-1],
+        }
+        raw = observation.raw_evidence if isinstance(observation.raw_evidence, Mapping) else {}
+        item_uuid = raw.get("item_uuid")
+        if isinstance(item_uuid, str):
+            candidates.add(item_uuid)
+        return bool(candidates & index.item_uuids)
+    if index.module_uuids:
+        # Module supporting evidence attaches to garment/permission/package rows only ?
+        # never blind-fan onto protected controls or provisional named targets.
+        if observation.observation_kind in {
+            "PROTECTED_CONTROL",
+            "NAMED_TARGET_EVIDENCE",
+            "PROTECTED_HASH_MANIFEST",
+        }:
+            return False
+        module_uuid = _observation_module_uuid(observation)
+        return bool(module_uuid and module_uuid in index.module_uuids)
+    return False
+
+
+def _attach_supporting_evidence(
+    observation: Observation, indexes: list[SupportingEvidenceIndex]
+) -> Observation:
+    """Attach supporting evidence_path by exact wearable/item/module/route identity only."""
+    matched_paths = [
+        index.evidence_path
+        for index in indexes
+        if _observation_matches_supporting(observation, index)
+    ]
+    if not matched_paths:
+        return observation
+    evidence_pointers = tuple(dict.fromkeys((*observation.evidence_pointers, *matched_paths)))
+    payload = dict(observation.payload)
+    payload["evidence_pointers"] = evidence_pointers
+    return replace(
+        observation,
+        evidence_files=evidence_pointers,
+        payload=payload,
+    )
+
+
 def _attach_protected_manifest(
     observation: Observation, inventories: IndependentInventories
 ) -> Observation:
@@ -733,6 +977,7 @@ def generate(config: LocalConfiguration) -> GenerationResult:
     """Hash inputs, adapt observations, reconcile, audit, and write all artifacts."""
     verified_inputs = verify_evidence_inputs(config)
     inventories = extract_independent_inventories(verified_inputs)
+    supporting_indexes = _build_supporting_evidence_indexes(verified_inputs)
     observations: list[Observation] = []
     for input_ in verified_inputs:
         for observation in read_observations(input_):
@@ -742,6 +987,7 @@ def generate(config: LocalConfiguration) -> GenerationResult:
             )
             if namespaced.observation_kind == "PROTECTED_CONTROL":
                 namespaced = _attach_protected_manifest(namespaced, inventories)
+            namespaced = _attach_supporting_evidence(namespaced, supporting_indexes)
             observations.append(namespaced)
     reconciliation = reconcile_observations(observations)
     joined_records, joined_observation_to_record = attach_named_target_evidence(

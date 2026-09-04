@@ -138,16 +138,15 @@ def test_current_hash_locked_evidence_generates_truthful_master_ledger():
     assert audit["registered_inventories"]["prior_evidence"] == [
         f"input:{input_id}" for input_id in sorted(SUPPORTING_INPUT_IDS)
     ]
-    assert audit["unreferenced_prior_evidence"] == [
-        f"input:{input_id}"
-        for input_id in sorted(SUPPORTING_INPUT_IDS - {"protected_hash_manifest_v1"})
-    ]
+    assert audit["unreferenced_prior_evidence"] == []
 
     recluse_records = [
         record for record in ledger["records"]
-        if record["evidence_paths"] == ["input:recluse_provider_contract_v2"]
+        if "input:recluse_provider_contract_v2" in record["evidence_paths"]
+        and record.get("shipped_package_id") == RECLUSE_PACKAGE_ID
     ]
     assert len(recluse_records) == 1
+    assert "input:recluse_provider_contract_v2" in recluse_records[0]["evidence_paths"]
     recluse = recluse_records[0]
     assert recluse["source_module"]["uuid"] == "096665c7-75aa-4747-9548-6ccafba985c8"
     assert recluse["source_module"]["version64"] == "36028797018963968"
@@ -174,7 +173,8 @@ def test_current_hash_locked_evidence_generates_truthful_master_ledger():
     ]
     padded_only = [
         record for record in ledger["records"]
-        if record["evidence_paths"] == ["input:padded_findings"]
+        if "input:padded_findings" in record["evidence_paths"]
+        and "input:coverage_master_registry_scoped" not in record["evidence_paths"]
     ]
     assert soul_joined
     assert bard_joined
@@ -214,17 +214,20 @@ def test_current_hash_locked_evidence_generates_truthful_master_ledger():
     # freeze-promote (TexturePak dependency-only / not garment-source twin).
     # ClothMorph Runtime/BCB/SCO/External providers join as first-party freeze-promote
     # (roles runtime/provider; not garment-source twins; SerpentineShel public author).
+    # Tiefling b57bab2c / Recluse Wave2 TEST e204398d / Underwear TEST fb6466cc join as
+    # TEST contract freeze-promote (never-exclude / UUID-conflict-flagged / historical-only).
     # BASE_GAME closes from retained base_game_profile_20260902 capture digests via the
     # aggregate census release_profile_complete path (not a new mod package freeze).
     expected_complete = sorted(freeze_bound)
     assert audit["complete_source_profiles"] == expected_complete
     assert audit["missing_source_profiles"] == sorted(required_profiles - set(expected_complete))
-    assert audit["required_source_profiles_complete"] is False
+    assert audit["required_source_profiles_complete"] is True
     assert audit["freeze_bound_source_profiles"] == sorted(freeze_bound)
-    assert audit["freeze_missing_source_profiles"] == sorted(required_profiles - freeze_bound)
+    assert audit["freeze_missing_source_profiles"] == []
     assert audit["census_incomplete_source_profiles"] == []
-    assert len(mod_freeze_bound) == 19
-    assert len(expected_complete) == 20
+    assert len(mod_freeze_bound) == 22
+    assert len(expected_complete) == 23
+    assert len(audit["missing_source_profiles"]) == 0
     assert BASE_GAME_SOURCE_PROFILE_UNRESOLVED in expected_complete
     assert BASE_GAME_SOURCE_PROFILE_UNRESOLVED not in audit["freeze_missing_source_profiles"]
     bcb_profiles = {
@@ -242,14 +245,20 @@ def test_current_hash_locked_evidence_generates_truthful_master_ledger():
         "SOURCE_PROFILE:0d73fe2f-49ae-528e-9a9b-160e7f124afc:36451009484029952",
         "SOURCE_PROFILE:fdb658be-223c-55c8-a12f-3542a9c6e2fb:36169534507384832",
     }
+    test_contract_three_profiles = {
+        "SOURCE_PROFILE:b57bab2c-5679-5445-8fee-ca8c282990a5:36028797018963968",
+        "SOURCE_PROFILE:e204398d-b389-5381-8957-2a7a228a5ff7:36028797018963968",
+        "SOURCE_PROFILE:fb6466cc-b4d5-4023-90ea-057d97aa4957:36028797018963968",
+    }
     assert bcb_profiles <= set(expected_complete)
     assert imports_texture_profiles <= set(expected_complete)
     assert clothmorph_provider_profiles <= set(expected_complete)
+    assert test_contract_three_profiles <= set(expected_complete)
     assert len(audit["registered_inventories"]["source_observations"]) == 3172
     assert audit["missing_from_ledger"] == []
     assert audit["duplicate_identity"] == []
     assert audit["ledger_without_source"] == []
-    assert audit["source_complete"] is False
+    assert audit["source_complete"] is True
     assert len(audit["in_scope_nonterminal"]) == 3170
     assert audit["excluded_with_proof"] == []
     assert audit["excluded_modes_with_proof"] == []

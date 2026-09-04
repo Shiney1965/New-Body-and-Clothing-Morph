@@ -547,6 +547,13 @@ def _census_profiles(
     (78f1571f-...), ClothMorphSCO (0d73fe2f-...), and ClothMorphExternal (fdb658be-...)
     may freeze-bind as role=provider. These first-party packages (public author
     SerpentineShel) are not garment-source twins and do not invent meshes.
+    ClothMorphTieflingBT1Test (b57bab2c-...) may freeze-bind as role=provider TEST
+    with NEVER-exclude semantics and accepted PAK byte identity 01E96CF2...F141.
+    ClothMorphSindaeImportedOutfitsRecluseWave2Test (e204398d-...) may freeze-bind
+    as role=provider TEST while documenting UUID conflict vs registry prior
+    dc0bef6b-... (same D326000F lineage) and distinct Imports source 096665c7-...
+    ClothMorphUnderwearBCBPakTest (fb6466cc-...) may freeze-bind as role=provider
+    TEST for historical/contract closure only (not final true-underwear architecture).
     """
     required: set[str] = set()
     complete: set[str] = set()
