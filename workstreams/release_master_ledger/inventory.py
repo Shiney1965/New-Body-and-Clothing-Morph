@@ -47,6 +47,9 @@ class IndependentInventories:
     provider_authority_complete: bool = False
     package_authority_present: bool = False
     package_authority_complete: bool = False
+    freeze_bound_source_profiles: frozenset[str] = frozenset()
+    freeze_missing_source_profiles: frozenset[str] = frozenset()
+    census_incomplete_source_profiles: frozenset[str] = frozenset()
 
     @property
     def missing_source_profiles(self) -> tuple[str, ...]:
@@ -59,6 +62,9 @@ class IndependentInventories:
             packaged_records=self.packaged_records,
             required_source_profiles=self.required_source_profiles,
             complete_source_profiles=self.complete_source_profiles,
+            freeze_bound_source_profiles=self.freeze_bound_source_profiles,
+            freeze_missing_source_profiles=self.freeze_missing_source_profiles,
+            census_incomplete_source_profiles=self.census_incomplete_source_profiles,
         )
 
 
@@ -87,6 +93,17 @@ def extract_independent_inventories(
     packaged_records: set[str] = set()
     required_profiles: set[str] = {BASE_GAME_SOURCE_PROFILE_UNRESOLVED}
     complete_profiles: set[str] = set()
+    freeze_keys: set[tuple[str, str]] = set()
+    freeze_bound: set[str] = set()
+    census_incomplete: set[str] = set()
+
+    for payload in payloads.values():
+        census_required, census_complete, keys, bound, incomplete = _census_profiles(payload)
+        required_profiles.update(census_required)
+        complete_profiles.update(census_complete)
+        freeze_keys.update(keys)
+        freeze_bound.update(bound)
+        census_incomplete.update(incomplete)
 
     for input_ in verified_inputs:
         payload = payloads[input_.input_id]
@@ -94,8 +111,13 @@ def extract_independent_inventories(
             continue
         if input_.kind.upper() in {
             "PROTECTED_REGISTRY", "COVERAGE", "TRUE_UNDERWEAR", "VANITYBODY", "BCBSCANTILY",
+            "PACKAGE", "NAMED_TARGET",
         }:
             source_observations.update(_source_observation_ids(input_, payload))
+        if input_.kind.upper() == "PERMISSION":
+            source_observations.update(
+                _permission_source_observation_ids(input_, payload, freeze_keys)
+            )
         if input_.kind.upper() == "PACKAGE":
             packaged_records.update(_package_ids(payload))
         if input_.input_id == "source_profile_inventory":
@@ -103,12 +125,42 @@ def extract_independent_inventories(
             required_profiles.update(required)
             complete_profiles.update(complete)
 
+    permission_by_key = _permission_binding_index(verified_inputs, payloads)
+    for payload in payloads.values():
+        for candidate in _census_candidate_rows(payload):
+            contract = candidate["contract"]
+            assert isinstance(contract, Mapping)
+            module = contract.get("module")
+            if not isinstance(module, Mapping):
+                continue
+            try:
+                assert isinstance(contract, Mapping)
+                profile_id = _census_bound_profile_id(contract, module)
+            except InventoryIntegrityError:
+                continue
+            if profile_id in complete_profiles:
+                continue
+            built = _admissible_contract_from_freeze_permission_join(
+                candidate, permission_by_key,
+            )
+            completed_id = (
+                _complete_source_profile(built, required_profiles) if built is not None else None
+            )
+            if completed_id is not None:
+                complete_profiles.add(completed_id)
+
+    freeze_missing = set(required_profiles) - freeze_bound
+    census_incomplete = (census_incomplete | freeze_bound) - complete_profiles
+
     return IndependentInventories(
         source_observations=frozenset(source_observations),
         prior_evidence=frozenset(prior_evidence),
         packaged_records=frozenset(packaged_records),
         required_source_profiles=frozenset(required_profiles),
         complete_source_profiles=frozenset(complete_profiles),
+        freeze_bound_source_profiles=frozenset(freeze_bound),
+        freeze_missing_source_profiles=frozenset(freeze_missing),
+        census_incomplete_source_profiles=frozenset(census_incomplete),
         protected_manifest_relations=relations,
         provider_claims=provider_claims,
         package_claims=package_claims,
@@ -403,14 +455,20 @@ def _records(payload: object, keys: tuple[str, ...]) -> list[Mapping[str, object
 
 
 def _source_observation_ids(input_: VerifiedInput, payload: object) -> set[str]:
+    kind = input_.kind.upper()
+    if kind == "NAMED_TARGET" and input_.path.suffix.lower() == ".md":
+        # Markdown named targets emit exactly one adapter observation keyed by input_id.
+        return {f"{input_.input_id}:{input_.input_id}"}
     keys_by_kind = {
         "PROTECTED_REGISTRY": ("entries", "records"),
         "COVERAGE": ("records",),
         "TRUE_UNDERWEAR": ("records",),
         "VANITYBODY": ("records",),
         "BCBSCANTILY": ("items", "records"),
+        "PACKAGE": ("records",),
+        "NAMED_TARGET": ("records",),
     }
-    records = _records(payload, keys_by_kind[input_.kind.upper()])
+    records = _records(payload, keys_by_kind[kind])
     identities: set[str] = set()
     for index, record in enumerate(records):
         candidate = (
@@ -444,12 +502,264 @@ def _package_ids(payload: object) -> set[str]:
     return ids
 
 
+
+def _census_candidate_rows(payload: object) -> list[Mapping[str, object]]:
+    if isinstance(payload, list):
+        rows = payload
+    elif isinstance(payload, Mapping) and isinstance(payload.get("candidates"), list):
+        rows = payload["candidates"]
+    else:
+        return []
+    if not rows:
+        return []
+    first = rows[0]
+    if not isinstance(first, Mapping):
+        return []
+    if not isinstance(first.get("discovery_profile_id"), str):
+        return []
+    if not isinstance(first.get("contract"), Mapping):
+        return []
+    normalized: list[Mapping[str, object]] = []
+    for index, row in enumerate(rows):
+        if not isinstance(row, Mapping):
+            raise InventoryIntegrityError(f"CENSUS_CANDIDATE_INVALID:{index}")
+        if not isinstance(row.get("discovery_profile_id"), str) or not row.get("discovery_profile_id"):
+            raise InventoryIntegrityError(f"CENSUS_CANDIDATE_ID_INVALID:{index}")
+        if not isinstance(row.get("contract"), Mapping):
+            raise InventoryIntegrityError(f"CENSUS_CANDIDATE_CONTRACT_INVALID:{index}")
+        normalized.append(row)
+    return normalized
+
+
+def _census_profiles(
+    payload: object,
+) -> tuple[set[str], set[str], set[tuple[str, str]], set[str], set[str]]:
+    """Collect required/complete/freeze-bound identities from census candidates.
+
+    BCBPak (1d24059d-...) and BCBUniqueTav (28c82588-...) may both freeze-bind as
+    alternate body-path source profiles. They are mutually exclusive installs (XOR),
+    not additive dual-body; ledger completeness does not authorize co-loading.
+    All garments present in each pak are in-scope (no forced 200-item cap).
+    """
+    required: set[str] = set()
+    complete: set[str] = set()
+    freeze_keys: set[tuple[str, str]] = set()
+    freeze_bound: set[str] = set()
+    incomplete: set[str] = set()
+    for candidate in _census_candidate_rows(payload):
+        contract = candidate["contract"]
+        assert isinstance(contract, Mapping)
+        module = contract.get("module")
+        if not isinstance(module, Mapping):
+            raise InventoryIntegrityError("CENSUS_CANDIDATE_MODULE_INVALID")
+        profile_id = _census_bound_profile_id(contract, module)
+        required.add(profile_id)
+        freeze_bound.add(profile_id)
+        sha = module.get("pak_sha256")
+        uuid = module.get("uuid")
+        if isinstance(uuid, str) and uuid and _valid_sha256(sha):
+            freeze_keys.add((uuid.lower(), str(sha).upper()))
+        admissible = candidate.get("admissible_contract")
+        release_complete = candidate.get("release_profile_complete") is True
+        completed_id = None
+        if release_complete and admissible is not None:
+            completed_id = _complete_source_profile(admissible, required)
+        if completed_id is None and release_complete:
+            completed_id = _complete_source_profile(contract, required)
+        if completed_id is not None:
+            complete.add(completed_id)
+        else:
+            incomplete.add(profile_id)
+    return required, complete, freeze_keys, freeze_bound, incomplete
+
+
+def _permission_source_observation_ids(
+    input_: VerifiedInput, payload: object, freeze_keys: set[tuple[str, str]],
+) -> set[str]:
+    if not freeze_keys:
+        return set()
+    identities: set[str] = set()
+    for index, record in enumerate(_records(payload, ("records",))):
+        uuid = record.get("mod_uuid")
+        sha = record.get("pak_sha256")
+        if not isinstance(uuid, str) or not uuid or not _valid_sha256(sha):
+            continue
+        if (uuid.lower(), str(sha).upper()) not in freeze_keys:
+            continue
+        scopes = record.get("scope_resolved")
+        if not isinstance(scopes, list):
+            continue
+        for scope_index, mesh in enumerate(scopes):
+            if not isinstance(mesh, str) or not mesh:
+                continue
+            local_id = f"{input_.input_id}:{index}:{scope_index}"
+            observation_id = f"{input_.input_id}:{local_id}"
+            if observation_id in identities:
+                raise InventoryIntegrityError(f"SOURCE_INVENTORY_DUPLICATE_ID:{observation_id}")
+            identities.add(observation_id)
+    return identities
+
+
+
+def _permission_binding_index(
+    verified_inputs: list[VerifiedInput], payloads: Mapping[str, object],
+) -> dict[tuple[str, str], Mapping[str, object]]:
+    """Index independently inventoried permission rows by freeze uuid+pak hash."""
+    index: dict[tuple[str, str], Mapping[str, object]] = {}
+    for input_ in verified_inputs:
+        if input_.kind.upper() != "PERMISSION":
+            continue
+        payload = payloads[input_.input_id]
+        for record in _records(payload, ("records",)):
+            uuid = record.get("mod_uuid")
+            sha = record.get("pak_sha256")
+            if not isinstance(uuid, str) or not uuid or not _valid_sha256(sha):
+                continue
+            key = (uuid.lower(), str(sha).upper())
+            # First exact binding wins; later duplicates are ignored for admission.
+            index.setdefault(key, record)
+    return index
+
+
+def _permission_state(flag: Mapping[str, object]) -> str | None:
+    token = flag.get("permission")
+    if token == "granted":
+        return "release_cleared"
+    if token in {"denied", "blocked"}:
+        return "blocked"
+    if token == "private_test_only":
+        return "private_test_only"
+    return None
+
+
+def _permission_evidence_sha256(record: Mapping[str, object], flag: Mapping[str, object]) -> str | None:
+    evidence = record.get("evidence")
+    if not isinstance(evidence, Mapping):
+        evidence = flag.get("evidence")
+    if not isinstance(evidence, Mapping):
+        return None
+    payload = json.dumps(evidence, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest().upper()
+
+
+def _admissible_contract_from_freeze_permission_join(
+    candidate: Mapping[str, object],
+    permission_by_key: Mapping[tuple[str, str], Mapping[str, object]],
+) -> dict[str, object] | None:
+    """Build a section-7.1 contract from freeze census digests + permission evidence.
+
+    Does not invent meshes or flatten routes. Census may remain
+    release_profile_complete=false; this only fills fields supported by real
+    freeze/permission evidence. Self-declared candidate.admissible_contract is
+    ignored here (anti self-authorization).
+    """
+    contract = candidate.get("contract")
+    if not isinstance(contract, Mapping):
+        return None
+    module = contract.get("module")
+    if not isinstance(module, Mapping):
+        return None
+    uuid = module.get("uuid")
+    sha = module.get("pak_sha256")
+    version64 = module.get("version64")
+    if not isinstance(uuid, str) or not uuid or not isinstance(version64, str) or not version64:
+        return None
+    if not _valid_sha256(sha):
+        return None
+    permission_record = permission_by_key.get((uuid.lower(), str(sha).upper()))
+    if permission_record is None:
+        return None
+    flag = permission_record.get("flag")
+    if not isinstance(flag, Mapping):
+        return None
+    state = _permission_state(flag)
+    credit = flag.get("credit_line")
+    if state is None or not isinstance(credit, str) or not credit:
+        return None
+    evidence_sha = _permission_evidence_sha256(permission_record, flag)
+    if evidence_sha is None:
+        return None
+    if any(not _valid_sha256(contract.get(key)) for key in (
+        "content_manifest_sha256", "root_stats_visualbank_digest",
+    )):
+        return None
+    route = candidate.get("observed_creation_paths_digest")
+    if not _valid_sha256(route):
+        route = contract.get("route_partition_digest")
+    if not _valid_sha256(route):
+        return None
+    deps = contract.get("required_dependencies")
+    if not isinstance(deps, list):
+        return None
+    forbidden = contract.get("forbidden_modules")
+    bodies = contract.get("supported_body_tuples")
+    # Honest empty lists when census left authority fields unresolved/None.
+    if forbidden is None:
+        forbidden = []
+    if bodies is None:
+        bodies = []
+    if not isinstance(forbidden, list) or not isinstance(bodies, list):
+        return None
+    exclude = flag.get("exclude")
+    limits = (
+        list(exclude)
+        if isinstance(exclude, list) and all(isinstance(item, str) for item in exclude)
+        else []
+    )
+    module_text = ("pak_filename", "folder", "name", "uuid", "version64")
+    if any(not isinstance(module.get(key), str) or not module.get(key) for key in module_text):
+        return None
+    declared = contract.get("profile_id")
+    profile_id = (
+        BASE_GAME_SOURCE_PROFILE_UNRESOLVED
+        if declared == BASE_GAME_SOURCE_PROFILE_UNRESOLVED
+        else f"SOURCE_PROFILE:{uuid}:{version64}"
+    )
+    return {
+        "schema": "clothmorph.source-profile",
+        "schema_version": 1,
+        "profile_id": profile_id,
+        "module": {
+            "pak_filename": module["pak_filename"],
+            "folder": module["folder"],
+            "name": module["name"],
+            "uuid": module["uuid"],
+            "version64": module["version64"],
+            "pak_sha256": str(sha).upper(),
+        },
+        "content_manifest_sha256": str(contract["content_manifest_sha256"]).upper(),
+        "root_stats_visualbank_digest": str(contract["root_stats_visualbank_digest"]).upper(),
+        "required_dependencies": list(deps),
+        "forbidden_modules": list(forbidden),
+        "supported_body_tuples": list(bodies),
+        "permission": {
+            "state": state,
+            "evidence_sha256": evidence_sha,
+            "credit_line": credit,
+            "distribution_limits": limits,
+        },
+        "route_partition_digest": str(route).upper(),
+    }
+
+
 def _source_profile_id(module: Mapping[str, object]) -> str:
     uuid = module.get("uuid")
     version64 = module.get("version64")
     if not isinstance(uuid, str) or not uuid or not isinstance(version64, str) or not version64:
         raise InventoryIntegrityError("SOURCE_PROFILE_MODULE_IDENTITY_INVALID")
     return f"SOURCE_PROFILE:{uuid}:{version64}"
+
+
+def _census_bound_profile_id(contract: Mapping[str, object], module: Mapping[str, object]) -> str:
+    """Prefer explicit BASE_GAME aggregate profile_id over module uuid:version.
+
+    Retained base-game capture evidence binds BASE_GAME_SOURCE_PROFILE_UNRESOLVED
+    without inventing a new SOURCE_PROFILE:<Shared uuid> package-freeze identity.
+    """
+    profile_id = contract.get("profile_id")
+    if profile_id == BASE_GAME_SOURCE_PROFILE_UNRESOLVED:
+        return BASE_GAME_SOURCE_PROFILE_UNRESOLVED
+    return _source_profile_id(module)
 
 
 def _complete_source_profile(contract: object, required_profiles: set[str]) -> str | None:

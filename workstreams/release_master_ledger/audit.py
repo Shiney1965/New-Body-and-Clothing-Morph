@@ -37,6 +37,9 @@ class InventorySets:
     packaged_records: frozenset[str] = frozenset()
     required_source_profiles: frozenset[str] = frozenset()
     complete_source_profiles: frozenset[str] = frozenset()
+    freeze_bound_source_profiles: frozenset[str] = frozenset()
+    freeze_missing_source_profiles: frozenset[str] = frozenset()
+    census_incomplete_source_profiles: frozenset[str] = frozenset()
     section_19_gates: Mapping[str, bool] = field(default_factory=dict)
 
 
@@ -343,6 +346,9 @@ def build_completeness_audit(
         "missing_source_profiles": sorted(
             set(inventories.required_source_profiles) - set(inventories.complete_source_profiles)
         ),
+        "freeze_bound_source_profiles": sorted(inventories.freeze_bound_source_profiles),
+        "freeze_missing_source_profiles": sorted(inventories.freeze_missing_source_profiles),
+        "census_incomplete_source_profiles": sorted(inventories.census_incomplete_source_profiles),
         "unclassified_count": sum(record.disposition == "UNCLASSIFIED" for record in result.records),
         "required_source_profiles_complete": profile_complete,
         "section_19_gates": section_19_gates,

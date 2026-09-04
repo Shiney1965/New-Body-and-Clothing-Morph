@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections import Counter
 from dataclasses import dataclass, replace
 import hashlib
+import re
 import json
 from pathlib import Path
 from typing import Any, Iterable, Mapping
@@ -470,6 +471,231 @@ def _markdown(ledger: Mapping[str, object], audit: Mapping[str, object]) -> str:
     return "\n".join(lines)
 
 
+
+
+_UUID_RE = re.compile(
+    r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
+)
+_GR2_RE = re.compile(r"[A-Za-z0-9_.-]+\.GR2")
+_GARMENT_RECORD_KINDS = frozenset({
+    "COVERAGE_RECORD",
+    "TRUE_UNDERWEAR_RECORD",
+    "VANITYBODY_RECORD",
+    "BCBSCANTILY_RECORD",
+})
+
+
+def _named_target_join_tokens(observation: Observation) -> set[str]:
+    """Extract exact, evidence-present join tokens; never invent meshes."""
+    tokens: set[str] = set()
+    raw = observation.raw_evidence if isinstance(observation.raw_evidence, Mapping) else {}
+    for key in ("item", "item_uuid", "stats_entry", "garment_family", "name", "display_name"):
+        value = raw.get(key)
+        if isinstance(value, str) and value:
+            tokens.add(value)
+            tokens.add(value.lower())
+    required_route = raw.get("required_route")
+    if isinstance(required_route, Mapping):
+        for key in ("original_vr", "target_vr", "source_file"):
+            value = required_route.get(key)
+            if isinstance(value, str) and value:
+                tokens.add(value)
+                tokens.add(value.lower())
+                normalized = value.replace("\\", "/")
+                if "/" in normalized:
+                    tokens.add(normalized.rsplit("/", 1)[-1])
+    root = observation.identity_fields.root_template_uuid
+    if isinstance(root, str) and root and not root.startswith("UNKNOWN_"):
+        tokens.add(root)
+        tokens.add(root.lower())
+    text_blobs: list[str] = []
+    for value in raw.values():
+        if isinstance(value, str):
+            text_blobs.append(value)
+    pointer = raw.get("evidence_pointer")
+    if isinstance(pointer, str) and pointer:
+        try:
+            text_blobs.append(Path(pointer).read_text(encoding="utf-8"))
+        except OSError:
+            pass
+    for blob in text_blobs:
+        for match in _UUID_RE.findall(blob):
+            tokens.add(match)
+            tokens.add(match.lower())
+        for match in _GR2_RE.findall(blob):
+            tokens.add(match)
+    return {token for token in tokens if token}
+
+
+def _garment_join_tokens(observation: Observation) -> set[str]:
+    tokens: set[str] = set()
+    fields = observation.identity_fields
+    for value in (
+        fields.root_template_uuid,
+        fields.stats_entry,
+        *fields.ordered_source_vrs,
+    ):
+        if isinstance(value, str) and value and not value.startswith("UNKNOWN_"):
+            tokens.add(value)
+            tokens.add(value.lower())
+    classification = observation.classification if isinstance(observation.classification, Mapping) else {}
+    family = classification.get("garment_family")
+    if isinstance(family, str) and family and family != "UNKNOWN_GARMENT_FAMILY":
+        tokens.add(family)
+        tokens.add(family.lower())
+    payload = observation.payload if isinstance(observation.payload, Mapping) else {}
+    source_route = payload.get("source_route") if isinstance(payload.get("source_route"), Mapping) else {}
+    for path_value in source_route.get("ordered_paths") or ():
+        if isinstance(path_value, str) and path_value and not path_value.startswith("UNKNOWN_"):
+            tokens.add(path_value)
+            tokens.add(path_value.replace("\\", "/").rsplit("/", 1)[-1])
+    raw = observation.raw_evidence if isinstance(observation.raw_evidence, Mapping) else {}
+    path_value = raw.get("source_visual_resource_path")
+    if isinstance(path_value, str) and path_value:
+        tokens.add(path_value)
+        tokens.add(path_value.replace("\\", "/").rsplit("/", 1)[-1])
+    vr = raw.get("source_visual_resource_uuid")
+    if isinstance(vr, str) and vr:
+        tokens.add(vr)
+        tokens.add(vr.lower())
+    return tokens
+
+
+def attach_named_target_evidence(
+    records: tuple[LedgerRecord, ...],
+    observations: list[Observation],
+    observation_to_record: Mapping[str, str],
+) -> tuple[tuple[LedgerRecord, ...], dict[str, str]]:
+    """Join named-target evidence onto existing garment records without inventing meshes.
+
+    Hard garments stay in-scope outstanding: this only attaches evidence paths/hashes and
+    maps the named-target observation onto matched garment records for audit sourcing.
+    Unmatched named targets remain provisional ledger rows (still independently inventoried).
+    """
+    named = [
+        observation for observation in observations
+        if observation.observation_kind == "NAMED_TARGET_EVIDENCE"
+    ]
+    if not named:
+        return records, dict(observation_to_record)
+
+    garments_by_record: dict[str, list[Observation]] = {}
+    for observation in observations:
+        if observation.observation_kind not in _GARMENT_RECORD_KINDS:
+            continue
+        record_id = observation_to_record.get(observation.observation_id)
+        if record_id is None:
+            continue
+        garments_by_record.setdefault(record_id, []).append(observation)
+
+    mapping = dict(observation_to_record)
+    attachments: dict[str, list[Observation]] = {}
+    joined_named_ids: set[str] = set()
+    for named_observation in named:
+        tokens = _named_target_join_tokens(named_observation)
+        if not tokens:
+            continue
+        item_names = {
+            token for token in tokens
+            if isinstance(token, str)
+            and not _UUID_RE.fullmatch(token)
+            and not token.endswith(".GR2")
+            and not token.startswith("UNKNOWN_")
+            and "/" not in token
+            and "\\" not in token
+        }
+        matched_record_ids: list[str] = []
+        for record_id, garment_observations in garments_by_record.items():
+            garment_tokens: set[str] = set()
+            garment_stats: set[str] = set()
+            garment_families: set[str] = set()
+            garment_roots: set[str] = set()
+            garment_vrs: set[str] = set()
+            for garment in garment_observations:
+                garment_tokens.update(_garment_join_tokens(garment))
+                garment_stats.add(garment.identity_fields.stats_entry)
+                family = (
+                    garment.classification.get("garment_family")
+                    if isinstance(garment.classification, Mapping) else None
+                )
+                if isinstance(family, str):
+                    garment_families.add(family)
+                root = garment.identity_fields.root_template_uuid
+                if isinstance(root, str) and root:
+                    garment_roots.add(root.lower())
+                for vr in garment.identity_fields.ordered_source_vrs:
+                    if isinstance(vr, str) and vr:
+                        garment_vrs.add(vr.lower())
+                raw = garment.raw_evidence if isinstance(garment.raw_evidence, Mapping) else {}
+                raw_vr = raw.get("source_visual_resource_uuid")
+                if isinstance(raw_vr, str) and raw_vr:
+                    garment_vrs.add(raw_vr.lower())
+            overlap = tokens & garment_tokens
+            if not overlap:
+                continue
+            name_hit = bool(item_names & garment_stats) or bool(item_names & garment_families)
+            vr_or_mesh_hit = any(
+                (token.endswith(".GR2") or (_UUID_RE.fullmatch(token) and token.lower() in garment_vrs))
+                for token in overlap
+            )
+            root_only = bool(overlap) and all(
+                _UUID_RE.fullmatch(token) and token.lower() in garment_roots
+                for token in overlap
+            )
+            if root_only and not name_hit and not vr_or_mesh_hit:
+                continue
+            if item_names and not (name_hit or vr_or_mesh_hit or not root_only):
+                # Keep exact garment-name preference when present.
+                if not name_hit and not vr_or_mesh_hit:
+                    continue
+            matched_record_ids.append(record_id)
+        if not matched_record_ids:
+            continue
+        joined_named_ids.add(named_observation.observation_id)
+        for record_id in matched_record_ids:
+            attachments.setdefault(record_id, []).append(named_observation)
+            mapping[named_observation.observation_id] = record_id
+
+    if not attachments:
+        return records, mapping
+
+    updated: list[LedgerRecord] = []
+    for record in records:
+        mapped_obs = [
+            observation_id for observation_id, record_id in mapping.items()
+            if record_id == record.record_id
+        ]
+        original_obs = [
+            observation_id for observation_id, record_id in observation_to_record.items()
+            if record_id == record.record_id
+        ]
+        # Drop provisional named-target-only records once their observation joined elsewhere.
+        if (
+            original_obs
+            and set(original_obs) <= joined_named_ids
+            and record.record_id not in attachments
+        ):
+            continue
+        named_list = attachments.get(record.record_id)
+        if not named_list:
+            updated.append(record)
+            continue
+        evidence_paths = tuple(dict.fromkeys((
+            *record.evidence_paths,
+            *(path for named_obs in named_list for path in named_obs.evidence_pointers),
+        )))
+        evidence_hashes = tuple(dict.fromkeys((
+            *record.evidence_hashes,
+            *(named_obs.input_sha256 for named_obs in named_list),
+        )))
+        updated.append(replace(
+            record,
+            evidence_paths=evidence_paths,
+            evidence_hashes=evidence_hashes,
+        ))
+    return tuple(updated), mapping
+
+
 def _attach_protected_manifest(
     observation: Observation, inventories: IndependentInventories
 ) -> Observation:
@@ -518,6 +744,14 @@ def generate(config: LocalConfiguration) -> GenerationResult:
                 namespaced = _attach_protected_manifest(namespaced, inventories)
             observations.append(namespaced)
     reconciliation = reconcile_observations(observations)
+    joined_records, joined_observation_to_record = attach_named_target_evidence(
+        reconciliation.records, observations, reconciliation.observation_to_record,
+    )
+    reconciliation = replace(
+        reconciliation,
+        records=joined_records,
+        observation_to_record=joined_observation_to_record,
+    )
     discovered_events = discover_exclusion_events(config.exclusion_events_dir)
     verified_exclusion_evidence = _local_verified_evidence_registry(config, verified_inputs)
     discovered_event_files = {

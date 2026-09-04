@@ -1,8 +1,8 @@
-# ClothMorph Release Master Ledger Public Checkpoint — 2026-09-02
+# ClothMorph Release Master Ledger Public Checkpoint - 2026-09-03
 
 ## TL/DR
 
-The current hash-locked offline evidence generates deterministically into `3,173` observations and `3,173` master-ledger records. The generated audit reports `source_complete=false` and `release_complete=false`: all `14` required source profiles are missing, five prior-evidence inputs are not yet joined to concrete records, `208` emitted records have no independently inventoried source observation, and all `3,173` records remain release-blocking/nonterminal. There are currently no approved exclusion events: `excluded_modes_with_proof=0`, `excluded_with_proof=0`, `exclusion_validation_failures=0`, `exclusion_history_failures=0`, and `excluded_but_packaged=0`. Every record's four-mode scope remains advertised/nonterminal and every per-mode exclusion attachment is `null`. The `2026-09-02` zero-event verification repeated the real generator twice and reproduced the exact artifact hashes and counts below.
+The current hash-locked offline evidence generates deterministically into `3,172` observations and `3,170` master-ledger records. The generated audit reports `source_complete=false` and `release_complete=false`: `14` of `23` required source profiles are now section-7.1-complete via freeze-census + independent permission joins plus the retained base-game aggregate capture bind (`BASE_GAME_SOURCE_PROFILE_UNRESOLVED` closed from clothmorph-runtime14 `base_game_profile_20260902` digests; thirteen mod freeze-bound census candidates are complete — the prior ten including SCO `73928ffc` with Alan's exact Nexus 2617 permissions-tab quote, plus BCB core trio BCBPak `1d24059d` / BCBUniqueTav `28c82588` / BCBScantily `75934b95` bound from census `core_source_freeze_20260902_retry1` pak digests and Alan's 2026-07-11 Nexus 2351 permission review; BCBPak vs BCBUniqueTav is body-path XOR / mutually exclusive install, not additive dual-body; all garments in each BCB pak are in-scope; nine required identities remain freeze-missing, including Imports `096665c7` and SindaeTexturePak `873d1b73`), seven prior-evidence inputs are not yet joined to concrete records, `ledger_without_source=0`, and all `3,170` records remain release-blocking/nonterminal. Empty-scope Gloomstalker permission placeholders are no longer emitted as invented `UNKNOWN_PERMISSION_SCOPE` meshes; Recluse package evidence is independently inventoried as a source observation without freeze-promoting Imports `096665c7`; Soul Vest/Alt and Bard findings join onto matching coverage garment records; unmatched Padded/BG Watch findings remain an inventoried provisional named-target row. There are currently no approved exclusion events: `excluded_modes_with_proof=0`, `excluded_with_proof=0`, `exclusion_validation_failures=0`, `exclusion_history_failures=0`, and `excluded_but_packaged=0`. Every record's four-mode scope remains advertised/nonterminal and every per-mode exclusion attachment is `null`. The `2026-09-03` BCB core trio freeze-promote generation repeated the real generator twice and reproduced the artifact hashes and counts below.
 
 The protected registry reconciles exactly `32` immutable controls: `25` `GAMEPLAY_PASS`, `1` `USER_ACCEPTED_RESIDUAL`, `2` `PROTECTED_SOURCE_NATIVE`, and `4` `PROTECTED_SOURCE_NATIVE_PACKAGE_ONLY`. The four package-only Recluse controls remain gameplay-unproven and were not promoted.
 
@@ -12,42 +12,42 @@ These artifacts are local evidence outputs under ignored `workstreams/release_ma
 
 | Artifact | Bytes | SHA-256 |
 |---|---:|---|
-| `REMAINING_TARGET_MASTER_LEDGER.json` | `25,883,212` | `CF4867DBD38B2AC5320553C67FCF3E346FF03DD755280D36C34C4FCFEDF6A38C` |
-| `REMAINING_TARGET_MASTER_LEDGER.md` | `579` | `A8DF93F5DE4FC5BC804AE01220571B7A80F40984ABA089A809CCD78AF99DFEFB` |
-| `RELEASE_LEDGER_COMPLETENESS_AUDIT.json` | `790,206` | `AF4C156B6DF3DB6A4BC1B98451785277861AEAC4F7FA3E1FCBCC6717AB21BC5C` |
-| `EVIDENCE_INPUT_MANIFEST.json` | `7,057` | `E3E65616A94D4B9AB961CA4AF3013721878232548F3571CE018F97F67DF68631` |
+| `REMAINING_TARGET_MASTER_LEDGER.json` | `25,861,142` | `413CA2D420AC3AB37CC2730128684AE716C3F270BBD72E68416B832A12F88AEE` |
+| `REMAINING_TARGET_MASTER_LEDGER.md` | `577` | `D297B7B4C892BE74BF8FF23C36062AFED37CFD7C7C563CB39D8A568F567AC54E` |
+| `RELEASE_LEDGER_COMPLETENESS_AUDIT.json` | `792,945` | `55F40FE4A33C4BBB891F73EF75C06342F8150F3CC3C16F78FD943958F5CD4C95` |
+| `EVIDENCE_INPUT_MANIFEST.json` | `8,243` | `57C0BB3B3C9E039BC1235873A055E147F7F042FFE41D45B1CD30BDE598133066` |
 
-Two consecutive `2026-09-02` CLI generations produced these same four hashes.
+Two consecutive `2026-09-03` BCB-core-trio freeze-promote CLI generations produced these same four hashes.
 
 ## Current ledger and audit facts
 
-- Registered inputs: `16`.
-- Source observations: `3,173`.
-- Independently inventoried concrete source observations: `2,965`.
-- Emitted records: `3,173`.
-- Release-blocking records: `3,173`.
+- Registered inputs: `18`.
+- Source observations: `3,172`.
+- Independently inventoried concrete source observations: `3,172`.
+- Emitted records: `3,170`.
+- Release-blocking records: `3,170`.
 - `UNCLASSIFIED`: `0`.
 - Required source profiles complete: `false`.
 - `source_complete`: `false`.
 - `release_complete`: `false`.
 - `missing_from_ledger`: `0`.
 - `duplicate_identity`: `0`.
-- `unreferenced_prior_evidence`: `5`.
+- `unreferenced_prior_evidence`: `7`.
 - `packaged_without_ledger`: `0`.
-- `ledger_without_source`: `208`.
-- `in_scope_nonterminal`: `3,173`.
+- `ledger_without_source`: `0`.
+- `in_scope_nonterminal`: `3,170`.
 - `excluded_modes_with_proof`: `0`.
 - `excluded_with_proof`: `0`.
 - `exclusion_validation_failures`: `0`.
 - `exclusion_history_failures`: `0`.
 - `excluded_but_packaged`: `0`.
-- Required source profiles: `14`.
-- Complete source profiles: `0`.
-- Missing source profiles: `14`, including `BASE_GAME_SOURCE_PROFILE_UNRESOLVED`.
+- Required source profiles: `23`.
+- Complete source profiles: `14`.
+- Missing source profiles: `9` (BASE_GAME closed; BCB core trio closed). Freeze-bound identities: `14` (`13` mod freeze candidates + `BASE_GAME_SOURCE_PROFILE_UNRESOLVED`; `14` complete / `0` census-incomplete). Freeze-missing required identities: `9`.
 
-The bounded primary channels remain `2,534` coverage records, `68` true-underwear records, and `271` VanityBody records. All six configured supporting inputs have zero observation/record count, so they do not inflate the ledger.
+The bounded primary channels remain `2,534` coverage records, `68` true-underwear records, and `271` VanityBody records. All eight configured supporting inputs have zero observation/record count, so they do not inflate the ledger.
 
-The protected hash manifest is reconciled one-to-one by registry ID/path/bytes/SHA/consumer metadata and attached as provenance to all `32` protected records without opening any protected payload. The other five supporting inputs remain truthfully listed in `unreferenced_prior_evidence` until concrete joins exist. `packaged_without_ledger=0` is earned against independently extracted package ownership ID `PACKAGE_SHA256:A4BB716CB70C8046FE87ECB94A8D081563D953AD1E07BA1F521B01765768E345`, present on the Recluse record with module UUID `096665c7-75aa-4747-9548-6ccafba985c8` and version `36028797018963968`; the record remains release-blocking and gameplay-unassessed.
+The protected hash manifest is reconciled one-to-one by registry ID/path/bytes/SHA/consumer metadata and attached as provenance to all `32` protected records without opening any protected payload. The other seven supporting inputs remain truthfully listed in `unreferenced_prior_evidence` until concrete record-level joins exist. Census candidates are independently inventoried for required/freeze-bound profile identities but are not attached as per-record evidence paths. All thirteen mod freeze-bound candidates become section-7.1-complete when independently bound permission evidence fills admissible contracts (SCO via Alan's exact Nexus 2617 permissions-tab quote; BCB core trio via Alan's 2026-07-11 Nexus 2351 review / Sindae required-dependency grant; BCBPak vs BCBUniqueTav body-path XOR documented in local/BCB_PAK_UNIQUE_TAV_BODY_PATH_XOR.md; citation-only SCO bind aborted); their census `release_profile_complete` remains false. `BASE_GAME_SOURCE_PROFILE_UNRESOLVED` is freeze-bound and section-7.1-complete from retained `base_game_profile_20260902` capture digests (Shared.pak `9D63D634…`, content manifest `08394D7A…`, EquipmentRaces `FC66EDC4…`, top-level package hash manifest `048FB0EB…`, exe `E899C67C…`) via aggregate census `release_profile_complete=true` without inventing a Shared package freeze identity. `packaged_without_ledger=0` and `ledger_without_source=0` are earned against independently inventoried package observation ownership ID `PACKAGE_SHA256:A4BB716CB70C8046FE87ECB94A8D081563D953AD1E07BA1F521B01765768E345`, present on the Recluse record with module UUID `096665c7-75aa-4747-9548-6ccafba985c8` and version `36028797018963968`; Imports freeze-promotion remains deferred and the record remains release-blocking and gameplay-unassessed. Hard named garments remain in-scope outstanding (`excluded_with_proof=0`).
 
 ## Exact current input boundary
 
@@ -63,12 +63,14 @@ The protected hash manifest is reconciled one-to-one by registry ID/path/bytes/S
 | `vanitybody_route_protection` | `6,814` | `5CFDCFA53A2B0747AADC1FC996C4FA4B9A41919D34E63EEB8371BC5130A23E8B` |
 | `bcbscantily_class_ledger` | `24,261` | `266575498CFA9A6130A693DFBB90B3B30A57945CA499C401BF1F9D3595BBC1A4` |
 | `bcbscantily_item_contracts` | `850,968` | `2914AA90144E9AF8529993A22580F4391080743C8061DA44DD2F5211BD1BBBBC` |
-| `external_permission_manifest_v1` | `118,574` | `C02DFB56B6F246C7902F31EA371405763F1BB555CA5CE016CB06A31895EBA908` |
+| `external_permission_manifest_v1` | `132,057` | `CEDA8CD61CA13B253971B798392BDBEDC96FD316D7F1C2742A67455277A694EB` |
 | `recluse_provider_contract_v2` | `1,458` | `C56B0208C09D04531258BFCC01BF7319C05EC47C36FCA750C84428A4CEC0DA01` |
 | `soul_vest_alt_decision` | `1,326` | `2FE915214CFAAB8953A923EACA47FCF98803ED8A37BAA257D03DF5FD78E67E23` |
 | `padded_findings` | `15,507` | `CDD5CBAE21FC88BABAFC1893F5D7BA1B4B5C34FDECDAD64671D45B5EEC96ADA8` |
 | `bard_findings` | `9,180` | `2C7324F0198115906C49B3584F95D780A209B5FBEE1B42A448CFC0044F2262FB` |
 | `source_profile_inventory` | `20,044` | `9CB045CD9850867FEDFA9A98587096C953360F47D81BD074B1A5E8C050AE5E00` |
+| `source_profile_census_candidates` | `38,741` | `25AF5693DD94034157D61C035B06C207FC9B57C2A896F0F53BA3BB16E0B358EF` |
+| `base_game_aggregate_census` | `2,604` | `4E44EE73BCD628856EFBAD2964197285839ACDF0E2EB7B116CD345117340E806` |
 
 Every input is hashed before parsing. The exclusion history is restricted to the exact canonical ignored path `workstreams/release_master_ledger/local/exclusion_events`; it currently contains zero event files. Paths merely named inside retained JSON— including live/AppData source-PAK, profile, log, and mod paths—were not dereferenced.
 

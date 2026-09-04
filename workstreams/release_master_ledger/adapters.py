@@ -473,7 +473,9 @@ def adapt_permission_manifest(records: object, verified_input: VerifiedInput) ->
     for index, manifest in enumerate(_records(records)):
         scopes = _text_sequence(manifest.get("scope_resolved"), ())
         if not scopes:
-            scopes = ("UNKNOWN_PERMISSION_SCOPE",)
+            # Empty freeze-bound permission rows stay module-level evidence only.
+            # Do not invent UNKNOWN_PERMISSION_SCOPE mesh placeholders.
+            continue
         for scope_index, mesh_name in enumerate(scopes):
             observations.append(_observation(
                 manifest, verified_input, index=f"{index}:{scope_index}", kind="PERMISSION_SCOPE_MESH",
