@@ -59,6 +59,16 @@ Focused verification: `python -m pytest workstreams/bard_authority_closure/tests
 - No GR2/PAK mint; no protected registry/manifest rewrite; no Tiefling PAK touch; no live Mods/AppData mutation; Spike #2 untouched; Padded/BG Watch, Bard Vanilla/SBBF, Soul Vest/Alt, and Alfira untouched
 - No commit pending Plan `CONFIRM_COMMIT_OK`; PIN_FOLLOWUP_NEEDED left for next Padded touch only
 
+### Sibling Vanilla Task 3 ledger bind (informational; not Authority geometry)
+
+Bard Vanilla landmark/cage Task 3 remains `UNFIXABLE_WITH_AVAILABLE_SAFE_TOOLING` after Pants/Sleeves exhaustion at the fixed `0.50` floor with `0` Vanilla routes and `0` protected BCB routes. That offline terminal evidence is ledger-bound in `TASK_3_PUBLIC_CHECKPOINT.md` with:
+
+- `exclusion_event_input = null` (no mint / no attach until Plan authorizes)
+- `ready_for_attachment = false`
+- `release_blocking = true`
+
+Evidence anchors for that Vanilla bind: twin ignored reports SHA-256 `45BBAAB6D63478D78D59AAAF4F44CF42D7EC710A10B3248F39CABD27E8C3EFFF` (20,646 bytes) and landmark-contract digest `422B074B930393E3572EE6D6165A94775BD9054F94823A32C52D548F4A3311E5`. This Authority geometry-assessment package does **not** reopen Vanilla geometry, does **not** invent Vanilla/SBBF safe pairs, and does **not** mint or attach an exclusion event for Vanilla or Authority. The parked unassessable proof above (`1C52A3F8...`) stays ignored/local and untouched.
+
 The prior source-audit disposition `SOURCE_AUDIT_COMPLETE_GEOMETRY_UNASSESSED` remains the resolver baseline for the eleven-gap packet. This spike adds a separate geometry-assessment proof package and does not mutate that packet's required null defect / empty methods fields.
 
 ### Reopening condition
