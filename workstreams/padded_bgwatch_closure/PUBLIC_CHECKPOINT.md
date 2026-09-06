@@ -44,8 +44,9 @@ still keeps `release_blocking=true` and does not attach an exclusion.
 Portable suite after this change: `200 passed, 1 skipped`. No generator rerun,
 no frozen-candidate measurement wave, no GR2/PAK/live Mods/AppData operation,
 and no Codex-tree write occurred.
+Self-pin recompute: SHA-256 over the UTF-8 file body after excluding the pin line **and** the blank line immediately above it. Naive pin-line-only drop of the previously pinned body yields `579E58317D76C7DF3791156789539A56D2854A4581C1283D57D6FF82C23045A3` (mismatch). Correct blank+pin exclusion matched prior pin `766C58AFD48214847F8D12976FE4351D94466E905D9490265ADE5A9C1728846A`.
 
-Checkpoint document SHA-256 `766C58AFD48214847F8D12976FE4351D94466E905D9490265ADE5A9C1728846A`
+Checkpoint document SHA-256 `DE917E93099E067F414481F204ACDD6A461695FD2D757B7E1C4016BA55A0CB55`
 
 ### Progress (committed bound; awaiting next assign)
 
