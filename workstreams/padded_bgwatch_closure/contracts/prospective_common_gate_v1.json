@@ -1,0 +1,131 @@
+{
+  "schema": "clothmorph.padded-prospective-common-gate",
+  "schema_version": 1,
+  "policy_kind": "PROSPECTIVE_COMMON_GATE_POLICY",
+  "historical_construction_governed_by_policy": false,
+  "purpose": "Prospective architecture-policy and common-gate definition for Padded Armor / BG Watch where same-predeclared-gate historical authority is missing. This does not rewrite historical construction gates, attach terminal exclusions, or authorize measurement waves.",
+  "garment_family": "Padded_Armor_BG_Watch_shared_damaged_candidate_family",
+  "common_gates": {
+    "nontriviality": {
+      "status_required": "PREDECLARED_NUMERICAL",
+      "note": "Word meaningful alone is not a criterion; inventing thresholds after failure is forbidden."
+    },
+    "silhouette": {
+      "status_required": "PREDECLARED_NUMERICAL",
+      "note": "Route-neutral silhouette metric and pass/fail must be declared before exhaustion claims."
+    },
+    "topology": {
+      "maximum_flipped_faces": 0,
+      "maximum_new_zero_area_faces": 0,
+      "published_area_ratio": [
+        0.5,
+        2.0
+      ],
+      "internal_area_ratio": [
+        0.51,
+        1.99
+      ],
+      "minimum_orientation_cosine": 0.05
+    },
+    "clearance": {
+      "target_clearance_m": 0.001,
+      "reject_surface_ambiguity": true,
+      "oracle": "exact closest triangle; barycentric interpolation of retained transformed GLB vertex normals",
+      "active_ids_authority": "pristine confident signed penetration; original IDs remain fixed"
+    },
+    "coverage": {
+      "outward_projection": "strictly_positive",
+      "maximum_distance_m": 0.05,
+      "fixed_cohort_coverage_loss_max": 0
+    },
+    "component": {
+      "atomic_membership_required": true,
+      "pants_result_required_when_atomic": true,
+      "ordered_route_membership_required": true
+    },
+    "material_skin_lod": {
+      "complete_route_contract_required": true
+    },
+    "deterministic_readback": {
+      "minimum_real_reconstructions": 2,
+      "synthetic_determinism_insufficient": true,
+      "frozen_byte_readback_is_not_generator_proof": true
+    },
+    "serialization_decimals": 6
+  },
+  "architecture_qualification": {
+    "minimum_qualifying_architectures": 3,
+    "alternate_path": "parent_findings_three_failed_plus_declared_final_materially_different_tested",
+    "parameter_tuning_is_not_distinct_architecture": true,
+    "declared_architectures": {
+      "smooth_nearest_vertex_body_transfer": {
+        "default_qualifying_status": "CANDIDATE_IF_SAME_COMMON_GATES",
+        "notes": "Historical global method; counts only when evaluated under this prospective common gate."
+      },
+      "global_nearest_target_vertex_normal_clipping": {
+        "default_qualifying_status": "CANDIDATE_IF_SAME_COMMON_GATES",
+        "notes": "Must not be double-counted as the same stage observation as transfer."
+      },
+      "strict_global_alpha_interpolation": {
+        "default_qualifying_status": "CANDIDATE_IF_SAME_COMMON_GATES",
+        "notes": "Historical published-topology selection is not automatic common-gate proof."
+      },
+      "confidence_gated_local_clearance_repair": {
+        "default_qualifying_status": "EXCLUDED_TARGET_NOT_CERTIFIED",
+        "notes": "Historical diagnostic only unless a separately corrected target-certified run is reviewed."
+      },
+      "current_connected_roi_field": {
+        "default_qualifying_status": "CANDIDATE_IF_SAME_COMMON_GATES",
+        "notes": "Accepted bounded 0/160 method evidence at a99446e; still requires common-gate identity binding for terminality."
+      }
+    }
+  },
+  "eligibility": {
+    "default": "UNASSESSED_OR_BLOCKED",
+    "eligible_requires": [
+      "COMMON_GATES_PREDECLARED",
+      "ARCHITECTURE_EXHAUSTION_UNDER_COMMON_GATES",
+      "ATOMIC_COMPONENT_MEMBERSHIP_RESOLVED",
+      "COMPLETE_ROUTE_SKIN_LOD_MATERIAL_CONTRACT_RESOLVED",
+      "NO_RETROSPECTIVE_ONLY_SUBSTITUTION"
+    ],
+    "blocked_when": [
+      "HARD_CONTRACT_IMPOSSIBILITY_UNPROVEN_CLAIM",
+      "PROTECTED_MUTATION_REQUIRED",
+      "INVENTED_IDENTIFIERS"
+    ]
+  },
+  "event_ready": {
+    "default": false,
+    "requires_all": [
+      "GEOMETRY_POLICY_ELIGIBLE",
+      "CANONICAL_SOURCE_PROFILE_RECORD_MODE_BOUND",
+      "PROTECTED_REGISTRY_SHARED_CONSUMERS_PROVEN",
+      "RECORD_IDENTITY_SOURCE_PROFILE_PRESENT",
+      "INDEPENDENT_REVIEW_APPROVED",
+      "PROPOSALS_APPROVED",
+      "NO_AUTO_ATTACHED_TERMINAL_EXCLUSION"
+    ],
+    "forbidden": [
+      "invent_event_id",
+      "invent_record_id",
+      "invent_identity_sha256",
+      "invent_source_profile_id",
+      "attach_terminal_exclusion",
+      "new_blind_frozen_candidate_measurement_wave",
+      "rewrite_historical_predeclaration"
+    ]
+  },
+  "release_blocking": {
+    "default": true,
+    "false_only_when": "valid_append_only_exclusion_event_attached_and_audit_pass",
+    "this_policy_never_auto_attaches_exclusion": true
+  },
+  "accepted_bounded_evidence_pins": {
+    "current_repeated_search_sha256": "5DAD7E910EB0E09E9E53EC9EE9444F916A9669AF885C6F7AD182432C98B9CA0A",
+    "current_method_commit": "a99446e3415ea6c9aa2148cbf9dfd2131237fa8d",
+    "retrospective_profile_sha256": "A5B4DFA883F17105C18712D4087B530F5E68F5811596430157D36E241CB03B7C",
+    "retrospective_evaluator_commit": "7c980ee1081b01d6e8fc4566a5504656d1346a3a",
+    "frozen_readback_crosswalk_commit": "6731cbffec5fbe24b0f9e3b77cc5436b1176af44"
+  }
+}

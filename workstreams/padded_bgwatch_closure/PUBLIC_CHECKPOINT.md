@@ -2,12 +2,61 @@
 
 ## TL/DR
 
-The four retained historical candidates now have exact repeated frozen-byte
-readbacks; each body candidate fails current necessary geometry checks, but
-whole-route, same-predeclared-gate architecture and canonical exclusion
-authority remain unresolved. The accepted corrected setup and unchanged
-`0/160` repeated garment search are preserved as bounded method evidence;
-no generator rerun, new candidate, gameplay acceptance or exclusion occurred.
+Prospective common-gate / eligibility / event_ready criteria are now coded
+and checkpointed for Padded Armor / BG Watch. Historical frozen-candidate
+readbacks remain nonterminal; the garment stays `release_blocking=true` with
+no terminal exclusion attached and no new measurement wave. The accepted
+corrected setup and unchanged `0/160` repeated garment search are preserved
+as bounded method evidence.
+
+## Prospective common-gate policy — 2026-09-04
+
+Policy kind: `PROSPECTIVE_COMMON_GATE_POLICY`.
+Contract: `workstreams/padded_bgwatch_closure/contracts/prospective_common_gate_v1.json`
+(SHA-256 `B0B9474C1E712AB992DC45EC75CF64C8AACA8AA1AE5F15CCA6A6869162AA433F`).
+Adjudicator: `workstreams/padded_bgwatch_closure/prospective_common_gate.py`
+(SHA-256 `F211594CD964D74FEB84E426B32F3F6A8CEF8CD8849A36A7C02CEB1257A7C066`).
+Tests: `workstreams/padded_bgwatch_closure/tests/test_prospective_common_gate.py`
+(SHA-256 `A8A07AB46FC9D0B3E95312DA6EBC16F20E41BAC718D5BEDBDA233D1E107F65A3`).
+
+This policy does **not** rewrite historical construction gates. It defines
+forward-looking common-gate identity (nontriviality, silhouette, topology,
+clearance, coverage, component, material/skin/LOD, deterministic readback),
+architecture-exhaustion qualification (minimum three materially distinct
+architectures under identical common gates; local `TARGET_NOT_CERTIFIED`
+excluded; parameter retunes non-counting), `geometry_policy_eligibility`, and
+`event_ready` criteria. Default adjudication of empty evidence is
+`geometry_policy_eligibility=UNASSESSED_OR_BLOCKED`, `event_ready=false`,
+`release_blocking=true`, `terminal_exclusion_attached=false`,
+`measurement_wave_performed=false`.
+
+Eligibility may become `ELIGIBLE` only when common gates are predeclared,
+architecture exhaustion under those gates is met, atomic component membership
+and complete route skin/LOD/material contracts are resolved, and retrospective
+readback alone is not substituted as proof. `event_ready` additionally requires
+canonical source-profile/record/mode binding, protected-registry/shared-consumer
+proof, independently bound record/identity/source-profile identifiers,
+independent review approval, and approved proposals. The adjudicator hard-refuses
+measurement-wave and auto-attach-exclusion flags; it never invents ledger/event
+IDs. Even when `event_ready=true` in a synthetic complete packet, this module
+still keeps `release_blocking=true` and does not attach an exclusion.
+
+Portable suite after this change: `200 passed, 1 skipped`. No generator rerun,
+no frozen-candidate measurement wave, no GR2/PAK/live Mods/AppData operation,
+and no Codex-tree write occurred.
+
+Checkpoint document SHA-256 `766C58AFD48214847F8D12976FE4351D94466E905D9490265ADE5A9C1728846A`
+
+### Progress (committed bound; awaiting next assign)
+
+- Bound: Padded Armor / BG Watch prospective common-gate only.
+- Commit scope: prospective policy + adjudicator + tests + this checkpoint.
+- Author: SerpentineShel.
+- Next for Plan review: independently approve whether historical authority can
+  supply a qualifying set, or explicitly approve this prospective policy as the
+  architecture/gate definition where authority is missing; then separately bind
+  canonical profile/record and protected-registry consumers before any terminal
+  disposition. Awaiting next assign; Authority not started.
 
 ## Current frozen-candidate readback — 2026-09-02
 
