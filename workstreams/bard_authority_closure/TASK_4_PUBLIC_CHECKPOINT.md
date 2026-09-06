@@ -1,3 +1,72 @@
+# Astarion Geometry Spike — Authority Task 4 geometry assessment
+
+## TL/DR
+
+`geometry_admitted=false` with classification **`unassessable`**.
+
+Under retained safe tooling only, Authority has no source-bound defect region and therefore cannot enter conditional landmark/cage geometry. HFL/TIF normal and Alt VisualBank contracts retain Netherstone objects and remain forbidden substitutes for the exact BCB nine-object main. BCB metadata-slot versus physical-mesh count differences are recorded source facts, not fit defect regions. No terminal exclusion event is attached; `release_blocking=true` remains accurate.
+
+Status: `GEOMETRY_ASSESSMENT_COMPLETE_UNASSESSABLE`.
+
+## Geometry assessment evidence (this spike)
+
+Fresh deterministic proof packets (byte-identical; regenerated 2026-09-06 on Grok worktree after RO manifest-copy of ignored local evidence):
+
+- `workstreams/bard_authority_closure/local/task-4-geometry-assessment-20260906/run-1/authority-geometry-assessment.json`
+- `workstreams/bard_authority_closure/local/task-4-geometry-assessment-20260906/run-2/authority-geometry-assessment.json`
+
+Both are exactly **28381** bytes, SHA-256 `1C52A3F872A661442D3F91880264411224B7CE27AC2F1BF1C0D6C6284857F2CE`.
+
+Preserved prior parked proof (informational; superseded as current proof package):
+
+- `local/task-4-geometry-assessment-20260904/run-1|run-2/authority-geometry-assessment.json` — 28276 bytes, SHA-256 `07A024A3AE0C585694B42A1C27E9E27E0846C477D635AF3824C44A91519132A5`
+
+Tracked assessment code/tests (pre-commit working tree; **reused parked drafts unchanged**):
+
+| Path | SHA-256 |
+|---|---|
+| `workstreams/bard_authority_closure/authority_geometry_assessment.py` | `4EB9734AFE360817AC415DE99D02E3F18CCEDE83303FEB738FBC3D66C4B721F8` |
+| `workstreams/bard_authority_closure/tests/test_authority_geometry_assessment.py` | `34C8A6A0239669F8D7E67582EA1C3579A81E1CF4DB4D089D5723A0BA7669F839` |
+
+Evidence enablement (ignored local only; Codex not written):
+
+- RO manifest-copy from Codex `bard-authority-closure` local into Grok local: `task-4-gap-audit-20260902`, `task-4-gap-audit-output-20260902`, `task-4-fresh-readback-20260902`, `task-4-source-audit`, plus `authority_config.json` / `config.json`.
+- Copy manifest: `local/task-4-geometry-evidence-copy-manifest-20260906/evidence-copy-manifest.json` (750 files).
+- Path remap note: `local/task-4-geometry-evidence-copy-manifest-20260906/PATH_REMAP_NOTE.md` — two `matched_paths` entries for `bcbscantily-package-list.txt` remapped Codex→Grok; `retained_alias_search` expected SHA-256 updated to `8C63D9D13725E65BE37D05E104C840BE42EBD91758FF04BDF2B75DE357909528`.
+- `fresh_scantily_root` remains RO Codex freeze path (Grok freeze absent).
+- Gap-audit baseline packet unchanged: `local/task-4-gap-audit-output-20260902/run-1/authority-eleven-gap-audit.json` — 1728433 bytes, SHA-256 `34EF05B54D2EBF045B94F1AFC22217BF932D21538268501EB7D5734273E9B9BB`.
+
+Methods exercised (assessment only; not repair architectures):
+
+1. `retained_findings_defect_scan`
+2. `retained_inventory_defect_scan`
+3. `gap_audit_geometry_defect_scan`
+4. `glb_semantic_readback`
+5. `netherstone_substitute_gate`
+6. `bcb_slot_vs_physical_mesh_gate`
+7. `conditional_geometry_module_absence_gate`
+
+Focused verification: `python -m pytest workstreams/bard_authority_closure/tests/test_authority_geometry_assessment.py -q -p no:cacheprovider` → **4 passed in 68.79s**.
+
+### Explicit boundary
+
+- `geometry_admitted=false`
+- `classification=unassessable` (not `admitted`; not `unfixable` — no conditional geometry architecture was runnable without a source-bound defect region)
+- `exclusion_event_input=null` (proof package only; **not** auto-attached)
+- `ready_for_attachment=false`
+- `release_blocking=true`
+- `authority_landmark_cage.py` remains absent
+- No GR2/PAK mint; no protected registry/manifest rewrite; no Tiefling PAK touch; no live Mods/AppData mutation; Spike #2 untouched; Padded/BG Watch, Bard Vanilla/SBBF, Soul Vest/Alt, and Alfira untouched
+- No commit pending Plan `CONFIRM_COMMIT_OK`; PIN_FOLLOWUP_NEEDED left for next Padded touch only
+
+The prior source-audit disposition `SOURCE_AUDIT_COMPLETE_GEOMETRY_UNASSESSED` remains the resolver baseline for the eleven-gap packet. This spike adds a separate geometry-assessment proof package and does not mutate that packet's required null defect / empty methods fields.
+
+### Reopening condition
+
+Supply a source-bound defect-region declaration for the exact BCB nine-object/optional-skirt contract **and** exact non-Netherstone replacements for the four HFL/TIF geometry IDs, or a separately approved manual-remesh/source-replacement project. Do not invent defect coordinates from slot/mesh count discrepancies.
+
+---
+
 # Authority Task 4 — fresh-source audit checkpoint
 
 ## TL/DR
